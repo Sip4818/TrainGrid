@@ -19,5 +19,6 @@ celery -A workers.celery_app worker --loglevel=info
 
 ## Rules
 - Use async FastAPI endpoints where possible
+- Follow strict OOP principles and keep production-grade code quality
 - Keep trainer classes modular
 - Do not hardcode model configs
