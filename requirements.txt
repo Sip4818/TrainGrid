@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+celery
+redis
+pydantic-settings
+sqlalchemy
+alembic
+httpx
+
+# Code quality and tests
+ruff
+mypy
+pytest
+pytest-asyncio
+pytest-cov
