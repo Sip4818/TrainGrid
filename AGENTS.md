@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Project Overview
-RunForge is an ML orchestration platform for training,
+TrainGrid is an ML orchestration platform for training,
 tracking, and deploying ML models.
 
 ## Architecture
