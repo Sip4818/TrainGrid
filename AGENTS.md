@@ -10,6 +10,8 @@ tracking, and deploying ML models.
 - trainers/ -> model-specific training logic
 - frontend/ -> React dashboard
 
+See docs/architecture.md for the detailed project structure and layer responsibilities.
+
 ## Commands
 Start backend:
 uvicorn api.main:app --reload
