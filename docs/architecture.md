@@ -126,6 +126,28 @@ frontend/src/styles/     global styles
 The UI should behave like an operations dashboard: tables, status badges,
 charts, logs, config panels, and direct workflow actions.
 
+## Initial Vertical Slice
+
+The first implementation should focus on one complete training path before the
+platform grows horizontally.
+
+```text
+tabular CSV dataset
+  -> api start-run endpoint
+  -> celery training task
+  -> sklearn RandomForestClassifier trainer
+  -> local artifact storage
+  -> persisted run metrics and status
+  -> frontend run detail view
+```
+
+Recommended first model:
+
+- `RandomForestClassifier` for classification on tabular data
+- typed trainer config for model parameters and dataset settings
+- local filesystem storage for artifacts
+- minimal persistence for run metadata, metrics, and status transitions
+
 ## Tests
 
 Tests should mirror the main layers:
