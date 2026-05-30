@@ -6,6 +6,8 @@ pydantic-settings
 sqlalchemy
 alembic
 httpx
+scikit-learn
+pandas
 
 # Code quality and tests
 ruff
