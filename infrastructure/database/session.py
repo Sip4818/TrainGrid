@@ -12,13 +12,14 @@ engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 
-# 'SessionLocal' is our factory for database sessions. 
+# 'SessionLocal' is our factory for database sessions.
 # We'll use this whenever we need to talk to the database.
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # 'Base' is the parent class for all our database models.
 # It tracks all the tables we define.
 Base = declarative_base()
+
 
 # A helper function to get a database session and ensure it's closed afterward.
 def get_db():

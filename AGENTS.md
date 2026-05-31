@@ -25,3 +25,4 @@ celery -A workers.celery_app worker --loglevel=info
 - Keep trainer classes modular
 - Do not hardcode model configs
 - **Communication:** After every code change or implementation step, provide a concise explanation of WHAT was changed and WHY it was put in that specific file/directory. This is crucial for learning the architecture.
+- **Command Execution:** Always run commands one by one and avoid executing multiple commands in a single step (e.g., avoid joining commands with `;` or `&&`).
