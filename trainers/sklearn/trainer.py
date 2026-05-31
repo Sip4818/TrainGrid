@@ -5,6 +5,7 @@ from sklearn.metrics import accuracy_score
 from .config import RandomForestClassifierConfig
 import pandas as pd
 
+
 class RandomForestClassifierTrainer:
     def __init__(self, config: RandomForestClassifierConfig):
         self.config = config
@@ -19,15 +20,18 @@ class RandomForestClassifierTrainer:
         target = self.config.target_column
         # Check if columns exist in the dataset
         if not all(col in self.data.columns for col in features + [target]):
-            raise ValueError("Some feature or target columns are missing in the dataset.")
-        
+            raise ValueError(
+                "Some feature or target columns are missing in the dataset."
+            )
 
     def preprocess_data(self):
         # Preprocess your data here
         self.X = self.data[self.config.feature_columns]
         self.y = self.data[self.config.target_column]
-        #split data into train and test sets, handle missing values, encode categorical variables, etc.
-        X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=42)
+        # split data into train and test sets, handle missing values, encode categorical variables, etc.
+        X_train, X_test, y_train, y_test = train_test_split(
+            self.X, self.y, test_size=0.2, random_state=42
+        )
         self.X_train = X_train
         self.X_test = X_test
         self.y_train = y_train
@@ -35,11 +39,14 @@ class RandomForestClassifierTrainer:
 
     def train_model(self):
         # Train your model here
-        model = RandomForestClassifier(n_estimators=self.config.n_estimators, max_depth=self.config.max_depth, random_state=42)
+        model = RandomForestClassifier(
+            n_estimators=self.config.n_estimators,
+            max_depth=self.config.max_depth,
+            random_state=42,
+        )
         model.fit(self.X_train, self.y_train)
         self.model = model
         return self.model
-        
 
     def evaluate_model(self):
         # Evaluate your model here
