@@ -24,3 +24,4 @@ celery -A workers.celery_app worker --loglevel=info
 - Follow strict OOP principles and keep production-grade code quality
 - Keep trainer classes modular
 - Do not hardcode model configs
+- **Communication:** After every code change or implementation step, provide a concise explanation of WHAT was changed and WHY it was put in that specific file/directory. This is crucial for learning the architecture.
