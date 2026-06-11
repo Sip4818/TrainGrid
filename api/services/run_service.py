@@ -36,3 +36,6 @@ class RunService:
 
     def get_run(self, run_id: int) -> RunModel | None:
         return self.db.get(RunModel, run_id)
+
+    def get_runs(self) -> list[RunModel]:
+        return self.db.query(RunModel).all()
