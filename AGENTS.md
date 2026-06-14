@@ -24,6 +24,7 @@ celery -A workers.celery_app worker --loglevel=info
 - Follow strict OOP principles and keep production-grade code quality
 - Keep trainer classes modular
 - Do not hardcode model configs
+- **Planning:** ALWAYS provide a plan and the proposed code in the chat before making any actual code changes. Do not execute code changes without prior approval.
 - **Communication:** After every code change or implementation step, provide a concise explanation of WHAT was changed and WHY it was put in that specific file/directory. This is crucial for learning the architecture.
 - **Command Execution:** Always run commands one by one and avoid executing multiple commands in a single step (e.g., avoid joining commands with `;` or `&&`).
 - **Validation:** Before completing any task, you MUST run the project's quality checks as defined in the CI workflow:
