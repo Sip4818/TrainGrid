@@ -45,6 +45,8 @@ We are implementing the first "Vertical Slice" of the platform: training a `Rand
 ### Immediate Next Steps
 1.  **API Tests** (`tests/api/test_runs.py`): Write end-to-end tests for the `/runs` endpoints using `TestClient`.
 2.  **Frontend Dashboard** (`frontend/`): Scaffold the React frontend and build the tabular training run submission form.
+3.  **Containerization**: Add Dockerfiles for the backend (FastAPI + Celery) and the React frontend, and create a `docker-compose.yml` that brings up Redis, the backend, a Celery worker, and a persistent SQLite volume.
+
 
 ## Development Workflows
 - **API Changes:** Always create both a SQLAlchemy model and a Pydantic schema (Base, Create, and Response) to maintain separation of concerns.
