@@ -37,11 +37,14 @@ We are implementing the first "Vertical Slice" of the platform: training a `Rand
 - [x] **RandomForest Trainer** implemented in `trainers/sklearn/`.
 - [x] **Database Model** for Runs created in `infrastructure/database/models.py`.
 - [x] **API Schemas** (Pydantic) defined in `api/schemas/run.py`.
+- [x] **Run Service** (`api/services/run_service.py`): Logic to create runs and trigger Celery tasks.
+- [x] **API Router** (`api/routers/runs.py`): Endpoints to start and track runs.
+- [x] **Celery Task** (`workers/tasks/training_tasks.py`): Connects trainer and saves results to DB.
+- [x] **Backend Initialization** (`api/main.py`): DB table creation and router registration.
 
 ### Immediate Next Steps
-1.  **Run Service** (`api/services/run_service.py`): Implement logic to create runs and trigger Celery tasks.
-2.  **API Router** (`api/routers/runs.py`): Expose endpoints to start and track runs.
-3.  **Celery Task** (`workers/tasks/training_tasks.py`): Update the task to use the trainer and save results to the DB.
+1.  **API Tests** (`tests/api/test_runs.py`): Write end-to-end tests for the `/runs` endpoints using `TestClient`.
+2.  **Frontend Dashboard** (`frontend/`): Scaffold the React frontend and build the tabular training run submission form.
 
 ## Development Workflows
 - **API Changes:** Always create both a SQLAlchemy model and a Pydantic schema (Base, Create, and Response) to maintain separation of concerns.
