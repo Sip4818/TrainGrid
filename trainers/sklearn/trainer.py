@@ -44,7 +44,7 @@ class RandomForestClassifierTrainer(BaseTrainer):
         self.load_data()
         self.validate_data()
         self.preprocess_data()
-        
+
         model = RandomForestClassifier(
             n_estimators=self.config.n_estimators,
             max_depth=self.config.max_depth,
@@ -55,11 +55,13 @@ class RandomForestClassifierTrainer(BaseTrainer):
         return self.model
 
     def evaluate(self) -> dict[str, float]:
+        assert self.model is not None, "Model must be trained before evaluation"
+        assert self.X_test is not None, "Data must be preprocessed before evaluation"
+        assert self.y_test is not None, "Data must be preprocessed before evaluation"
         predictions = self.model.predict(self.X_test)
         accuracy = accuracy_score(self.y_test, predictions)
         return {"accuracy": float(accuracy)}
-        
+
     def save(self, output_path: str) -> None:
         if self.model is not None:
             joblib.dump(self.model, output_path)
-
