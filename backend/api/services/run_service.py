@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 
-from api.schemas.run import RunCreate
-from infrastructure.database.models import RunModel
-from shared.enums import RunStatus
+from backend.api.schemas.run import RunCreate
+from backend.infrastructure.database.models import RunModel
+from backend.shared.enums import RunStatus
 
 
 class RunService:
@@ -29,7 +29,7 @@ class RunService:
         self.db.commit()
         self.db.refresh(run)
 
-        from workers.tasks.training_tasks import start_training_run
+        from backend.workers.tasks.training_tasks import start_training_run
 
         start_training_run.delay(str(run.id))
         return run

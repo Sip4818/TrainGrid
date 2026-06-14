@@ -1,12 +1,12 @@
 import os
 from datetime import datetime
 
-from workers.celery_app import celery_app
-from infrastructure.database.session import SessionLocal
-from infrastructure.database.models import RunModel
-from shared.enums import RunStatus
-from trainers.sklearn.config import RandomForestClassifierConfig
-from trainers.sklearn.trainer import RandomForestClassifierTrainer
+from backend.workers.celery_app import celery_app
+from backend.infrastructure.database.session import SessionLocal
+from backend.infrastructure.database.models import RunModel
+from backend.shared.enums import RunStatus
+from backend.trainers.sklearn.config import RandomForestClassifierConfig
+from backend.trainers.sklearn.trainer import RandomForestClassifierTrainer
 
 
 @celery_app.task(name="training.start_run")

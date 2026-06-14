@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from api.routers import health, runs
-from infrastructure.database.session import engine, Base
+from backend.api.routers import health, runs
+from backend.infrastructure.database.session import engine, Base
 
 
 def create_app() -> FastAPI:

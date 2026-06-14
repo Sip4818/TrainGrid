@@ -1,7 +1,7 @@
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 
-from api.main import app
+from backend.api.main import app
 
 client = TestClient(app)
 
@@ -18,7 +18,9 @@ def test_create_run():
         },
     }
     # Patch the Celery task so no real broker is needed
-    with patch("workers.tasks.training_tasks.start_training_run.delay") as mock_delay:
+    with patch(
+        "backend.workers.tasks.training_tasks.start_training_run.delay"
+    ) as mock_delay:
         response = client.post("/runs/", json=payload)
         assert response.status_code == 200
         data = response.json()

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Any
-from shared.enums import RunStatus
+from backend.shared.enums import RunStatus
 
 
 class RunBase(BaseModel):

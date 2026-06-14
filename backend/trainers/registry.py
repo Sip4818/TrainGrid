@@ -1,6 +1,6 @@
 from typing import TypeAlias
 
-from trainers.base import BaseTrainer
+from backend.trainers.base import BaseTrainer
 
 TrainerClass: TypeAlias = type[BaseTrainer]
 

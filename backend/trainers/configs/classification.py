@@ -1,4 +1,4 @@
-from trainers.configs.base import TrainerConfig
+from backend.trainers.configs.base import TrainerConfig
 
 
 class ClassificationConfig(TrainerConfig):

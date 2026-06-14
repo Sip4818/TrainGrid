@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, JSON, DateTime, Enum as SQLEnum
-from infrastructure.database.session import Base
+from backend.infrastructure.database.session import Base
 from datetime import datetime
-from shared.enums import RunStatus
+from backend.shared.enums import RunStatus
 
 
 class RunModel(Base):

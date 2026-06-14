@@ -66,7 +66,7 @@ See docs/architecture.md for the detailed project structure and layer responsibi
 
 ## Commands
 Start backend:
-uvicorn api.main:app --reload
+uvicorn backend.api.main:app --reload
 
 Start worker:
 celery -A workers.celery_app worker --loglevel=info

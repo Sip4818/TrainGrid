@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-from trainers.base import BaseTrainer
+from backend.trainers.base import BaseTrainer
 from .config import RandomForestClassifierConfig
 
 
