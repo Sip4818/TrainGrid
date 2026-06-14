@@ -27,11 +27,7 @@ celery -A workers.celery_app worker --loglevel=info
 - **Planning:** ALWAYS provide a plan and the proposed code in the chat before making any actual code changes. Do not execute code changes without prior approval.
 - **Communication:** After every code change or implementation step, provide a concise explanation of WHAT was changed and WHY it was put in that specific file/directory. This is crucial for learning the architecture.
 - **Command Execution:** Always run commands one by one and avoid executing multiple commands in a single step (e.g., avoid joining commands with `;` or `&&`).
-- **Validation:** Before completing any task, you MUST run the project's quality checks as defined in the CI workflow:
-    1. `ruff format .` (to fix formatting)
-    2. `ruff check .` (to lint)
-    3. `mypy .` (to type check)
-    4. `pytest` (to run tests)
+- **Validation:** Before completing any task, you MUST run the project's quality checks by executing `.\check.ps1`.
 
 ## Current Status: Vertical Slice - Tabular Training
 We are implementing the first "Vertical Slice" of the platform: training a `RandomForestClassifier` on tabular CSV data.
