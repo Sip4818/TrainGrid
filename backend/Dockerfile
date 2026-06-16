@@ -17,7 +17,8 @@ RUN pip install --no-cache-dir \
     alembic \
     httpx \
     scikit-learn \
-    pandas
+    pandas \
+    psycopg2-binary
 
 COPY backend/ ./backend/
 

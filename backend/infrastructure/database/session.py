@@ -2,15 +2,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# The database URL tells SQLAlchemy where to find our database file.
-# "sqlite:///./traingrid.db" means a file named 'traingrid.db' in the current folder.
-SQLALCHEMY_DATABASE_URL = "sqlite:///./traingrid.db"
+from backend.api.core.config import settings
 
-# The 'engine' is the low-level connection to the database.
-# check_same_thread=False is a specific setting needed for SQLite when used with FastAPI.
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+
+def _build_engine():
+    connect_args: dict[str, bool] = {}
+    if settings.database_url.startswith("sqlite"):
+        connect_args = {"check_same_thread": False}
+
+    return create_engine(settings.database_url, connect_args=connect_args)
+
+
+engine = _build_engine()
 
 # 'SessionLocal' is our factory for database sessions.
 # We'll use this whenever we need to talk to the database.
