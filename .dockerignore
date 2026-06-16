@@ -1,0 +1,15 @@
+.venv
+.git
+.github
+.pytest_cache
+.mypy_cache
+.ruff_cache
+__pycache__
+*.py[cod]
+*.db
+artifacts
+frontend
+tests
+docs
+*.md
+!backend/README.MD
