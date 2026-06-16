@@ -55,7 +55,8 @@ We are implementing the first "Vertical Slice" of the platform: training a `Rand
 
 ### Immediate Next Steps
 
-1.  **Frontend Containerization**: Add a `Dockerfile` for the React frontend inside `frontend/`. Register the frontend as a service in `docker-compose.yml` using a standard Node base image with volume mapping for hot-reload during development.
+1.  **Test Cases**: Write comprehensive tests for all implemented vertical slice code across every layer — API schemas, API services, database models, trainers, trainer registry, shared enums, and worker tasks. Focus on value-adding tests (validation, edge cases, data path) rather than mocking scikit-learn internals.
+2.  **Frontend Containerization**: Add a `Dockerfile` for the React frontend inside `frontend/`. Register the frontend as a service in `docker-compose.yml` using a standard Node base image with volume mapping for hot-reload during development.
 
 ---
 
