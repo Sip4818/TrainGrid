@@ -1,8 +1,8 @@
-import pandas as pd
-import joblib
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+import pandas as pd  # type: ignore[import-untyped]
+import joblib  # type: ignore[import-untyped]
+from sklearn.ensemble import RandomForestClassifier  # type: ignore[import-untyped]
+from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
+from sklearn.metrics import accuracy_score  # type: ignore[import-untyped]
 
 from backend.trainers.base import BaseTrainer
 from .config import RandomForestClassifierConfig

@@ -27,4 +27,22 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
+    "pandas-stubs",
 ]
+
+# 1. Global configurations MUST come before any specific [[tool.mypy.overrides]] arrays
+[tool.mypy]
+ignore_missing_imports = true
+
+# 2. Specific module overrides (Optional fallbacks)
+[[tool.mypy.overrides]]
+module = "celery.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "joblib.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sklearn.*"
+ignore_missing_imports = true

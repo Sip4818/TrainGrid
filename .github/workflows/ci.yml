@@ -39,7 +39,6 @@ jobs:
 
       - name: Lint
         run: ruff check .
-
       - name: Type check
         run: |
           if find . -path ./.venv -prune -o -name "*.py" -print -quit | grep -q .; then
