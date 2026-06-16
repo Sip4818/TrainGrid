@@ -44,8 +44,14 @@ We are implementing the first "Vertical Slice" of the platform: training a `Rand
 - [x] **API Tests** (`tests/api/test_runs.py`): End-to-end tests for the `/runs` endpoints using `TestClient`.
 
 ### Immediate Next Steps
-1.  **Frontend Dashboard** (`frontend/`): Scaffold the React frontend and build the tabular training run submission form.
-2.  **Containerization**: Add Dockerfiles for the backend (FastAPI + Celery) and the React frontend, and create a `docker-compose.yml` that brings up Redis, the backend, a Celery worker, and a persistent SQLite volume.
+
+1.  **Containerization**: Add a single `Dockerfile` for the backend (shared by FastAPI and Celery) and a basic `Dockerfile` for the React frontend. Create a `docker-compose.yml` that pulls official pre-made images for Redis and PostgreSQL (replacing SQLite to avoid database lock errors during parallel training runs). Use Docker volumes to enable code live-reloading so you can modify model training logic instantly without rebuilding images. No complex multi-stage optimization or advanced build layers are needed for this first slice.
+2.  **CI/ CD**: Setup a minimal GitHub Actions workflow that handles linting, runs your validation script (`.\check.ps1`), and executes basic `docker build` and `docker push` commands to upload your backend image to Docker Hub. Avoid advanced orchestration setups like matrix builds, multi-architecture compiling, or automated cloud deployments at this stage.
+3.  **Test Cases**: Focus strictly on high-value end-to-end (E2E) smoke testing. Write integration tests for the `/runs` endpoint that accept a dummy tabular CSV payload and verify that a 202 status code is returned. Do not write complex unit tests for scikit-learn's internal math libraries or deep database mocks.
+4.  **Frontend Dashboard** (`frontend/`): Scaffold a dead-simple Vite + React application. Create a basic HTML upload form with a file input component to select tabular CSV data and a submit button that fires a standard JavaScript `fetch()` request directly to your backend API. Avoid state management libraries, complex routing architectures, or UI styling frameworks.
+5.  **Front end containerization**: Add the React development container into the master `docker-compose.yml` file using a standard, unoptimized Node base image. Map your local frontend folder via Docker volumes so UI modifications reflect in the browser instantly without requiring container restarts.
+
+
 
 ## Development Workflows
 - **API Changes:** Always create both a SQLAlchemy model and a Pydantic schema (Base, Create, and Response) to maintain separation of concerns.

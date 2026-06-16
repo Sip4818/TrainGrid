@@ -1,0 +1,30 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "FastAPI backend service with Celery, Redis, and ML components"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "celery",
+    "redis",
+    "pydantic-settings",
+    "sqlalchemy",
+    "alembic",
+    "httpx",
+    "scikit-learn",
+    "pandas",
+]
+
+[tool.setuptools]
+packages = []
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]

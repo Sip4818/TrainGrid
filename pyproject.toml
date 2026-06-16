@@ -1,4 +1,9 @@
-[tool.mypy]
-python_version = "3.11"
-ignore_missing_imports = true
+[project]
+name = "project-root"
+version = "0.1.0"
+description = "Monorepo root for Frontend and Backend"
+requires-python = ">=3.10"
 
+# This tells uv to look inside the backend folder for a Python project
+[tool.uv.workspace]
+members = ["backend"]
