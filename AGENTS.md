@@ -67,6 +67,63 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 
 ---
 
+## Logging & Exception Handling Plan
+
+Both custom logging and custom exceptions exist as **unused scaffolding**. This plan wires them into the actual application flow.
+
+### Current Problems
+
+| Issue | Where | Impact |
+|-------|-------|--------|
+| `GET /runs/999999` returns `200 OK` with `{"error": "..."}` instead of `404` | `api/routers/runs.py` | Breaks HTTP semantics; clients get no status code signal |
+| `run_service.py` returns `None` instead of raising an exception | `api/services/run_service.py` | Every caller needs `if result is None` boilerplate |
+| `configure_logging()` is never called | `api/core/logging.py` | Dead code; no component logs anything |
+| No structured log format or request IDs | `api/core/logging.py` | Hard to trace actions across services |
+
+### Phase 1: Custom Exceptions
+
+**Goal:** Consistent HTTP error responses with proper status codes.
+
+| Step | File | Change |
+|------|------|--------|
+| 1 | `shared/errors.py` | Move `TrainGridError` here as shared base class; keep `NotFoundError` |
+| 2 | `api/core/exceptions.py` | Add FastAPI exception handlers for `NotFoundError` (→ 404) and `TrainGridError` (→ 500), returning `{"detail": {"code": "...", "message": "..."}}` |
+| 3 | `api/core/exceptions.py` | Add `TrainingRunNotFoundError` (404) for run-specific lookups |
+| 4 | `api/services/run_service.py` | `get_run` raises `NotFoundError` / `TrainingRunNotFoundError` instead of returning `None` |
+| 5 | `api/routers/runs.py` | Remove inline `if run is None: return {"error": ...}` — let exception flow to handler |
+| 6 | `api/main.py` | Import and register exception handlers on the app |
+| 7 | `api/services/run_service.py` | `create_run` wraps Celery dispatch in try/except, raises on failure |
+| 8 | `workers/tasks/training_tasks.py` | Raise `TrainingRunNotFoundError` when run_id is missing from DB |
+
+**Result:** Every endpoint returns consistent `{"detail": {"code": "NOT_FOUND", "message": "..."}}` with the correct HTTP status code.
+
+### Phase 2: Custom Logging
+
+**Goal:** Every significant action is traceable via structured logs.
+
+| Step | File | Change |
+|------|------|--------|
+| 1 | `api/core/logging.py` | Add `get_logger(name)` helper; add `filename` and `lineno` to format; support structured `extra` fields |
+| 2 | `api/main.py` | Call `configure_logging()` at the top of `create_app()` |
+| 3 | `api/services/run_service.py` | `logger.info("Run created", extra={"run_id": ..., "experiment_id": ...})` on create |
+| 4 | `api/routers/runs.py` | `logger.info("GET /runs/{run_id}")` on requests |
+| 5 | `workers/tasks/training_tasks.py` | `logger.info` on start/complete, `logger.error` on failure (include `run_id`, `error` in extras) |
+| 6 | `api/core/exceptions.py` | `logger.exception()` in exception handlers to capture stack traces |
+
+**Result:** Run creation, training lifecycle events, and all errors appear in logs with context fields for filtering.
+
+### Impact on Existing Tests
+
+The `test_get_run_not_found` test in `tests/api/test_runs.py` must be updated: it currently expects `200` + `{"error": "Run not found"}`, but after Phase 1 it will get `404` + `{"detail": {"code": "NOT_FOUND", ...}}`.
+
+### Dependencies
+
+- No new packages needed (Python `logging` is stdlib, FastAPI has built-in exception handler support)
+- Changes are scoped to existing files only — no new files created
+
+
+---
+
 ## Test Coverage Plan
 
 Comprehensive test plan for all backend implementations, organized by layer.
