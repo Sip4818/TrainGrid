@@ -29,12 +29,12 @@ celery -A backend.workers.celery_app worker --loglevel=info
 - **Command Execution:** Always run commands one by one and avoid executing multiple commands in a single step (e.g., avoid joining commands with `;` or `&&`).
 - **Validation:** Before completing any task, you MUST run the project's quality checks by executing `./check.sh`.
 
-## Current Status: Vertical Slice - Tabular Training
-We are implementing the first "Vertical Slice" of the platform: training a `RandomForestClassifier` on tabular CSV data.
+## Current Status: Vertical Slice - Tabular Training (Partial)
 
-### Completed Milestones
+The first vertical slice (training a `RandomForestClassifier` on tabular CSV data) has a **functional but rough backend**. The frontend is **scaffolded only** — not yet wired to the backend.
 
-**Core Backend**
+### Backend (Functional — Barely)
+
 - [x] **Architecture defined** in `docs/architecture.md`.
 - [x] **RandomForest Trainer** implemented in `trainers/sklearn/`.
 - [x] **Database Model** for Runs created in `infrastructure/database/models.py`.
@@ -50,13 +50,17 @@ We are implementing the first "Vertical Slice" of the platform: training a `Rand
 - [x] **Docker Compose** (`docker-compose.yml`): Services for PostgreSQL, Redis, API, and Celery worker with volume-based live-reload. SQLite is used for local development; PostgreSQL runs inside Docker.
 - [x] **CI/CD Pipeline** (`.github/workflows/ci.yml`): GitHub Actions workflow with linting (ruff), type checking (mypy), and testing (pytest).
 
-**Frontend Dashboard**
-- [x] **Vite + React App** scaffolded under `frontend/` with TypeScript, pages, components, and feature modules (runs, projects, experiments, models, deployments).
+### Frontend (Scaffolded Only — Not Functional)
+
+- [ ] **Vite + React App** scaffolded under `frontend/` with TypeScript — pages, components, and feature modules (runs, projects, experiments, models, deployments) exist as boilerplate but are **not connected to the backend API**.
+- [ ] **No API client layer** wired — the frontend cannot fetch or display real data.
+- [ ] **Not containerized** — no Dockerfile, no service in `docker-compose.yml`.
 
 ### Immediate Next Steps
 
-1.  **Test Cases**: Write comprehensive tests for all implemented vertical slice code across every layer — API schemas, API services, database models, trainers, trainer registry, shared enums, and worker tasks. Focus on value-adding tests (validation, edge cases, data path) rather than mocking scikit-learn internals.
-2.  **Frontend Containerization**: Add a `Dockerfile` for the React frontend inside `frontend/`. Register the frontend as a service in `docker-compose.yml` using a standard Node base image with volume mapping for hot-reload during development.
+1.  **Connect frontend to backend**: Add an API client layer (e.g., generated OpenAPI client or manual fetch wrappers) and wire up the runs list/detail views to the `/runs/` endpoints.
+2.  **Frontend containerization**: Add a `Dockerfile` for the React frontend inside `frontend/` and register it in `docker-compose.yml`.
+3.  **Test coverage**: Write comprehensive tests across all layers — API schemas, services, database models, trainers, registry, shared enums, and worker tasks.
 
 
 ### API Input Reference (First Vertical Slice)
