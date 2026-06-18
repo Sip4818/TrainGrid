@@ -27,7 +27,7 @@ celery -A backend.workers.celery_app worker --loglevel=info
 - **Planning:** ALWAYS provide a plan and the proposed code in the chat before making any actual code changes. Do not execute code changes without prior approval.
 - **Communication:** After every code change or implementation step, provide a concise explanation of WHAT was changed and WHY it was put in that specific file/directory. This is crucial for learning the architecture.
 - **Command Execution:** Always run commands one by one and avoid executing multiple commands in a single step (e.g., avoid joining commands with `;` or `&&`).
-- **Validation:** Before completing any task, you MUST run the project's quality checks by executing `.\check.ps1`.
+- **Validation:** Before completing any task, you MUST run the project's quality checks by executing `./check.sh`.
 
 ## Current Status: Vertical Slice - Tabular Training
 We are implementing the first "Vertical Slice" of the platform: training a `RandomForestClassifier` on tabular CSV data.
@@ -57,6 +57,54 @@ We are implementing the first "Vertical Slice" of the platform: training a `Rand
 
 1.  **Test Cases**: Write comprehensive tests for all implemented vertical slice code across every layer — API schemas, API services, database models, trainers, trainer registry, shared enums, and worker tasks. Focus on value-adding tests (validation, edge cases, data path) rather than mocking scikit-learn internals.
 2.  **Frontend Containerization**: Add a `Dockerfile` for the React frontend inside `frontend/`. Register the frontend as a service in `docker-compose.yml` using a standard Node base image with volume mapping for hot-reload during development.
+
+
+### API Input Reference (First Vertical Slice)
+
+The `POST /runs/` endpoint accepts the following JSON body:
+
+```json
+{
+  "experiment_id": 1,
+  "config": {
+    "dataset_path": "dataset.csv",
+    "target_column": "target",
+    "feature_columns": ["feature1", "feature2"],
+    "n_estimators": 100,
+    "max_depth": null
+  }
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `experiment_id` | int | Yes | Links the run to an experiment |
+| `config.dataset_path` | string | Yes | Path to the CSV file (e.g. `dataset.csv`) |
+| `config.target_column` | string | Yes | Name of the target/label column |
+| `config.feature_columns` | list[str] | Yes | Names of the feature columns |
+| `config.n_estimators` | int | No | Number of trees in the forest (default: `100`) |
+| `config.max_depth` | int / null | No | Max tree depth (`null` = unlimited, default: `null`) |
+
+**cURL example:**
+
+```bash
+curl -X POST http://localhost:8000/runs/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "experiment_id": 1,
+    "config": {
+      "dataset_path": "dataset.csv",
+      "target_column": "target",
+      "feature_columns": ["feature1", "feature2"],
+      "n_estimators": 100,
+      "max_depth": null
+    }
+  }'
+```
+
+Track a run: `GET /runs/{run_id}` — returns status, metrics, timestamps.
+List all runs: `GET /runs/` — returns every run in the database.
+
 
 ---
 
