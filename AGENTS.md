@@ -51,6 +51,9 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 - [x] **CI/CD Pipeline** (`.github/workflows/ci.yml`): GitHub Actions workflow with linting (ruff), type checking (mypy), and testing (pytest).
 
 ### Frontend (Scaffolded Only — Not Functional)
+> **Note:** The owner has zero knowledge of the React/Vite/TypeScript stack.
+> All frontend code is **implemented and validated by AI** through automated test suites (Vitest, Playwright) and CI checks.
+> The owner validates only that `./check.sh` passes and the Docker stack starts without errors.
 
 - [ ] **Vite + React App** scaffolded under `frontend/` with TypeScript — pages, components, and feature modules (runs, projects, experiments, models, deployments) exist as boilerplate but are **not connected to the backend API**.
 - [ ] **No API client layer** wired — the frontend cannot fetch or display real data.
