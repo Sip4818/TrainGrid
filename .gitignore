@@ -227,3 +227,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 *.db
+
+# Dataset files (too large for version control)
+backend/datasets/*.csv
+backend/datasets/*.parquet
+backend/datasets/*.json
