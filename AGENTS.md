@@ -270,9 +270,9 @@ The frontend build configuration is **complete** and the API client layer is **i
 | File | Status |
 |------|--------|
 | `src/api/client.ts`, `endpoints.ts` | **Implemented + tested** (17 vitest tests) |
-| `src/features/runs/` (api, types, hooks) | `types.ts` implemented + tested (15 tests); `api.ts` implemented + tested (12 tests); `hooks.ts` still stub |
+| `src/features/runs/` (api, types, hooks) | `types.ts` tested (15 tests); `api.ts` tested (12 tests); `hooks.ts` still stub |
 | `src/pages/RunsPage.tsx`, `RunDetailPage.tsx` | Empty stubs |
-| `src/components/ui/*` (Table, Button, Badge, Spinner, Modal, Input, Select, Tabs) | Empty stubs (9 files) |
+| `src/components/ui/*` | Implemented (8 components + 8 test files) — vitest passes, `tsc --noEmit` has minor type errors in two test files |
 | `src/components/layout/*` (Sidebar, Topbar, PageHeader) | Empty stubs (3 files) |
 | `src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | Empty stubs |
 | `src/App.tsx` | Renders `<div>TrainGrid</div>` only |
@@ -289,7 +289,7 @@ Each phase must produce working code validated by `./check.sh`. No phase depends
 | **2. API Client** [x] | `apiClient` fetch wrapper with base URL, error handling, JSON serialization. Endpoint constants. | `frontend/src/api/client.ts`, `frontend/src/api/endpoints.ts` | `npm run build` + vitest |
 | **3. Run Types** [x] | TypeScript types mirroring backend Pydantic: `RunStatus`, `RunConfig`, `RunCreate`, `Run` | `frontend/src/features/runs/types.ts` | `npm run build` + vitest |
 | **4. Run API** [x] | `createRun()`, `getRun()`, `getRuns()` functions | `frontend/src/features/runs/api.ts` | vitest (mock fetch) |
-| **5. UI Components** | Build `Button`, `Badge` (status-colored), `Spinner`, `Table`, `Modal`, `Input`, `Select`, `Tabs` | `frontend/src/components/ui/*.tsx` | vitest (render + interaction) |
+| **5. UI Components** [x] | Build `Button`, `Badge` (status-colored), `Spinner`, `Table`, `Modal`, `Input`, `Select`, `Tabs` | `frontend/src/components/ui/*.tsx` | vitest (render + interaction) |
 | **6. Layout Components** | `Sidebar` (nav links), `Topbar` (app name), `PageHeader` (title+description) | `frontend/src/components/layout/*.tsx` | vitest (render) |
 | **7. Routing & Shell** | React Router routes, app shell with Sidebar+Topbar+`<Outlet>`, QueryClient provider | `frontend/src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | `npm run build` |
 | **8. Runs List Page** | `RunsPage`: table of all runs, create-run modal with form fields, status badges, row click → detail | `frontend/src/pages/RunsPage.tsx` | vitest + Playwright |
