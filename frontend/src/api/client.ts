@@ -28,6 +28,15 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+
+    // Ensure message is an own enumerable property so assertion matchers
+    // (toMatchObject, toEqual) can see it in all environments.
+    Object.defineProperty(this, "message", {
+      value: message,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
   }
 }
 
@@ -51,10 +60,9 @@ async function request<T>(
     });
   } catch (error) {
     // Network failure (offline, DNS, timeout, etc.)
-    throw new ApiError(
-      0,
-      error instanceof Error ? error.message : "Network request failed",
-    );
+    const message =
+      error instanceof Error ? error.message : "Network request failed";
+    throw new ApiError(0, { message });
   }
 
   if (!response.ok) {
