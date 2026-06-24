@@ -30,7 +30,7 @@ describe("Select", () => {
   });
 
   it("reflects the selected value", () => {
-    render(<Select options={options} value="option2" readOnly />);
+    render(<Select options={options} value="option2" disabled />);
     expect(screen.getByRole("combobox")).toHaveValue("option2");
   });
 

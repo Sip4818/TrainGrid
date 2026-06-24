@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Table, type TableColumn } from "./Table";
 
-interface TestRow {
+interface TestRow extends Record<string, unknown> {
   id: number;
   name: string;
   status: string;

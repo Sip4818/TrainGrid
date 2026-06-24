@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 
-export interface TableColumn<T> {
-  key: keyof T | string;
+export interface TableColumn<T extends Record<string, unknown>> {
+  key: keyof T;
   label: string;
-  render?: (value: unknown, row: T) => ReactNode;
+  render?: (value: T[keyof T], row: T) => ReactNode;
 }
 
-interface TableProps<T> {
+interface TableProps<T extends Record<string, unknown>> {
   columns: TableColumn<T>[];
   rows: T[];
   onRowClick?: (row: T) => void;
@@ -66,7 +66,7 @@ export function Table<T extends Record<string, unknown>>({
         )}
         {rows.map((row, rowIndex) => (
           <tr
-            key={(row.id as string) ?? rowIndex}
+            key={rowIndex}
             style={{
               cursor: onRowClick ? "pointer" : "default",
             }}
@@ -86,8 +86,8 @@ export function Table<T extends Record<string, unknown>>({
             {columns.map((col) => (
               <td key={String(col.key)} style={tdStyle}>
                 {col.render
-                  ? col.render(row[col.key as keyof T], row)
-                  : String(row[col.key as keyof T] ?? "")}
+                  ? col.render(row[col.key], row)
+                  : String(row[col.key] ?? "")}
               </td>
             ))}
           </tr>
@@ -96,4 +96,3 @@ export function Table<T extends Record<string, unknown>>({
     </table>
   );
 }
-
