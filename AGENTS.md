@@ -29,7 +29,8 @@ celery -A backend.workers.celery_app worker --loglevel=info
 - **Command Execution:** Always run commands one by one and avoid executing multiple commands in a single step (e.g., avoid joining commands with `;` or `&&`).
 - **Validation:** Before completing any task, you MUST run the project's quality checks by executing `./check.sh`.
 
-## Current Status: Vertical Slice - Tabular Training (Partial)
+## Current Status: Frontend Implementation & Backend Hardening (In Progress)
+> **Currently working on:** Frontend wiring (Phases 6–13) + Logging/Exception handling implementation
 
 The first vertical slice (training a `RandomForestClassifier` on tabular CSV data) has a **functional but rough backend**. The frontend is **scaffolded only** — not yet wired to the backend.
 
@@ -50,7 +51,7 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 - [x] **Docker Compose** (`docker-compose.yml`): Services for PostgreSQL, Redis, API, and Celery worker with volume-based live-reload. SQLite is used for local development; PostgreSQL runs inside Docker.
 - [x] **CI/CD Pipeline** (`.github/workflows/ci.yml`): GitHub Actions workflow with linting (ruff), type checking (mypy), and testing (pytest).
 
-### Frontend (Scaffolded Only — Not Functional)
+### Frontend (Phases 1–5 Complete — Phases 6+ In Progress)
 > **Note:** The owner has zero knowledge of the React/Vite/TypeScript stack.
 > All frontend code is **implemented and validated by AI** through automated test suites (Vitest, Playwright) and CI checks.
 > The owner validates only that `./check.sh` passes and the Docker stack starts without errors.
@@ -135,17 +136,20 @@ Comprehensive test plan for all backend implementations, organized by layer.
 - `[~]` In progress
 - `[x]` Complete
 
+> **Status:** Phases 1–5 complete (all unit tests, conftest fixtures, and CI integration done).
+> Remaining phases depend on feature implementation completion.
+
 ---
 
 ### Phase 1: Shared & Infrastructure Layer (pure unit tests, no DB)
 
 | File | Tests | Status |
 |------|-------|--------|
-| `tests/shared/test_enums.py` | RunStatus/DeploymentStatus values, str enum behavior | `[ ]` |
-| `tests/shared/test_errors.py` | NotFoundError message and exception hierarchy | `[ ]` |
-| `tests/shared/test_constants.py` | APP_NAME == "TrainGrid" | `[ ]` |
-| `tests/infrastructure/test_database_models.py` | RunModel default status, table name, columns | `[ ]` |
-| `tests/infrastructure/test_artifact_store.py` | ABC cannot be instantiated, abstract methods raise | `[ ]` |
+| `tests/shared/test_enums.py` | RunStatus/DeploymentStatus values, str enum behavior | `[x]` |
+| `tests/shared/test_errors.py` | NotFoundError message and exception hierarchy | `[x]` |
+| `tests/shared/test_constants.py` | APP_NAME == "TrainGrid" | `[x]` |
+| `tests/infrastructure/test_database_models.py` | RunModel default status, table name, columns | `[x]` |
+| `tests/infrastructure/test_artifact_store.py` | ABC cannot be instantiated, abstract methods raise | `[x]` |
 
 **Total Phase 1: ~12 tests across 5 files**
 
@@ -155,13 +159,13 @@ Comprehensive test plan for all backend implementations, organized by layer.
 
 | File | Tests | Status |
 |------|-------|--------|
-| `tests/trainers/test_base.py` | BaseTrainer ABC cannot be instantiated, abstract methods | `[ ]` |
-| `tests/trainers/test_registry.py` | register/get, KeyError for unknown, singleton instance | `[ ]` |
-| `tests/trainers/test_sklearn_config.py` | RandomForestClassifierConfig defaults and custom values | `[ ]` |
-| `tests/trainers/test_sklearn_trainer.py` | Initialization, pre-train guards (evaluate/save) | `[ ]` |
-| `tests/trainers/test_configs_base.py` | TrainerConfig forbids extra fields | `[ ]` |
-| `tests/trainers/test_configs_classification.py` | ClassificationConfig requires target_column | `[ ]` |
-| `tests/trainers/test_configs_regression.py` | RegressionConfig requires target_column | `[ ]` |
+| `tests/trainers/test_base.py` | BaseTrainer ABC cannot be instantiated, abstract methods | `[x]` |
+| `tests/trainers/test_registry.py` | register/get, KeyError for unknown, singleton instance | `[x]` |
+| `tests/trainers/test_sklearn_config.py` | RandomForestClassifierConfig defaults and custom values | `[x]` |
+| `tests/trainers/test_sklearn_trainer.py` | Initialization, pre-train guards (evaluate/save) | `[x]` |
+| `tests/trainers/test_configs_base.py` | TrainerConfig forbids extra fields | `[x]` |
+| `tests/trainers/test_configs_classification.py` | ClassificationConfig requires target_column | `[x]` |
+| `tests/trainers/test_configs_regression.py` | RegressionConfig requires target_column | `[x]` |
 
 **Total Phase 2: ~18 tests across 7 files**
 
@@ -171,11 +175,11 @@ Comprehensive test plan for all backend implementations, organized by layer.
 
 | File | Tests | Status |
 |------|-------|--------|
-| `tests/api/test_schemas_run.py` | RunCreate valid/missing-field validation, Run response from_attributes | `[ ]` |
-| `tests/api/test_run_service.py` | RunService create/get/get_all with mocked DB | `[ ]` |
-| `tests/api/test_runs.py` *(expand)* | Add: valid-run GET, invalid POST validation, list-after-create | `[ ]` |
-| `tests/api/test_core_config.py` | Settings defaults and env override | `[ ]` |
-| `tests/api/test_core_exceptions.py` | TrainGridError raise/catch and inheritance | `[ ]` |
+| `tests/api/test_schemas_run.py` | RunCreate valid/missing-field validation, Run response from_attributes | `[x]` |
+| `tests/api/test_run_service.py` | RunService create/get/get_all with mocked DB | `[x]` |
+| `tests/api/test_runs.py` *(expand)* | Add: valid-run GET, invalid POST validation, list-after-create | `[x]` |
+| `tests/api/test_core_config.py` | Settings defaults and env override | `[x]` |
+| `tests/api/test_core_exceptions.py` | TrainGridError raise/catch and inheritance | `[x]` |
 
 **Total Phase 3: ~18 tests across 5 files**
 
@@ -185,8 +189,8 @@ Comprehensive test plan for all backend implementations, organized by layer.
 
 | File | Tests | Status |
 |------|-------|--------|
-| `tests/workers/test_celery_app.py` | Celery app name and config from settings | `[ ]` |
-| `tests/workers/test_training_tasks.py` | Not-found, success, failure, timestamps | `[ ]` |
+| `tests/workers/test_celery_app.py` | Celery app name and config from settings | `[x]` |
+| `tests/workers/test_training_tasks.py` | Not-found, success, failure, timestamps | `[x]` |
 
 **Total Phase 4: ~6 tests across 2 files**
 
@@ -196,8 +200,8 @@ Comprehensive test plan for all backend implementations, organized by layer.
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `tests/conftest.py` | db_session (in-memory SQLite), run_service, sample payload fixtures | `[ ]` |
-| `tests/api/conftest.py` | TestClient with dependency override for test DB | `[ ]` |
+| `tests/conftest.py` | db_session (in-memory SQLite), run_service, sample payload fixtures | `[x]` |
+| `tests/api/conftest.py` | TestClient with dependency override for test DB | `[x]` |
 
 ---
 
