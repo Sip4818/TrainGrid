@@ -261,7 +261,58 @@ List all runs: `GET /runs/` — returns every run in the database.
 
 ---
 
+## Frontend Wiring Plan — Phase 3 (Vertical Slice Connection)
+
+### Current State
+
+The entire frontend is **placeholder comments only**. Every file under `frontend/src/` has only stub comments — no real code. The critical configuration files (`vite.config.ts`, `tsconfig.json`) are **missing entirely**.
+
+| File | Status |
+|------|--------|
+| `src/api/client.ts`, `endpoints.ts` | Empty stubs |
+| `src/features/runs/` (api, types, hooks) | Empty stubs |
+| `src/pages/RunsPage.tsx`, `RunDetailPage.tsx` | Empty stubs |
+| `src/components/ui/*` (Table, Button, Badge, Spinner, Modal, Input, Select, Tabs) | Empty stubs (9 files) |
+| `src/components/layout/*` (Sidebar, Topbar, PageHeader) | Empty stubs (3 files) |
+| `src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | Empty stubs |
+| `src/App.tsx` | Renders `<div>TrainGrid</div>` only |
+| `package.json` | Missing `react-router-dom`, testing libs, `vite.config.ts`, `tsconfig.json` |
+| `vite.config.ts`, `tsconfig.json` | **Don't exist** |
+
+### Execution Phases
+
+Each phase must produce working code validated by `./check.sh`. No phase depends on a running backend — use mocked data for development and test-driven validation.
+
+| Phase | What | Key Files | Validation |
+|-------|------|-----------|------------|
+| **1. Build Config** | Create `vite.config.ts`, `tsconfig.json`, `tsconfig.node.json`. Add deps to `package.json`: `react-router-dom`, `@tanstack/react-query`, `vitest`, `@testing-library/react`, `jsdom`, `playwright`. | `frontend/vite.config.ts`, `frontend/tsconfig.json`, `frontend/package.json` | `npm run build` succeeds |
+| **2. API Client** | `apiClient` fetch wrapper with base URL, error handling, JSON serialization. Endpoint constants. | `frontend/src/api/client.ts`, `frontend/src/api/endpoints.ts` | `npm run build` + vitest |
+| **3. Run Types** | TypeScript types mirroring backend Pydantic: `RunStatus`, `RunConfig`, `RunCreate`, `Run` | `frontend/src/features/runs/types.ts` | `npm run build` + vitest |
+| **4. Run API** | `createRun()`, `getRun()`, `getRuns()` functions | `frontend/src/features/runs/api.ts` | vitest (mock fetch) |
+| **5. UI Components** | Build `Button`, `Badge` (status-colored), `Spinner`, `Table`, `Modal`, `Input`, `Select`, `Tabs` | `frontend/src/components/ui/*.tsx` | vitest (render + interaction) |
+| **6. Layout Components** | `Sidebar` (nav links), `Topbar` (app name), `PageHeader` (title+description) | `frontend/src/components/layout/*.tsx` | vitest (render) |
+| **7. Routing & Shell** | React Router routes, app shell with Sidebar+Topbar+`<Outlet>`, QueryClient provider | `frontend/src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | `npm run build` |
+| **8. Runs List Page** | `RunsPage`: table of all runs, create-run modal with form fields, status badges, row click → detail | `frontend/src/pages/RunsPage.tsx` | vitest + Playwright |
+| **9. Run Detail Page** | `RunDetailPage`: single run view, auto-polling every 3s while PENDING/RUNNING, config+metrics display | `frontend/src/pages/RunDetailPage.tsx` | vitest + Playwright |
+| **10. Dashboard Page** | `DashboardPage`: summary cards with run counts by status | `frontend/src/pages/DashboardPage.tsx` | vitest |
+| **11. App Wiring** | Wire providers + router in `main.tsx`, `App.tsx` renders the app | `frontend/src/main.tsx`, `frontend/src/App.tsx` | `npm run build` |
+| **12. Containerization** | Multi-stage `Dockerfile` (node build → nginx serve), `frontend` service in `docker-compose.yml` (port 3000) | `frontend/Dockerfile`, `docker-compose.yml` | `docker compose up frontend` |
+| **13. Frontend Tests** | `vitest.config.ts`, unit tests for components/api/hooks, Playwright E2E for runs flow, integrate into `./check.sh` | `frontend/vitest.config.ts`, `frontend/src/**/*.test.tsx`, `frontend/e2e/` | `./check.sh` passes |
+
+### Critical Rules for Frontend Implementation
+
+1. **No hardcoded API URLs** — use the `apiClient` base URL configurable via Vite env vars
+2. **TypeScript everywhere** — no `any` types, strict mode enabled
+3. **Auto-polling for active runs** — use `@tanstack/react-query`'s `refetchInterval` (3s) when run status is PENDING or RUNNING
+4. **Graceful error states** — show error messages when API calls fail, not blank screens
+5. **Responsive CSS** — enough styling for a usable dashboard (no CSS framework, keep it simple with CSS modules or plain CSS)
+6. **Test-driven** — each component gets a Vitest render test; critical user paths get Playwright E2E tests
+7. **Owner validates only via `./check.sh`** — no manual frontend review needed
+
+---
+
 ## Development Workflows
 - **API Changes:** Always create both a SQLAlchemy model and a Pydantic schema (Base, Create, and Response) to maintain separation of concerns.
 - **Training Logic:** Keep it inside the `trainers/` directory, decoupled from the API and Workers.
 - **Commits:** Use `feat:`, `fix:`, or `docs:` prefixes. Push changes after successful implementation of a component.
+- **AI Commits:** If a commit is made by AI or with AI assistance, the commit message must include the AI model name and state that it was generated with AI assistance. Format: `feat: description [generated by <model-name> with AI assistant]`. This ensures traceability of AI-generated contributions.
