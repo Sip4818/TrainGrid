@@ -270,7 +270,7 @@ The frontend build configuration is **complete** and the API client layer is **i
 | File | Status |
 |------|--------|
 | `src/api/client.ts`, `endpoints.ts` | **Implemented + tested** (17 vitest tests) |
-| `src/features/runs/` (api, types, hooks) | Empty stubs |
+| `src/features/runs/` (api, types, hooks) | `types.ts` implemented + tested (15 tests); `api.ts`, `hooks.ts` still stubs |
 | `src/pages/RunsPage.tsx`, `RunDetailPage.tsx` | Empty stubs |
 | `src/components/ui/*` (Table, Button, Badge, Spinner, Modal, Input, Select, Tabs) | Empty stubs (9 files) |
 | `src/components/layout/*` (Sidebar, Topbar, PageHeader) | Empty stubs (3 files) |
@@ -287,7 +287,7 @@ Each phase must produce working code validated by `./check.sh`. No phase depends
 |-------|------|-----------|------------|
 | **1. Build Config** [x] | Create `vite.config.ts`, `tsconfig.json`, `tsconfig.node.json`. Add deps to `package.json`: `react-router-dom`, `@tanstack/react-query`, `vitest`, `@testing-library/react`, `jsdom`, `playwright`. | `frontend/vite.config.ts`, `frontend/tsconfig.json`, `frontend/package.json` | `npm run build` succeeds |
 | **2. API Client** [x] | `apiClient` fetch wrapper with base URL, error handling, JSON serialization. Endpoint constants. | `frontend/src/api/client.ts`, `frontend/src/api/endpoints.ts` | `npm run build` + vitest |
-| **3. Run Types** | TypeScript types mirroring backend Pydantic: `RunStatus`, `RunConfig`, `RunCreate`, `Run` | `frontend/src/features/runs/types.ts` | `npm run build` + vitest |
+| **3. Run Types** [x] | TypeScript types mirroring backend Pydantic: `RunStatus`, `RunConfig`, `RunCreate`, `Run` | `frontend/src/features/runs/types.ts` | `npm run build` + vitest |
 | **4. Run API** | `createRun()`, `getRun()`, `getRuns()` functions | `frontend/src/features/runs/api.ts` | vitest (mock fetch) |
 | **5. UI Components** | Build `Button`, `Badge` (status-colored), `Spinner`, `Table`, `Modal`, `Input`, `Select`, `Tabs` | `frontend/src/components/ui/*.tsx` | vitest (render + interaction) |
 | **6. Layout Components** | `Sidebar` (nav links), `Topbar` (app name), `PageHeader` (title+description) | `frontend/src/components/layout/*.tsx` | vitest (render) |
