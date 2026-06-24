@@ -42,11 +42,20 @@ async function request<T>(
     "Content-Type": "application/json",
   };
 
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (error) {
+    // Network failure (offline, DNS, timeout, etc.)
+    throw new ApiError(
+      0,
+      error instanceof Error ? error.message : "Network request failed",
+    );
+  }
 
   if (!response.ok) {
     let detail: unknown;
