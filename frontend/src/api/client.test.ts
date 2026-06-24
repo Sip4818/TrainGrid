@@ -103,6 +103,24 @@ describe("apiClient.post", () => {
   });
 });
 
+describe("204 No Content", () => {
+  it("returns undefined on 204 for get", async () => {
+    mockFetch(204, undefined);
+
+    const result = await apiClient.get("/runs/1");
+
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined on 204 for post", async () => {
+    mockFetch(204, undefined);
+
+    const result = await apiClient.post("/runs/");
+
+    expect(result).toBeUndefined();
+  });
+});
+
 describe("ApiError", () => {
   it("extracts message from detail object", () => {
     const err = new ApiError(404, { code: "NOT_FOUND", message: "Run not found" });
