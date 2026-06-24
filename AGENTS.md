@@ -56,12 +56,12 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 > The owner validates only that `./check.sh` passes and the Docker stack starts without errors.
 
 - [x] **Vite + React App** scaffolded under `frontend/` with TypeScript — pages, components, and feature modules (runs, projects, experiments, models, deployments) exist as boilerplate but are **not connected to the backend API**.
-- [ ] **No API client layer** wired — the frontend cannot fetch or display real data.
+- [x] **API Client layer** wired — `apiClient` fetch wrapper (`get`/`post`), `ApiError` class, and endpoint constants under `src/api/`. (17 passing vitest tests)
 - [ ] **Not containerized** — no Dockerfile, no service in `docker-compose.yml`.
 
 ### Immediate Next Steps
 
-1.  **Connect frontend to backend**: Add an API client layer (e.g., generated OpenAPI client or manual fetch wrappers) and wire up the runs list/detail views to the `/runs/` endpoints.
+1. **[x] API Client layer done** (`src/api/client.ts` + `endpoints.ts`). Next: wire up runs list/detail views to the `/runs/` endpoints.
 2.  **Frontend containerization**: Add a `Dockerfile` for the React frontend inside `frontend/` and register it in `docker-compose.yml`.
 3.  **Test coverage**: Write comprehensive tests across all layers — see [Test Coverage Plan](#test-coverage-plan).
 
@@ -265,11 +265,11 @@ List all runs: `GET /runs/` — returns every run in the database.
 
 ### Current State
 
-The frontend build configuration is **complete**. Every file under `frontend/src/` has only stub comments — no real code. Build config files (`vite.config.ts`, `tsconfig.json`, `tsconfig.node.json`, `vite-env.d.ts`) now exist, and all necessary packages are installed.
+The frontend build configuration is **complete** and the API client layer is **implemented + tested**. Build config files (`vite.config.ts`, `tsconfig.json`, `tsconfig.node.json`, `vite-env.d.ts`, `vitest.config.ts`) now exist, all necessary packages are installed, and CI runs frontend checks (`tsc`, `vitest`, `build`). Every other file under `frontend/src/` still has only stub comments.
 
 | File | Status |
 |------|--------|
-| `src/api/client.ts`, `endpoints.ts` | Empty stubs |
+| `src/api/client.ts`, `endpoints.ts` | **Implemented + tested** (17 vitest tests) |
 | `src/features/runs/` (api, types, hooks) | Empty stubs |
 | `src/pages/RunsPage.tsx`, `RunDetailPage.tsx` | Empty stubs |
 | `src/components/ui/*` (Table, Button, Badge, Spinner, Modal, Input, Select, Tabs) | Empty stubs (9 files) |
@@ -286,7 +286,7 @@ Each phase must produce working code validated by `./check.sh`. No phase depends
 | Phase | What | Key Files | Validation |
 |-------|------|-----------|------------|
 | **1. Build Config** [x] | Create `vite.config.ts`, `tsconfig.json`, `tsconfig.node.json`. Add deps to `package.json`: `react-router-dom`, `@tanstack/react-query`, `vitest`, `@testing-library/react`, `jsdom`, `playwright`. | `frontend/vite.config.ts`, `frontend/tsconfig.json`, `frontend/package.json` | `npm run build` succeeds |
-| **2. API Client** | `apiClient` fetch wrapper with base URL, error handling, JSON serialization. Endpoint constants. | `frontend/src/api/client.ts`, `frontend/src/api/endpoints.ts` | `npm run build` + vitest |
+| **2. API Client** [x] | `apiClient` fetch wrapper with base URL, error handling, JSON serialization. Endpoint constants. | `frontend/src/api/client.ts`, `frontend/src/api/endpoints.ts` | `npm run build` + vitest |
 | **3. Run Types** | TypeScript types mirroring backend Pydantic: `RunStatus`, `RunConfig`, `RunCreate`, `Run` | `frontend/src/features/runs/types.ts` | `npm run build` + vitest |
 | **4. Run API** | `createRun()`, `getRun()`, `getRuns()` functions | `frontend/src/features/runs/api.ts` | vitest (mock fetch) |
 | **5. UI Components** | Build `Button`, `Badge` (status-colored), `Spinner`, `Table`, `Modal`, `Input`, `Select`, `Tabs` | `frontend/src/components/ui/*.tsx` | vitest (render + interaction) |
