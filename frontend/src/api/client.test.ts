@@ -139,3 +139,25 @@ describe("ApiError", () => {
     expect(err.message).toBe("API request failed with status 500");
   });
 });
+
+describe("network failure", () => {
+  it("throws ApiError with status 0 when fetch rejects", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Failed to fetch"));
+
+    await expect(apiClient.get("/runs/")).rejects.toThrow(ApiError);
+    await expect(apiClient.get("/runs/")).rejects.toMatchObject({
+      status: 0,
+      message: "Failed to fetch",
+    });
+  });
+
+  it("throws ApiError with fallback message when error is not an Error instance", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue("string error");
+
+    await expect(apiClient.get("/runs/")).rejects.toThrow(ApiError);
+    await expect(apiClient.get("/runs/")).rejects.toMatchObject({
+      status: 0,
+      message: "Network request failed",
+    });
+  });
+});
