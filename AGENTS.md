@@ -272,7 +272,7 @@ The frontend build configuration is **complete** and the API client layer is **i
 | `src/api/client.ts`, `endpoints.ts` | **Implemented + tested** (17 vitest tests) |
 | `src/features/runs/` (api, types, hooks) | `types.ts` tested (15 tests); `api.ts` tested (12 tests); `hooks.ts` still stub |
 | `src/pages/RunsPage.tsx`, `RunDetailPage.tsx` | Empty stubs |
-| `src/components/ui/*` | Implemented (8 components + 8 test files) — vitest passes, `tsc --noEmit` has minor type errors in two test files |
+| `src/components/ui/*` | Implemented (8 components + 8 test files) — vitest + `tsc --noEmit` + build all pass |
 | `src/components/layout/*` (Sidebar, Topbar, PageHeader) | Empty stubs (3 files) |
 | `src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | Empty stubs |
 | `src/App.tsx` | Renders `<div>TrainGrid</div>` only |
