@@ -1,1 +1,3 @@
-// Dashboard page will live here.
+export function DashboardPage(): React.ReactElement {
+  return <div>Dashboard</div>;
+}
