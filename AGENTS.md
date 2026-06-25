@@ -30,7 +30,7 @@ celery -A backend.workers.celery_app worker --loglevel=info
 - **Validation:** Before completing any task, you MUST run the project's quality checks by executing `./check.sh`.
 
 ## Current Status: Frontend Implementation & Backend Hardening (In Progress)
-> **Currently working on:** Frontend wiring (Phases 6–13) + Logging/Exception handling implementation
+> **Currently working on:** Frontend wiring (Phases 8–13) + Logging/Exception handling implementation
 
 The first vertical slice (training a `RandomForestClassifier` on tabular CSV data) has a **functional but rough backend**. The frontend is **scaffolded only** — not yet wired to the backend.
 
