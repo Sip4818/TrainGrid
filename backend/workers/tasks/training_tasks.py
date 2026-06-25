@@ -45,6 +45,7 @@ def start_training_run(run_id: str) -> dict[str, str]:
         if run:
             run.status = RunStatus.FAILED  # type: ignore[assignment]
             run.finished_at = datetime.utcnow()  # type: ignore[assignment]
+            run.metrics = {"error": str(e)}  # type: ignore[assignment]
             db.commit()
         return {"run_id": run_id, "status": "failed", "error": str(e)}
     finally:
