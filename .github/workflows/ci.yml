@@ -113,10 +113,13 @@ jobs:
       - name: Start Docker Compose stack
         run: |
           docker compose up -d --wait
-          echo "All services healthy. Verifying API..."
-          # Verify the API is responsive before running tests
-          docker compose exec -T api wget -q -O /dev/null http://localhost:8000/runs/ || echo "API not ready yet"
-          echo "Stack is up."
+          echo "All services healthy. Waiting for frontend to serve..."
+          # Poll the frontend until it responds
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000 > /dev/null && echo "Frontend ready!" && break
+            echo "Waiting for frontend... attempt $i"
+            sleep 2
+          done
 
       - name: Run Playwright E2E tests
         working-directory: frontend
