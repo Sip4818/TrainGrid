@@ -58,12 +58,12 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 
 - [x] **Vite + React App** scaffolded under `frontend/` with TypeScript — pages, components, and feature modules (runs, projects, experiments, models, deployments) exist as boilerplate but are **not connected to the backend API**.
 - [x] **API Client layer** wired — `apiClient` fetch wrapper (`get`/`post`), `ApiError` class, and endpoint constants under `src/api/`. (17 passing vitest tests)
-- [ ] **Not containerized** — no Dockerfile, no service in `docker-compose.yml`.
+- [x] **Containerized** — Multi-stage `Dockerfile` (node build → nginx serve), `frontend` service in `docker-compose.yml` (port 3000).
 
 ### Immediate Next Steps
 
 1. **[x] Runs list and detail views wired** — RunsPage (list+create), RunDetailPage (detail view with auto-polling)
-2.  **Frontend containerization**: Add a `Dockerfile` for the React frontend inside `frontend/` and register it in `docker-compose.yml`.
+2. **[x] Frontend containerized** — Multi-stage `Dockerfile` + `frontend` service in `docker-compose.yml` on port 3000.
 3.  **Test coverage**: Write comprehensive tests across all layers — see [Test Coverage Plan](#test-coverage-plan).
 
 ---
@@ -302,7 +302,7 @@ Each phase must produce working code validated by `./check.sh`. No phase depends
 | **9. Run Detail Page** [x] | `RunDetailPage`: single run view, auto-polling every 3s while PENDING/RUNNING, config+metrics display | `frontend/src/pages/RunDetailPage.tsx` | vitest + Playwright |
 | **10. Dashboard Page** | `DashboardPage`: summary cards with run counts by status | `frontend/src/pages/DashboardPage.tsx` | vitest |
 | **11. App Wiring** [x] | Wire providers + router in `main.tsx`, `App.tsx` renders the app | `frontend/src/main.tsx`, `frontend/src/App.tsx` | `npm run build` |
-| **12. Containerization** | Multi-stage `Dockerfile` (node build → nginx serve), `frontend` service in `docker-compose.yml` (port 3000) | `frontend/Dockerfile`, `docker-compose.yml` | `docker compose up frontend` |
+| **12. Containerization** [x] | Multi-stage `Dockerfile` (node build → nginx serve), `frontend` service in `docker-compose.yml` (port 3000) | `frontend/Dockerfile`, `docker-compose.yml` | `docker compose up frontend` |
 | **13. Frontend Tests** | `vitest.config.ts`, unit tests for components/api/hooks, Playwright E2E for runs flow, integrate into `./check.sh` | `frontend/vitest.config.ts`, `frontend/src/**/*.test.tsx`, `frontend/e2e/` | `./check.sh` passes |
 
 ### Critical Rules for Frontend Implementation
