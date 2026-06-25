@@ -30,7 +30,7 @@ celery -A backend.workers.celery_app worker --loglevel=info
 - **Validation:** Before completing any task, you MUST run the project's quality checks by executing `./check.sh`.
 
 ## Current Status: Frontend Implementation & Backend Hardening (In Progress)
-> **Currently working on:** Frontend wiring (Phases 9-13) + Logging/Exception handling implementation
+> **Currently working on:** Frontend wiring (Phases 10-13) + Logging/Exception handling implementation
 
 The first vertical slice (training a `RandomForestClassifier` on tabular CSV data) has a **functional but rough backend**. The frontend is **scaffolded only** — not yet wired to the backend.
 
@@ -62,7 +62,7 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 
 ### Immediate Next Steps
 
-1. **[x] API Client layer done** (`src/api/client.ts` + `endpoints.ts`). Next: wire up runs list/detail views to the `/runs/` endpoints.
+1. **[x] Runs list and detail views wired** — RunsPage (list+create), RunDetailPage (detail view with auto-polling)
 2.  **Frontend containerization**: Add a `Dockerfile` for the React frontend inside `frontend/` and register it in `docker-compose.yml`.
 3.  **Test coverage**: Write comprehensive tests across all layers — see [Test Coverage Plan](#test-coverage-plan).
 
@@ -274,9 +274,9 @@ The frontend build configuration is **complete** and the API client layer is **i
 | File | Status |
 |------|--------|
 | `src/api/client.ts`, `endpoints.ts` | **Implemented + tested** (17 vitest tests) |
-| `src/features/runs/` (api, types, hooks) | `types.ts` tested (15 tests); `api.ts` tested (12 tests); `hooks.ts` implemented with TanStack Query (2 hooks) |
+| `src/features/runs/` (api, types, hooks) | `types.ts` tested (15 tests); `api.ts` tested (12 tests); `hooks.ts` implemented with TanStack Query (3 hooks: useRuns, useRun, useCreateRun) |
 | `src/pages/RunsPage.tsx` | **Implemented** — table, create modal, status badges, navigation to detail (3 vitest tests) |
-| `src/pages/RunDetailPage.tsx` | Empty stub |
+| `src/pages/RunDetailPage.tsx` (+ test file) | **Implemented** — single run view, auto-polling every 3s, config/timeline/metrics display |
 | `src/components/ui/*` | Implemented (8 components + 8 test files) — vitest + `tsc --noEmit` + build all pass |
 | `src/components/layout/*` (Sidebar, Topbar, PageHeader) | Implemented (3 components + 3 test files) |
 | `src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | Implemented — router, shell, providers |
@@ -299,7 +299,7 @@ Each phase must produce working code validated by `./check.sh`. No phase depends
 | **6. Layout Components** [x] | `Sidebar` (nav links), `Topbar` (app name), `PageHeader` (title+description) | `frontend/src/components/layout/*.tsx` | vitest (render) |
 | **7. Routing & Shell** [x] | React Router routes, app shell with Sidebar+Topbar+`<Outlet>`, QueryClient provider | `frontend/src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | `npm run build` |
 | **8. Runs List Page** [x] | `RunsPage`: table of all runs, create-run modal with form fields, status badges, row click → detail | `frontend/src/pages/RunsPage.tsx` | vitest + Playwright |
-| **9. Run Detail Page** | `RunDetailPage`: single run view, auto-polling every 3s while PENDING/RUNNING, config+metrics display | `frontend/src/pages/RunDetailPage.tsx` | vitest + Playwright |
+| **9. Run Detail Page** [x] | `RunDetailPage`: single run view, auto-polling every 3s while PENDING/RUNNING, config+metrics display | `frontend/src/pages/RunDetailPage.tsx` | vitest + Playwright |
 | **10. Dashboard Page** | `DashboardPage`: summary cards with run counts by status | `frontend/src/pages/DashboardPage.tsx` | vitest |
 | **11. App Wiring** [x] | Wire providers + router in `main.tsx`, `App.tsx` renders the app | `frontend/src/main.tsx`, `frontend/src/App.tsx` | `npm run build` |
 | **12. Containerization** | Multi-stage `Dockerfile` (node build → nginx serve), `frontend` service in `docker-compose.yml` (port 3000) | `frontend/Dockerfile`, `docker-compose.yml` | `docker compose up frontend` |
