@@ -73,8 +73,9 @@ describe("getRuns", () => {
   it("throws ApiError on network failure", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Network error"));
 
-    await expect(getRuns()).rejects.toThrow(ApiError);
-    await expect(getRuns()).rejects.toMatchObject({ status: 0 });
+    const promise = getRuns();
+    await expect(promise).rejects.toThrow(ApiError);
+    await expect(promise).rejects.toMatchObject({ status: 0 });
   });
 });
 
@@ -126,8 +127,9 @@ describe("getRun", () => {
   it("throws ApiError on network failure", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Offline"));
 
-    await expect(getRun(1)).rejects.toThrow(ApiError);
-    await expect(getRun(1)).rejects.toMatchObject({ status: 0 });
+    const promise = getRun(1);
+    await expect(promise).rejects.toThrow(ApiError);
+    await expect(promise).rejects.toMatchObject({ status: 0 });
   });
 });
 

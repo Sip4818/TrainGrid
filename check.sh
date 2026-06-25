@@ -37,6 +37,10 @@ echo "Running build..."
 npm run build
 echo "Frontend build passed!"
 
+echo "Running Playwright E2E tests..."
+npx playwright test
+echo "Playwright E2E tests passed!"
+
 cd ..
 
 echo ""
