@@ -30,7 +30,7 @@ celery -A backend.workers.celery_app worker --loglevel=info
 - **Validation:** Before completing any task, you MUST run the project's quality checks by executing `./check.sh`.
 
 ## Current Status: Frontend Implementation & Backend Hardening (In Progress)
-> **Currently working on:** Frontend wiring (Phases 8–13) + Logging/Exception handling implementation
+> **Currently working on:** Frontend wiring (Phases 9-13) + Logging/Exception handling implementation
 
 The first vertical slice (training a `RandomForestClassifier` on tabular CSV data) has a **functional but rough backend**. The frontend is **scaffolded only** — not yet wired to the backend.
 
@@ -269,17 +269,19 @@ List all runs: `GET /runs/` — returns every run in the database.
 
 ### Current State
 
-The frontend build configuration is **complete** and the API client layer is **implemented + tested**. Build config files (`vite.config.ts`, `tsconfig.json`, `tsconfig.node.json`, `vite-env.d.ts`, `vitest.config.ts`) now exist, all necessary packages are installed, and CI runs frontend checks (`tsc`, `vitest`, `build`). Every other file under `frontend/src/` still has only stub comments.
+The frontend build configuration is **complete** and the API client layer is **implemented + tested**. Build config files (`vite.config.ts`, `tsconfig.json`, `tsconfig.node.json`, `vite-env.d.ts`, `vitest.config.ts`) now exist, all necessary packages are installed, and CI runs frontend checks (`tsc`, `vitest`, `build`). Phases 1-8 are implemented and tested.
 
 | File | Status |
 |------|--------|
 | `src/api/client.ts`, `endpoints.ts` | **Implemented + tested** (17 vitest tests) |
-| `src/features/runs/` (api, types, hooks) | `types.ts` tested (15 tests); `api.ts` tested (12 tests); `hooks.ts` still stub |
-| `src/pages/RunsPage.tsx`, `RunDetailPage.tsx` | Empty stubs |
+| `src/features/runs/` (api, types, hooks) | `types.ts` tested (15 tests); `api.ts` tested (12 tests); `hooks.ts` implemented with TanStack Query (2 hooks) |
+| `src/pages/RunsPage.tsx` | **Implemented** — table, create modal, status badges, navigation to detail (3 vitest tests) |
+| `src/pages/RunDetailPage.tsx` | Empty stub |
 | `src/components/ui/*` | Implemented (8 components + 8 test files) — vitest + `tsc --noEmit` + build all pass |
-| `src/components/layout/*` (Sidebar, Topbar, PageHeader) | Empty stubs (3 files) |
-| `src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | Empty stubs |
-| `src/App.tsx` | Renders `<div>TrainGrid</div>` only |
+| `src/components/layout/*` (Sidebar, Topbar, PageHeader) | Implemented (3 components + 3 test files) |
+| `src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | Implemented — router, shell, providers |
+| `src/App.tsx` | Wired with `<RouterProvider>` |
+| `src/main.tsx` | Bootstraps app with `<Providers>` wrapper |
 | `package.json` | Has all necessary dependencies |
 | `vite.config.ts`, `tsconfig.json`, `tsconfig.node.json`, `vite-env.d.ts` | **Created** |
 
@@ -294,12 +296,12 @@ Each phase must produce working code validated by `./check.sh`. No phase depends
 | **3. Run Types** [x] | TypeScript types mirroring backend Pydantic: `RunStatus`, `RunConfig`, `RunCreate`, `Run` | `frontend/src/features/runs/types.ts` | `npm run build` + vitest |
 | **4. Run API** [x] | `createRun()`, `getRun()`, `getRuns()` functions | `frontend/src/features/runs/api.ts` | vitest (mock fetch) |
 | **5. UI Components** [x] | Build `Button`, `Badge` (status-colored), `Spinner`, `Table`, `Modal`, `Input`, `Select`, `Tabs` | `frontend/src/components/ui/*.tsx` | vitest (render + interaction) |
-| **6. Layout Components** | `Sidebar` (nav links), `Topbar` (app name), `PageHeader` (title+description) | `frontend/src/components/layout/*.tsx` | vitest (render) |
-| **7. Routing & Shell** | React Router routes, app shell with Sidebar+Topbar+`<Outlet>`, QueryClient provider | `frontend/src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | `npm run build` |
-| **8. Runs List Page** | `RunsPage`: table of all runs, create-run modal with form fields, status badges, row click → detail | `frontend/src/pages/RunsPage.tsx` | vitest + Playwright |
+| **6. Layout Components** [x] | `Sidebar` (nav links), `Topbar` (app name), `PageHeader` (title+description) | `frontend/src/components/layout/*.tsx` | vitest (render) |
+| **7. Routing & Shell** [x] | React Router routes, app shell with Sidebar+Topbar+`<Outlet>`, QueryClient provider | `frontend/src/app/routes.tsx`, `layout.tsx`, `providers.tsx` | `npm run build` |
+| **8. Runs List Page** [x] | `RunsPage`: table of all runs, create-run modal with form fields, status badges, row click → detail | `frontend/src/pages/RunsPage.tsx` | vitest + Playwright |
 | **9. Run Detail Page** | `RunDetailPage`: single run view, auto-polling every 3s while PENDING/RUNNING, config+metrics display | `frontend/src/pages/RunDetailPage.tsx` | vitest + Playwright |
 | **10. Dashboard Page** | `DashboardPage`: summary cards with run counts by status | `frontend/src/pages/DashboardPage.tsx` | vitest |
-| **11. App Wiring** | Wire providers + router in `main.tsx`, `App.tsx` renders the app | `frontend/src/main.tsx`, `frontend/src/App.tsx` | `npm run build` |
+| **11. App Wiring** [x] | Wire providers + router in `main.tsx`, `App.tsx` renders the app | `frontend/src/main.tsx`, `frontend/src/App.tsx` | `npm run build` |
 | **12. Containerization** | Multi-stage `Dockerfile` (node build → nginx serve), `frontend` service in `docker-compose.yml` (port 3000) | `frontend/Dockerfile`, `docker-compose.yml` | `docker compose up frontend` |
 | **13. Frontend Tests** | `vitest.config.ts`, unit tests for components/api/hooks, Playwright E2E for runs flow, integrate into `./check.sh` | `frontend/vitest.config.ts`, `frontend/src/**/*.test.tsx`, `frontend/e2e/` | `./check.sh` passes |
 
