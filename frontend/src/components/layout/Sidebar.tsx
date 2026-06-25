@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 interface SidebarProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 /**
