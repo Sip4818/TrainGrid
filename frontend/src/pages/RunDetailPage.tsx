@@ -117,7 +117,7 @@ export function RunDetailPage(): React.ReactElement {
   if (isLoading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-        <PageHeader title={`Run #${id}`} description="Loading run details\u2026" />
+        <PageHeader title={`Run #${id}`} description="Loading run details..." />
         <div
           style={{
             flex: 1,
