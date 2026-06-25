@@ -1,4 +1,4 @@
-﻿# AGENTS.md
+# AGENTS.md
 
 ## Project Overview
 TrainGrid is an ML orchestration platform for training,
@@ -70,57 +70,575 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 
 ## Logging & Exception Handling Plan
 
-Both custom logging and custom exceptions exist as **unused scaffolding**. This plan wires them into the actual application flow.
+> **Status:** Not started — ready for implementation.
 
-### Current Problems
+Both custom logging and custom exceptions exist as **unused scaffolding**. This plan wires them into the actual application flow across every layer: shared errors, API exception handlers, services, routers, and Celery workers.
 
-| Issue | Where | Impact |
-|-------|-------|--------|
-| `GET /runs/999999` returns `200 OK` with `{"error": "..."}` instead of `404` | `api/routers/runs.py` | Breaks HTTP semantics; clients get no status code signal |
-| `run_service.py` returns `None` instead of raising an exception | `api/services/run_service.py` | Every caller needs `if result is None` boilerplate |
-| `configure_logging()` is never called | `api/core/logging.py` | Dead code; no component logs anything |
-| No structured log format or request IDs | `api/core/logging.py` | Hard to trace actions across services |
+### Current State Audit
 
-### Phase 1: Custom Exceptions
-
-**Goal:** Consistent HTTP error responses with proper status codes.
-
-| Step | File | Change |
-|------|------|--------|
-| 1 | `shared/errors.py` | Move `TrainGridError` here as shared base class; keep `NotFoundError` |
-| 2 | `api/core/exceptions.py` | Add FastAPI exception handlers for `NotFoundError` (→ 404) and `TrainGridError` (→ 500), returning `{"detail": {"code": "...", "message": "..."}}` |
-| 3 | `api/core/exceptions.py` | Add `TrainingRunNotFoundError` (404) for run-specific lookups |
-| 4 | `api/services/run_service.py` | `get_run` raises `NotFoundError` / `TrainingRunNotFoundError` instead of returning `None` |
-| 5 | `api/routers/runs.py` | Remove inline `if run is None: return {"error": ...}` — let exception flow to handler |
-| 6 | `api/main.py` | Import and register exception handlers on the app |
-| 7 | `api/services/run_service.py` | `create_run` wraps Celery dispatch in try/except, raises on failure |
-| 8 | `workers/tasks/training_tasks.py` | Raise `TrainingRunNotFoundError` when run_id is missing from DB |
-
-**Result:** Every endpoint returns consistent `{"detail": {"code": "NOT_FOUND", "message": "..."}}` with the correct HTTP status code.
-
-### Phase 2: Custom Logging
-
-**Goal:** Every significant action is traceable via structured logs.
-
-| Step | File | Change |
-|------|------|--------|
-| 1 | `api/core/logging.py` | Add `get_logger(name)` helper; add `filename` and `lineno` to format; support structured `extra` fields |
-| 2 | `api/main.py` | Call `configure_logging()` at the top of `create_app()` |
-| 3 | `api/services/run_service.py` | `logger.info("Run created", extra={"run_id": ..., "experiment_id": ...})` on create |
-| 4 | `api/routers/runs.py` | `logger.info("GET /runs/{run_id}")` on requests |
-| 5 | `workers/tasks/training_tasks.py` | `logger.info` on start/complete, `logger.error` on failure (include `run_id`, `error` in extras) |
-| 6 | `api/core/exceptions.py` | `logger.exception()` in exception handlers to capture stack traces |
-
-**Result:** Run creation, training lifecycle events, and all errors appear in logs with context fields for filtering.
-
-### Impact on Existing Tests
-
-The `test_get_run_not_found` test in `tests/api/test_runs.py` must be updated: it currently expects `200` + `{"error": "Run not found"}`, but after Phase 1 it will get `404` + `{"detail": {"code": "NOT_FOUND", ...}}`.
+| File | Current State | Problem |
+|------|---------------|---------|
+| `shared/errors.py` | Defines `NotFoundError(Exception)` — never imported or used | Dead code |
+| `api/core/exceptions.py` | Defines `TrainGridError(Exception)` — never imported or used | Dead code; no hierarchy with `NotFoundError` |
+| `api/core/logging.py` | Defines `configure_logging()` — never called | Dead code; zero `logger` usage across entire backend |
+| `api/routers/runs.py` | `get_run` returns `200 OK` with `{"error": "Run not found"}` | Breaks HTTP semantics; frontend gets no status code signal |
+| `api/services/run_service.py` | `get_run()` returns `None`; no try/except on Celery dispatch | Callers need `if result is None` boilerplate; silent Celery failures |
+| `workers/tasks/training_tasks.py` | Not-found returns dict; generic `except Exception` with no logging | Training lifecycle is invisible; errors only stored in DB metrics column |
+| `api/main.py` | No `configure_logging()` call; no exception handlers registered | Logging and exception infrastructure completely disconnected |
 
 ### Dependencies
 
-- No new packages needed (Python `logging` is stdlib, FastAPI has built-in exception handler support)
-- Changes are scoped to existing files only — no new files created
+- **No new packages needed** — Python `logging` is stdlib, FastAPI has built-in exception handler support
+- **No new files created** — all changes are to existing files
+- **One test update required** — `test_get_run_not_found` currently expects `200`; will need `404`
+
+---
+
+### Phase 1: Custom Exceptions (7 Steps)
+
+**Goal:** Consistent HTTP error responses with proper status codes. Every error returns `{"detail": {"code": "ERROR_CODE", "message": "Human-readable message"}}` with the correct HTTP status code.
+
+#### Step 1.1 — Unify Exception Hierarchy in `shared/errors.py`
+
+Move `TrainGridError` here as the shared base class. Make `NotFoundError` inherit from it. Add `TrainingRunNotFoundError` for run-specific lookups.
+
+**Why `shared/errors.py`?** Because exceptions are raised in both the API layer (`api/services/`) and the worker layer (`workers/tasks/`). Placing them in `shared/` keeps both layers decoupled from each other.
+
+```python
+# backend/shared/errors.py
+
+
+class TrainGridError(Exception):
+    """Base exception for all TrainGrid application errors.
+
+    All custom exceptions inherit from this so a single FastAPI
+    exception handler can catch the entire hierarchy.
+    """
+
+
+class NotFoundError(TrainGridError):
+    """Raised when a requested resource does not exist."""
+
+
+class TrainingRunNotFoundError(NotFoundError):
+    """Raised when a training run ID does not exist in the database."""
+
+    def __init__(self, run_id: int | str) -> None:
+        self.run_id = run_id
+        super().__init__(f"Training run {run_id} not found")
+```
+
+#### Step 1.2 — Delete `TrainGridError` from `api/core/exceptions.py`, Add FastAPI Handlers
+
+Replace the current single-class file with FastAPI exception handler functions. These catch our custom exceptions and return JSON responses with proper HTTP status codes.
+
+**Why `api/core/exceptions.py`?** FastAPI exception handlers are API-layer concerns — they translate Python exceptions into HTTP responses. The worker layer never uses these handlers (Celery tasks don't return HTTP responses).
+
+```python
+# backend/api/core/exceptions.py
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+from backend.api.core.logging import get_logger
+from backend.shared.errors import NotFoundError, TrainGridError
+
+logger = get_logger(__name__)
+
+
+def register_exception_handlers(app: FastAPI) -> None:
+    """Register all custom exception handlers on the FastAPI app."""
+
+    @app.exception_handler(NotFoundError)
+    async def not_found_handler(request: Request, exc: NotFoundError) -> JSONResponse:
+        logger.warning("Resource not found: %s [%s %s]", exc, request.method, request.url.path)
+        return JSONResponse(
+            status_code=404,
+            content={
+                "detail": {
+                    "code": "NOT_FOUND",
+                    "message": str(exc),
+                }
+            },
+        )
+
+    @app.exception_handler(TrainGridError)
+    async def traingrid_error_handler(request: Request, exc: TrainGridError) -> JSONResponse:
+        logger.exception("Unhandled TrainGridError: %s [%s %s]", exc, request.method, request.url.path)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": {
+                    "code": "INTERNAL_ERROR",
+                    "message": str(exc),
+                }
+            },
+        )
+```
+
+#### Step 1.3 — Register Exception Handlers in `api/main.py`
+
+Import and call `register_exception_handlers(app)` after creating the FastAPI app instance.
+
+```diff
+ # backend/api/main.py
+
+ from fastapi import FastAPI
+ from fastapi.middleware.cors import CORSMiddleware
+
+ from backend.api.routers import health, runs
++from backend.api.core.exceptions import register_exception_handlers
+ from backend.infrastructure.database.session import engine, Base
+
+
+ def create_app() -> FastAPI:
+     # 1. Initialize Database Tables
+     Base.metadata.create_all(bind=engine)
+
+     # 2. Create App
+     app = FastAPI(title="TrainGrid API")
+
+     # Configure CORS middleware
+     app.add_middleware(
+         CORSMiddleware,
+         allow_origins=["*"],
+         allow_credentials=True,
+         allow_methods=["*"],
+         allow_headers=["*"],
+     )
+
+-    # 3. Register Routers
++    # 3. Register Exception Handlers
++    register_exception_handlers(app)
++
++    # 4. Register Routers
+     app.include_router(health.router)
+     app.include_router(runs.router)
+
+     return app
+```
+
+#### Step 1.4 — Update `api/services/run_service.py` to Raise Exceptions
+
+`get_run` raises `TrainingRunNotFoundError` instead of returning `None`. `create_run` wraps Celery dispatch in try/except to catch broker connection failures.
+
+```python
+# backend/api/services/run_service.py
+
+from sqlalchemy.orm import Session
+
+from backend.api.schemas.run import RunCreate
+from backend.infrastructure.database.models import RunModel
+from backend.shared.enums import RunStatus
+from backend.shared.errors import TrainingRunNotFoundError
+
+
+class RunService:
+    """
+    Application service for creating and retrieving training runs.
+
+    This service owns the workflow for the first vertical slice:
+    persist the run, commit it, and enqueue the background training task.
+    """
+
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def create_run(self, payload: RunCreate) -> RunModel:
+        run = RunModel(
+            experiment_id=payload.experiment_id,
+            status=RunStatus.PENDING,
+            config=payload.config,
+            metrics={},
+            artifact_path=None,
+        )
+
+        self.db.add(run)
+        self.db.commit()
+        self.db.refresh(run)
+
+        from backend.workers.tasks.training_tasks import start_training_run
+
+        try:
+            start_training_run.delay(str(run.id))
+        except Exception:
+            # Celery broker unavailable — run stays PENDING, will be retried
+            pass
+
+        return run
+
+    def get_run(self, run_id: int) -> RunModel:
+        run = self.db.get(RunModel, run_id)
+        if run is None:
+            raise TrainingRunNotFoundError(run_id)
+        return run
+
+    def get_runs(self) -> list[RunModel]:
+        return self.db.query(RunModel).all()
+```
+
+**Key changes:**
+- `get_run` return type changes from `RunModel | None` → `RunModel`
+- `get_run` raises `TrainingRunNotFoundError` instead of returning `None`
+- `create_run` wraps Celery dispatch in try/except (broker failures shouldn't crash the API)
+
+#### Step 1.5 — Simplify `api/routers/runs.py`
+
+Remove the inline `if run is None` check — the exception handler now catches `TrainingRunNotFoundError` and returns `404` automatically.
+
+```python
+# backend/api/routers/runs.py
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from backend.api.schemas.run import RunCreate
+from backend.api.services.run_service import RunService
+from backend.infrastructure.database.session import get_db
+
+router = APIRouter(prefix="/runs", tags=["runs"])
+
+
+@router.get("/{run_id}")
+def get_run(run_id: int, db: Session = Depends(get_db)):
+    """Retrieve a training run by its ID."""
+    service = RunService(db)
+    return service.get_run(run_id)
+
+
+@router.get("/")
+def get_runs(db: Session = Depends(get_db)):
+    """Retrieve all training runs."""
+    service = RunService(db)
+    return service.get_runs()
+
+
+@router.post("/")
+def create_run(payload: RunCreate, db: Session = Depends(get_db)):
+    """Create a new training run with the given configuration."""
+    service = RunService(db)
+    return service.create_run(payload)
+```
+
+**Key change:** `get_run` endpoint is 3 lines instead of 5. No more `if run is None: return {"error": ...}`.
+
+#### Step 1.6 — Update `workers/tasks/training_tasks.py` to Use `TrainingRunNotFoundError`
+
+Replace the silent `return {"status": "not_found"}` with a raised `TrainingRunNotFoundError`.
+
+```diff
+ # backend/workers/tasks/training_tasks.py (not-found section only)
+
+         run = db.query(RunModel).filter(RunModel.id == int(run_id)).first()
+         if not run:
+-            return {"run_id": run_id, "status": "not_found"}
++            raise TrainingRunNotFoundError(run_id)
+```
+
+Add the import at the top:
+```diff
++from backend.shared.errors import TrainingRunNotFoundError
+```
+
+#### Step 1.7 — Update `tests/api/test_runs.py`
+
+The `test_get_run_not_found` test must change from expecting `200` to expecting `404` with the new response format.
+
+```diff
+ # tests/api/test_runs.py
+
+ def test_get_run_not_found():
+     response = client.get("/runs/999999")
+-    assert response.status_code == 200
+-    assert response.json() == {"error": "Run not found"}
++    assert response.status_code == 404
++    data = response.json()
++    assert data["detail"]["code"] == "NOT_FOUND"
++    assert "999999" in data["detail"]["message"]
+```
+
+---
+
+### Phase 2: Structured Logging (6 Steps)
+
+**Goal:** Every significant action is traceable via structured logs with component names, filenames, line numbers, and contextual fields like `run_id`.
+
+#### Step 2.1 — Enhance `api/core/logging.py`
+
+Add a `get_logger(name)` helper, add `filename` and `lineno` to the format string, and configure the root logger once.
+
+```python
+# backend/api/core/logging.py
+
+import logging
+import sys
+
+
+def configure_logging(level: int = logging.INFO) -> None:
+    """Configure the root logger for the TrainGrid application.
+
+    Call once at application startup (in create_app or Celery worker init).
+    Uses a structured format with timestamp, level, component name,
+    filename, line number, and message.
+    """
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(
+        logging.Formatter(
+            fmt="%(asctime)s %(levelname)-8s %(name)-30s %(filename)s:%(lineno)d — %(message)s",
+            datefmt="%Y-%m-%dT%H:%M:%S",
+        )
+    )
+
+    root = logging.getLogger()
+    root.setLevel(level)
+
+    # Avoid duplicate handlers on repeated calls (e.g. in tests)
+    if not root.handlers:
+        root.addHandler(handler)
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Return a named logger for the given module.
+
+    Usage:
+        from backend.api.core.logging import get_logger
+        logger = get_logger(__name__)
+        logger.info("Something happened", extra={"run_id": 42})
+    """
+    return logging.getLogger(name)
+```
+
+**Key decisions:**
+- Logs go to `stdout` (not a file) — Docker captures `stdout` and makes it available via `docker compose logs`.
+- Format includes `%(name)s` so you can filter by component (e.g. `backend.api.services.run_service`).
+- `get_logger(__name__)` gives each module its own named logger.
+
+#### Step 2.2 — Activate Logging in `api/main.py`
+
+Call `configure_logging()` at the very top of `create_app()`, before anything else runs.
+
+```diff
+ # backend/api/main.py
+
++from backend.api.core.logging import configure_logging, get_logger
+
+ def create_app() -> FastAPI:
++    # 0. Initialize Logging
++    configure_logging()
++    logger = get_logger(__name__)
++    logger.info("Starting TrainGrid API")
++
+     # 1. Initialize Database Tables
+     Base.metadata.create_all(bind=engine)
+```
+
+#### Step 2.3 — Add Logging to `api/routers/runs.py`
+
+Log each incoming request with relevant context.
+
+```diff
+ # backend/api/routers/runs.py
+
++from backend.api.core.logging import get_logger
++
++logger = get_logger(__name__)
++
+
+ @router.get("/{run_id}")
+ def get_run(run_id: int, db: Session = Depends(get_db)):
+     """Retrieve a training run by its ID."""
++    logger.info("GET /runs/%s", run_id)
+     service = RunService(db)
+     return service.get_run(run_id)
+
+ @router.get("/")
+ def get_runs(db: Session = Depends(get_db)):
+     """Retrieve all training runs."""
++    logger.info("GET /runs/")
+     service = RunService(db)
+     return service.get_runs()
+
+ @router.post("/")
+ def create_run(payload: RunCreate, db: Session = Depends(get_db)):
+     """Create a new training run with the given configuration."""
++    logger.info("POST /runs/ experiment_id=%s", payload.experiment_id)
+     service = RunService(db)
+     return service.create_run(payload)
+```
+
+#### Step 2.4 — Add Logging to `api/services/run_service.py`
+
+Log business logic events: run creation, Celery dispatch success/failure, and run lookups.
+
+```diff
+ # backend/api/services/run_service.py
+
++from backend.api.core.logging import get_logger
++
++logger = get_logger(__name__)
++
+
+ def create_run(self, payload: RunCreate) -> RunModel:
+     ...
+     self.db.refresh(run)
++    logger.info("Run created: run_id=%s experiment_id=%s", run.id, run.experiment_id)
+
+     try:
+         start_training_run.delay(str(run.id))
++        logger.info("Celery task dispatched: run_id=%s", run.id)
+     except Exception:
++        logger.exception("Failed to dispatch Celery task: run_id=%s", run.id)
+         pass
+
+     return run
+
+ def get_run(self, run_id: int) -> RunModel:
+     run = self.db.get(RunModel, run_id)
+     if run is None:
++        logger.warning("Run not found: run_id=%s", run_id)
+         raise TrainingRunNotFoundError(run_id)
+     return run
+```
+
+#### Step 2.5 — Add Logging to `workers/tasks/training_tasks.py`
+
+Log the full training lifecycle: task start, status transitions, completion, and failure with traceback.
+
+```python
+# backend/workers/tasks/training_tasks.py (full replacement)
+
+import logging
+import os
+from datetime import datetime
+
+from backend.workers.celery_app import celery_app
+from backend.infrastructure.database.session import SessionLocal
+from backend.infrastructure.database.models import RunModel
+from backend.shared.enums import RunStatus
+from backend.shared.errors import TrainingRunNotFoundError
+from backend.trainers.sklearn.config import RandomForestClassifierConfig
+from backend.trainers.sklearn.trainer import RandomForestClassifierTrainer
+
+logger = logging.getLogger(__name__)
+
+
+@celery_app.task(name="training.start_run")
+def start_training_run(run_id: str) -> dict[str, str]:
+    logger.info("Task received: run_id=%s", run_id)
+    db = SessionLocal()
+    try:
+        run = db.query(RunModel).filter(RunModel.id == int(run_id)).first()
+        if not run:
+            logger.error("Run not found in DB: run_id=%s", run_id)
+            raise TrainingRunNotFoundError(run_id)
+
+        logger.info("Starting training: run_id=%s", run_id)
+        run.status = RunStatus.RUNNING  # type: ignore[assignment]
+        run.started_at = datetime.utcnow()  # type: ignore[assignment]
+        db.commit()
+
+        config_data = run.config
+        rf_config = RandomForestClassifierConfig(**config_data)
+
+        trainer = RandomForestClassifierTrainer(config=rf_config)
+        trainer.train()
+        metrics = trainer.evaluate()
+        logger.info("Training completed: run_id=%s metrics=%s", run_id, metrics)
+
+        os.makedirs("artifacts", exist_ok=True)
+        artifact_path = f"artifacts/model_{run_id}.joblib"
+        trainer.save(artifact_path)
+
+        run.metrics = metrics  # type: ignore[assignment]
+        run.artifact_path = artifact_path  # type: ignore[assignment]
+        run.status = RunStatus.COMPLETED  # type: ignore[assignment]
+        run.finished_at = datetime.utcnow()  # type: ignore[assignment]
+        db.commit()
+
+        logger.info("Run completed successfully: run_id=%s artifact=%s", run_id, artifact_path)
+        return {"run_id": run_id, "status": "completed"}
+
+    except Exception as e:
+        logger.exception("Training failed: run_id=%s error=%s", run_id, e)
+        run = db.query(RunModel).filter(RunModel.id == int(run_id)).first()
+        if run:
+            run.status = RunStatus.FAILED  # type: ignore[assignment]
+            run.finished_at = datetime.utcnow()  # type: ignore[assignment]
+            run.metrics = {"error": str(e)}  # type: ignore[assignment]
+            db.commit()
+        return {"run_id": run_id, "status": "failed", "error": str(e)}
+    finally:
+        db.close()
+```
+
+**Key additions:**
+- `logger.info` at task receipt, training start, training completion
+- `logger.exception` on failure (automatically includes the full traceback)
+- `logger.error` when run_id is not found in DB
+
+#### Step 2.6 — Add Logging to Exception Handlers in `api/core/exceptions.py`
+
+Already included in Step 1.2 above — the `not_found_handler` uses `logger.warning()` and the `traingrid_error_handler` uses `logger.exception()` to capture full stack traces.
+
+---
+
+### Phase 3: Test Updates (1 Step)
+
+#### Step 3.1 — Update `tests/api/test_runs.py`
+
+Already detailed in Step 1.7 above. Summary of all test changes:
+
+| Test | Before | After |
+|------|--------|-------|
+| `test_get_run_not_found` | Expects `200` + `{"error": "Run not found"}` | Expects `404` + `{"detail": {"code": "NOT_FOUND", "message": "..."}}` |
+| `test_create_run` | No change needed | No change needed |
+| `test_get_runs` | No change needed | No change needed |
+
+---
+
+### Execution Order
+
+1. **Phase 1 first** — exception hierarchy and handlers. This is the core architectural fix.
+2. **Phase 2 next** — logging. This layer builds on the exception handlers (handlers log errors).
+3. **Phase 3 last** — test updates. Run `./check.sh` to confirm everything passes.
+
+All three phases can be implemented in a single session. Run `./check.sh` after completing all phases to verify linting, types, and tests pass.
+
+### Expected Log Output After Implementation
+
+**API startup:**
+```
+2026-06-25T16:00:00 INFO     backend.api.main                main.py:12 — Starting TrainGrid API
+```
+
+**Successful run creation:**
+```
+2026-06-25T16:01:00 INFO     backend.api.routers.runs         runs.py:25 — POST /runs/ experiment_id=1
+2026-06-25T16:01:00 INFO     backend.api.services.run_service run_service.py:34 — Run created: run_id=10 experiment_id=1
+2026-06-25T16:01:00 INFO     backend.api.services.run_service run_service.py:38 — Celery task dispatched: run_id=10
+2026-06-25T16:01:01 INFO     backend.workers.tasks.training_tasks training_tasks.py:19 — Task received: run_id=10
+2026-06-25T16:01:01 INFO     backend.workers.tasks.training_tasks training_tasks.py:26 — Starting training: run_id=10
+2026-06-25T16:01:02 INFO     backend.workers.tasks.training_tasks training_tasks.py:35 — Training completed: run_id=10 metrics={'accuracy': 1.0}
+2026-06-25T16:01:02 INFO     backend.workers.tasks.training_tasks training_tasks.py:44 — Run completed successfully: run_id=10 artifact=artifacts/model_10.joblib
+```
+
+**Failed run (e.g. bad dataset path):**
+```
+2026-06-25T16:02:00 INFO     backend.workers.tasks.training_tasks training_tasks.py:19 — Task received: run_id=11
+2026-06-25T16:02:00 INFO     backend.workers.tasks.training_tasks training_tasks.py:26 — Starting training: run_id=11
+2026-06-25T16:02:00 ERROR    backend.workers.tasks.training_tasks training_tasks.py:47 — Training failed: run_id=11 error=[Errno 2] No such file or directory: 'bad.csv'
+Traceback (most recent call last):
+  File "backend/workers/tasks/training_tasks.py", line 32, in start_training_run
+    ...
+FileNotFoundError: [Errno 2] No such file or directory: 'bad.csv'
+```
+
+**404 on unknown run:**
+```
+2026-06-25T16:03:00 INFO     backend.api.routers.runs         runs.py:14 — GET /runs/999
+2026-06-25T16:03:00 WARNING  backend.api.services.run_service run_service.py:46 — Run not found: run_id=999
+2026-06-25T16:03:00 WARNING  backend.api.core.exceptions      exceptions.py:14 — Resource not found: Training run 999 not found [GET /runs/999]
+```
 
 
 ---
