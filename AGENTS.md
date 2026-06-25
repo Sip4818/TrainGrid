@@ -30,7 +30,7 @@ celery -A backend.workers.celery_app worker --loglevel=info
 - **Validation:** Before completing any task, you MUST run the project's quality checks by executing `./check.sh`.
 
 ## Current Status: Frontend Implementation & Backend Hardening (In Progress)
-> **Currently working on:** Frontend wiring (Phases 10-13) + Logging/Exception handling implementation
+> **Currently working on:** Logging/Exception handling implementation
 
 The first vertical slice (training a `RandomForestClassifier` on tabular CSV data) has a **functional but rough backend**. The frontend is **scaffolded only** — not yet wired to the backend.
 
@@ -64,7 +64,7 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 
 1. **[x] Runs list and detail views wired** — RunsPage (list+create), RunDetailPage (detail view with auto-polling)
 2. **[x] Frontend containerized** — Multi-stage `Dockerfile` + `frontend` service in `docker-compose.yml` on port 3000.
-3.  **Test coverage**: Write comprehensive tests across all layers — see [Test Coverage Plan](#test-coverage-plan).
+3. **[x] Test coverage**: Comprehensive unit tests (108, 18 files) + Playwright E2E tests for runs flow.
 
 ---
 
@@ -303,7 +303,7 @@ Each phase must produce working code validated by `./check.sh`. No phase depends
 | **10. Dashboard Page** | `DashboardPage`: summary cards with run counts by status | `frontend/src/pages/DashboardPage.tsx` | vitest |
 | **11. App Wiring** [x] | Wire providers + router in `main.tsx`, `App.tsx` renders the app | `frontend/src/main.tsx`, `frontend/src/App.tsx` | `npm run build` |
 | **12. Containerization** [x] | Multi-stage `Dockerfile` (node build → nginx serve), `frontend` service in `docker-compose.yml` (port 3000) | `frontend/Dockerfile`, `docker-compose.yml` | `docker compose up frontend` |
-| **13. Frontend Tests** | `vitest.config.ts`, unit tests for components/api/hooks, Playwright E2E for runs flow, integrate into `./check.sh` | `frontend/vitest.config.ts`, `frontend/src/**/*.test.tsx`, `frontend/e2e/` | `./check.sh` passes |
+| **13. Frontend Tests** [x] | `vitest.config.ts`, unit tests for components/api/hooks, Playwright E2E for runs flow, integrate into `./check.sh` | `frontend/vitest.config.ts`, `frontend/src/**/*.test.tsx`, `frontend/e2e/` | `./check.sh` passes |
 
 ### Critical Rules for Frontend Implementation
 
