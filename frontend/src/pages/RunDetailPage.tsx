@@ -1,1 +1,3 @@
-// Run detail page will live here.
+export function RunDetailPage(): React.ReactElement {
+  return <div>Run Detail</div>;
+}
