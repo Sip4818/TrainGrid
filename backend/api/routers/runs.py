@@ -16,8 +16,6 @@ def get_run(run_id: int, db: Session = Depends(get_db)):
     """
     service = RunService(db)
     run = service.get_run(run_id)
-    if run is None:
-        return {"error": "Run not found"}
     return run
 
 
