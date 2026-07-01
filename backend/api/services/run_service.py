@@ -33,7 +33,9 @@ class RunService:
         self.db.add(run)
         self.db.commit()
         self.db.refresh(run)
-        logger.info("Run persisted run_id=%d experiment_id=%d", run.id, run.experiment_id)
+        logger.info(
+            "Run persisted run_id=%d experiment_id=%d", run.id, run.experiment_id
+        )
 
         from backend.workers.tasks.training_tasks import start_training_run
 
