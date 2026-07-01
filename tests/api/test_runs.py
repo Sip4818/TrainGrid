@@ -39,5 +39,7 @@ def test_get_runs():
 
 def test_get_run_not_found():
     response = client.get("/runs/999999")
-    assert response.status_code == 200
-    assert response.json() == {"error": "Run not found"}
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+    assert "not found" in data["detail"]["message"].lower()
