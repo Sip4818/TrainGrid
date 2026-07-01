@@ -3,9 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routers import health, runs
 from backend.infrastructure.database.session import engine, Base
+from backend.api.core.logging import configure_logging
+from backend.api.core.exceptions import register_exception_handlers
 
 
 def create_app() -> FastAPI:
+    # 0. Activate structured logging
+    configure_logging()
+
     # 1. Initialize Database Tables
     Base.metadata.create_all(bind=engine)
 
@@ -21,7 +26,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # 3. Register Routers
+    # 3. Register Exception Handlers
+    register_exception_handlers(app)
+
+    # 4. Register Routers
     app.include_router(health.router)
     app.include_router(runs.router)
 
