@@ -232,3 +232,4 @@ __marimo__/
 backend/datasets/*.csv
 backend/datasets/*.parquet
 backend/datasets/*.json
+frontend/test-results/
