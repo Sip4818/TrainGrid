@@ -76,7 +76,7 @@ Both custom logging and custom exceptions exist as **unused scaffolding** in the
 |------|---------------|---------|
 | `shared/errors.py` | Defines `TrainGridError` → `NotFoundError` → `TrainingRunNotFoundError` hierarchy | ✅ Done — step 1.1 |
 | `api/core/exceptions.py` | Defines `register_exception_handlers(app)` with 3 handlers (404, 500) | ✅ Done — step 1.2 |
-| `api/core/logging.py` | Defines `configure_logging()` — never called | Dead code; zero `logger` usage across entire backend |
+| `api/core/logging.py` | `get_logger()` helper + enhanced stdout format | ✅ Done — step 2.1 |
 | `api/routers/runs.py` | Simplified — no inline `if run is None` check | ✅ Done — steps 1.4/1.5 |
 | `api/services/run_service.py` | `get_run()` raises `TrainingRunNotFoundError`; Celery dispatch wrapped in try/except | ✅ Done — step 1.4 |
 | `workers/tasks/training_tasks.py` | Raises `TrainingRunNotFoundError` instead of silent dict | ✅ Done — step 1.6 |
@@ -104,11 +104,11 @@ Both custom logging and custom exceptions exist as **unused scaffolding** in the
 
 **Goal:** Every significant action is traceable via structured logs with component names, filenames, line numbers, and contextual fields like `run_id`.
 
-- [ ] 2.1 Enhance `api/core/logging.py` with `get_logger(name)` helper + stdout format (timestamp, level, name, filename, lineno)
-- [ ] 2.2 Activate logging in `api/main.py` — call `configure_logging()` at startup
-- [ ] 2.3 Add logging to `api/routers/runs.py` — log each endpoint call with context
-- [ ] 2.4 Add logging to `api/services/run_service.py` — log run creation, Celery dispatch, not-found warnings
-- [ ] 2.5 Add logging to `workers/tasks/training_tasks.py` — log task receipt, training start/complete/failure
+- [x] 2.1 Enhance `api/core/logging.py` with `get_logger(name)` helper + stdout format (timestamp, level, name, filename, lineno)
+- [x] 2.2 Activate logging in `api/main.py` — call `configure_logging()` at startup
+- [x] 2.3 Add logging to `api/routers/runs.py` — log each endpoint call with context
+- [x] 2.4 Add logging to `api/services/run_service.py` — log run creation, Celery dispatch, not-found warnings
+- [x] 2.5 Add logging to `workers/tasks/training_tasks.py` — log task receipt, training start/complete/failure
 
 ### Phase 3 — Validation (3 steps)
 
