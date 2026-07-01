@@ -80,7 +80,7 @@ Both custom logging and custom exceptions exist as **unused scaffolding** in the
 | `api/routers/runs.py` | `get_run` returns `200 OK` with `{"error": "Run not found"}` | Breaks HTTP semantics; frontend gets no status code signal |
 | `api/services/run_service.py` | `get_run()` returns `None`; no try/except on Celery dispatch | Callers need `if result is None` boilerplate; silent Celery failures |
 | `workers/tasks/training_tasks.py` | Not-found returns dict; generic `except Exception` with no logging | Training lifecycle is invisible; errors only stored in DB metrics column |
-| `api/main.py` | No `configure_logging()` call; no exception handlers registered | Logging and exception infrastructure completely disconnected |
+| `api/main.py` | Calls `configure_logging()` and `register_exception_handlers(app)` on startup | ✅ Done — step 1.3 |
 
 ### Dependencies
 
@@ -94,7 +94,7 @@ Both custom logging and custom exceptions exist as **unused scaffolding** in the
 
 - [x] 1.1 Unify exception hierarchy in `shared/errors.py`: `TrainGridError` → `NotFoundError` → `TrainingRunNotFoundError`
 - [x] 1.2 Replace `api/core/exceptions.py` with FastAPI handler functions (`register_exception_handlers(app)`)
-- [ ] 1.3 Register exception handlers in `api/main.py`
+- [x] 1.3 Register exception handlers in `api/main.py`
 - [ ] 1.4 Update `api/services/run_service.py`: `get_run` raises `TrainingRunNotFoundError`, `create_run` wraps Celery dispatch in try/except
 - [ ] 1.5 Simplify `api/routers/runs.py` — remove inline `if run is None` check (exception handler returns 404)
 - [ ] 1.6 Update `workers/tasks/training_tasks.py` — raise `TrainingRunNotFoundError` instead of returning `{"status": "not_found"}`
