@@ -23,7 +23,7 @@ export function RunsPage(): React.ReactElement {
   const createRunMutation = useCreateRun();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [experimentId, setExperimentId] = useState("1");
-  const [datasetPath, setDatasetPath] = useState("dataset.csv");
+  const [datasetPath, setDatasetPath] = useState("backend/datasets/sample.csv");
   const [targetColumn, setTargetColumn] = useState("target");
   const [featureColumns, setFeatureColumns] = useState("feature1,feature2");
   const [nEstimators, setNEstimators] = useState("100");
