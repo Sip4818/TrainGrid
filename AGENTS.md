@@ -74,8 +74,8 @@ Both custom logging and custom exceptions exist as **unused scaffolding** in the
 
 | File | Current State | Problem |
 |------|---------------|---------|
-| `shared/errors.py` | Defines `NotFoundError(Exception)` — never imported or used | Dead code |
-| `api/core/exceptions.py` | Defines `TrainGridError(Exception)` — never imported or used | Dead code; no hierarchy with `NotFoundError` |
+| `shared/errors.py` | Defines `TrainGridError` → `NotFoundError` → `TrainingRunNotFoundError` hierarchy | ✅ Done — step 1.1 |
+| `api/core/exceptions.py` | Defines `register_exception_handlers(app)` with 3 handlers (404, 500) | ✅ Done — step 1.2 |
 | `api/core/logging.py` | Defines `configure_logging()` — never called | Dead code; zero `logger` usage across entire backend |
 | `api/routers/runs.py` | `get_run` returns `200 OK` with `{"error": "Run not found"}` | Breaks HTTP semantics; frontend gets no status code signal |
 | `api/services/run_service.py` | `get_run()` returns `None`; no try/except on Celery dispatch | Callers need `if result is None` boilerplate; silent Celery failures |
@@ -92,8 +92,8 @@ Both custom logging and custom exceptions exist as **unused scaffolding** in the
 
 **Goal:** Consistent HTTP error responses with proper status codes. Every error returns `{"detail": {"code": "ERROR_CODE", "message": "Human-readable message"}}` with the correct HTTP status code.
 
-- [ ] 1.1 Unify exception hierarchy in `shared/errors.py`: `TrainGridError` → `NotFoundError` → `TrainingRunNotFoundError`
-- [ ] 1.2 Replace `api/core/exceptions.py` with FastAPI handler functions (`register_exception_handlers(app)`)
+- [x] 1.1 Unify exception hierarchy in `shared/errors.py`: `TrainGridError` → `NotFoundError` → `TrainingRunNotFoundError`
+- [x] 1.2 Replace `api/core/exceptions.py` with FastAPI handler functions (`register_exception_handlers(app)`)
 - [ ] 1.3 Register exception handlers in `api/main.py`
 - [ ] 1.4 Update `api/services/run_service.py`: `get_run` raises `TrainingRunNotFoundError`, `create_run` wraps Celery dispatch in try/except
 - [ ] 1.5 Simplify `api/routers/runs.py` — remove inline `if run is None` check (exception handler returns 404)
