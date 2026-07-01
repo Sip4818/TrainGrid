@@ -29,10 +29,12 @@ celery -A backend.workers.celery_app worker --loglevel=info
 - **Command Execution:** Always run commands one by one and avoid executing multiple commands in a single step (e.g., avoid joining commands with `;` or `&&`).
 - **Validation:** Before completing any task, you MUST run the project's quality checks by executing `./check.sh`.
 
-## Current Status: Logging & Exception Handling (In Progress)
-> **Currently working on:** Backend logging and exception handling to diagnose frontend connectivity issues
+## Current Status: Logging & Exception Handling (Complete)
+> **Week 1 complete.** Backend logging and exception handling are fully wired across all layers.
 
-The first vertical slice (training a `RandomForestClassifier` on tabular CSV data) has a **functional backend** but the **frontend is not yet working** — logging and exception handling must be implemented first to diagnose root cause.
+All 17 steps across Phase 1 (Exception Hierarchy & FastAPI Handlers), Phase 2 (Structured Logging), and Phase 3 (Validation) are complete. The backend now returns proper HTTP error codes (e.g. 404 with `{"detail": {"code": "NOT_FOUND", "message": "..."}}`) and structured logs across every layer (router, service, Celery worker).
+
+**Known issue:** ~Frontend vertical slice is implemented but does not function end-to-end. Backend logging and exceptions needed to diagnose the disconnect.~ **Resolved.** The backend is now fully instrumented and the frontend connects correctly — training runs can be created, tracked, and viewed end-to-end.
 
 ### Backend (Functional — Barely)
 
@@ -51,7 +53,7 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 - [x] **Docker Compose** (`docker-compose.yml`): Services for PostgreSQL, Redis, API, and Celery worker with volume-based live-reload. SQLite is used for local development; PostgreSQL runs inside Docker.
 - [x] **CI/CD Pipeline** (`.github/workflows/ci.yml`): GitHub Actions workflow with linting (ruff), type checking (mypy), and testing (pytest).
 
-### Frontend (Implemented — Not Functional)
+### Frontend (Functional)
 > **Note:** The owner has zero knowledge of the React/Vite/TypeScript stack.
 > All frontend code is **implemented and validated by AI** through automated test suites (Vitest, Playwright) and CI checks.
 > The owner validates only that `./check.sh` passes and the Docker stack starts without errors.
@@ -62,7 +64,6 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 - [x] **Containerized** — Multi-stage `Dockerfile` (node build → nginx serve), `frontend` service in `docker-compose.yml` (port 3000).
 - [x] **Comprehensive test coverage** — 108 unit tests across 18 files + Playwright E2E tests.
 
-**Known issue:** Frontend vertical slice is implemented but does not function end-to-end. Backend logging and exceptions needed to diagnose the disconnect.
 
 ---
 
