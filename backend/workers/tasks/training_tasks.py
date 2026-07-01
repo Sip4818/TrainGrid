@@ -5,6 +5,7 @@ from backend.workers.celery_app import celery_app
 from backend.infrastructure.database.session import SessionLocal
 from backend.infrastructure.database.models import RunModel
 from backend.shared.enums import RunStatus
+from backend.shared.errors import TrainingRunNotFoundError
 from backend.trainers.sklearn.config import RandomForestClassifierConfig
 from backend.trainers.sklearn.trainer import RandomForestClassifierTrainer
 
@@ -15,7 +16,7 @@ def start_training_run(run_id: str) -> dict[str, str]:
     try:
         run = db.query(RunModel).filter(RunModel.id == int(run_id)).first()
         if not run:
-            return {"run_id": run_id, "status": "not_found"}
+            raise TrainingRunNotFoundError(int(run_id))
 
         run.status = RunStatus.RUNNING  # type: ignore[assignment]
         run.started_at = datetime.utcnow()  # type: ignore[assignment]
