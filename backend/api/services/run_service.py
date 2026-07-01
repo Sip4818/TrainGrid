@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from backend.api.schemas.run import RunCreate
 from backend.infrastructure.database.models import RunModel
 from backend.shared.enums import RunStatus
+from backend.shared.errors import TrainingRunNotFoundError
 
 
 class RunService:
@@ -31,11 +32,20 @@ class RunService:
 
         from backend.workers.tasks.training_tasks import start_training_run
 
-        start_training_run.delay(str(run.id))
+        try:
+            start_training_run.delay(str(run.id))
+        except Exception as exc:
+            run.status = RunStatus.FAILED  # type: ignore[assignment]
+            run.metrics = {"error": f"Failed to enqueue training task: {exc}"}  # type: ignore[assignment]
+            self.db.commit()
+
         return run
 
-    def get_run(self, run_id: int) -> RunModel | None:
-        return self.db.get(RunModel, run_id)
+    def get_run(self, run_id: int) -> RunModel:
+        run = self.db.get(RunModel, run_id)
+        if run is None:
+            raise TrainingRunNotFoundError(run_id)
+        return run
 
     def get_runs(self) -> list[RunModel]:
         return self.db.query(RunModel).all()
