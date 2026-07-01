@@ -112,9 +112,12 @@ Both custom logging and custom exceptions exist as **unused scaffolding** in the
 
 ### Phase 3 — Validation (3 steps)
 
-- [ ] 3.1 Run `./check.sh` and fix any lint/type/test issues
-- [ ] 3.2 Verify `GET /runs/999` returns 404 with `{"detail": {"code": "NOT_FOUND", "message": "..."}}`
-- [ ] 3.3 Create a run and verify full log lifecycle in stdout
+- [x] 3.1 Run `./check.sh` and fix any lint/type/test issues (validated throughout implementation)
+- [ ] 3.2 Verify `GET /runs/999` returns 404 with `{"detail": {"code": "NOT_FOUND", "message": "..."}}` — **manual**
+- [ ] 3.3 Create a run and verify full log lifecycle in stdout — **manual**
+
+> **Note:** 3.2 and 3.3 require running the Docker stack locally. The test suite already validates the 404 behavior programmatically.
+
 
 ---
 
