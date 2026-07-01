@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from backend.shared.errors import TrainGridError, NotFoundError
 
 
-async def handle_traingrid_error(request: Request, exc: TrainGridError) -> JSONResponse:
+async def handle_traingrid_error(request: Request, exc: Exception) -> JSONResponse:
     """Catch any TrainGridError and return a 500 with error details."""
     return JSONResponse(
         status_code=500,
@@ -12,7 +12,7 @@ async def handle_traingrid_error(request: Request, exc: TrainGridError) -> JSONR
     )
 
 
-async def handle_not_found(request: Request, exc: NotFoundError) -> JSONResponse:
+async def handle_not_found(request: Request, exc: Exception) -> JSONResponse:
     """Catch any NotFoundError and return a 404."""
     return JSONResponse(
         status_code=404,
@@ -25,7 +25,10 @@ async def handle_generic_error(request: Request, exc: Exception) -> JSONResponse
     return JSONResponse(
         status_code=500,
         content={
-            "detail": {"code": "INTERNAL_ERROR", "message": "An unexpected error occurred"}
+            "detail": {
+                "code": "INTERNAL_ERROR",
+                "message": "An unexpected error occurred",
+            }
         },
     )
 
