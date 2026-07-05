@@ -57,3 +57,116 @@ The backend is fully instrumented and the frontend connects correctly — traini
 - **Training Logic:** Keep it inside the `trainers/` directory, decoupled from the API and Workers.
 - **Commits:** Use `feat:`, `fix:`, or `docs:` prefixes. Push changes after successful implementation of a component.
 - **AI Commits:** If a commit is made by AI or with AI assistance, the commit message must include the AI model name and state that it was generated with AI assistance. Format: `feat: description [generated with ai assistant]`. This ensures traceability of AI-generated contributions.
+
+---
+
+## Reading Guide
+
+Read the project in this order to build understanding from the top down — architecture first, then data, then request flow, then training logic. Each stage unlocks the next.
+
+---
+
+### Stage 1 — Big Picture (Start Here)
+
+Understand what the system does and how all its pieces connect before touching any code.
+
+| File | What to look for |
+|------|-----------------|
+| `docs/architecture.md` | Layer diagram, responsibility boundaries, how API / Worker / Trainer / DB relate to each other |
+| `docs/api-reference.md` | What endpoints exist, what they accept, what they return |
+| `docker-compose.yml` | What services run (PostgreSQL, Redis, API, Worker, Frontend) and how they're wired together |
+| `check.sh` | What quality gates exist (lint, types, tests) — these define "done" |
+
+---
+
+### Stage 2 — The Foundation (Shared Primitives)
+
+These files are imported everywhere. Understanding them means you'll never be confused by a type, enum, or error you see elsewhere.
+
+| File | What to look for |
+|------|-----------------|
+| `backend/shared/enums.py` | `RunStatus` enum — the possible states a training run goes through (`PENDING`, `RUNNING`, `COMPLETED`, `FAILED`) |
+| `backend/shared/errors.py` | The exception hierarchy: `TrainGridError` → `NotFoundError` → `TrainingRunNotFoundError`. Every error in the system traces back here |
+| `backend/shared/types.py` | Any shared type aliases used across layers |
+| `backend/shared/constants.py` | Global constants |
+
+---
+
+### Stage 3 — Data Layer (What Gets Persisted)
+
+Before reading any business logic, know exactly what shape the data takes in the database.
+
+| File | What to look for |
+|------|-----------------|
+| `backend/infrastructure/database/models.py` | The `Run` SQLAlchemy model — every column, its type, and what it represents |
+| `backend/infrastructure/database/session.py` | How the DB session is created and how SQLite (local) vs PostgreSQL (Docker) is selected |
+| `backend/api/schemas/` | Pydantic schemas (`RunBase`, `RunCreate`, `RunResponse`) — the difference between what the API accepts vs what it returns |
+
+**Key insight:** The SQLAlchemy model = database shape. The Pydantic schema = API contract. They are deliberately kept separate.
+
+---
+
+### Stage 4 — The Full Request Flow (Critical Path)
+
+Trace a single request — "start a training run" — end-to-end through every layer. Read these files in order:
+
+1. **`backend/api/main.py`** — App entry point. See how the DB, logging, exception handlers, and routers are all registered at startup.
+2. **`backend/api/core/logging.py`** — How `get_logger()` works and what format structured logs take.
+3. **`backend/api/core/exceptions.py`** — How `register_exception_handlers()` maps custom exceptions to HTTP status codes automatically.
+4. **`backend/api/routers/runs.py`** — The `POST /runs` and `GET /runs/{id}` endpoints. Notice how thin they are — no business logic here.
+5. **`backend/api/services/run_service.py`** — Where business logic lives. `create_run()` writes to DB and dispatches a Celery task. `get_run()` raises `TrainingRunNotFoundError` if missing.
+6. **`backend/workers/celery_app.py`** — How Celery is configured and connected to Redis.
+7. **`backend/workers/tasks/training_tasks.py`** — The async task that receives the run ID, loads the trainer, runs training, and writes results back to DB.
+
+**The flow in one line:**
+```
+HTTP Request → Router → Service → DB write + Celery dispatch → Worker picks up task → Trainer runs → DB updated with result
+```
+
+---
+
+### Stage 5 — Training Logic (The Core ML Layer)
+
+Now that you understand how a training job is triggered, see how the actual model training works.
+
+| File | What to look for |
+|------|-----------------|
+| `backend/trainers/base.py` | The `BaseTrainer` abstract class — the interface every trainer must implement |
+| `backend/trainers/registry.py` | How trainers are looked up by name (e.g. `"random_forest"` → `RandomForestTrainer`) |
+| `backend/trainers/configs/` | How model hyperparameters are defined without hardcoding |
+| `backend/trainers/sklearn/trainer.py` | The only fully implemented trainer. Read this to understand the `train()` method contract |
+
+**Key insight:** Adding a new model type means subclassing `BaseTrainer` and registering it in `registry.py` — nothing else changes.
+
+---
+
+### Bonus — Frontend & Tests
+
+Only read these after the backend flow is clear.
+
+| File | What to look for |
+|------|-----------------|
+| `frontend/src/api/` | `apiClient` fetch wrapper, `ApiError` class, endpoint constants — the frontend's contract with the backend |
+| `frontend/src/features/` | Feature-based modules (runs list, run detail) — where UI logic lives |
+| `frontend/src/pages/` | Page components that wire features into routes |
+| `tests/api/test_runs.py` | End-to-end API tests using `TestClient` — the best single-file summary of how the API behaves |
+
+---
+
+### Reading Order Summary
+
+```
+docs/architecture.md
+    ↓
+shared/ (enums → errors → types)
+    ↓
+infrastructure/database/ (models → session)
+    ↓
+api/main.py → core/ → routers/runs.py → services/run_service.py
+    ↓
+workers/celery_app.py → workers/tasks/training_tasks.py
+    ↓
+trainers/base.py → trainers/registry.py → trainers/sklearn/trainer.py
+    ↓
+frontend/src/api/ → frontend/src/features/ → tests/api/test_runs.py
+```
