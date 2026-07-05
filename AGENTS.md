@@ -78,6 +78,20 @@ Before we scale horizontally by adding new models, we should make the existing v
 - **3.2: Write Unit and Integration Tests for Registry & Storage**
   - **Why:** We must verify robust registration/resolution, configuration validation errors, and successful/failed artifact saving/loading.
 
+### Phase 4 — Frontend Status Filtering (Dashboard to Runs List)
+- **4.1: Update Dashboard Summary Card Navigation**
+  - **Why:** Clicking status summary cards on the dashboard should not just navigate to `/runs` unconditionally. It should pass the selected status as a query parameter (e.g., `/runs?status=failed`), except for the "Total" card.
+- **4.2: Parse Status Query Parameter in RunsPage**
+  - **Why:** The `RunsPage` needs to extract the active status filter from the URL query parameters using React Router's `useSearchParams` hook.
+
+### Phase 5 — Interactive Runs List Filter UI & Testing
+- **5.1: Filter the Runs Table Data Source**
+  - **Why:** The frontend table needs to only render runs matching the parsed status filter.
+- **5.2: Add a Filter Dropdown Selector to the Runs Page**
+  - **Why:** Users need a simple select box in the Runs Page header to clear, inspect, or modify the active status filter directly without having to navigate back to the dashboard.
+- **5.3: Update Frontend Unit and E2E Tests**
+  - **Why:** We must verify navigation, search parameter parsing, filtering behavior, and verify the frontend build and test suites pass successfully.
+
 ---
 
 ## Development Workflows
