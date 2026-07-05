@@ -52,6 +52,34 @@ The backend is fully instrumented and the frontend connects correctly — traini
 
 ---
 
+## Improvement Plan: Clean and Robust Vertical Slice
+
+Before we scale horizontally by adding new models, we should make the existing vertical slice clean and robust. Currently, several structural abstractions (like the trainer registry and artifact storage) are bypassed or unused. Addressing these first makes adding new models trivial.
+
+### Phase 1 — Trainer Registry & Error Handling Integration
+- **1.1: Add `TrainerNotFoundError` to Exception Hierarchy**
+  - **Why:** If the user specifies an invalid trainer name in the run configuration, the system should raise a structured `TrainerNotFoundError` rather than throwing a generic `KeyError`. This error should map to a clean HTTP 404/422 status code in FastAPI exception handlers.
+- **1.2: Register `RandomForestClassifierTrainer` in `TrainerRegistry`**
+  - **Why:** The `TrainerRegistry` is currently empty and `RandomForestClassifierTrainer` is never registered. We need to initialize/register it on startup so that it can be resolved dynamically.
+- **1.3: Update Run Schema to Validate `trainer_name`**
+  - **Why:** The FastAPI endpoint accepts an arbitrary `config` dict. We must validate that a valid `trainer_name` (e.g., `"random_forest"`) is provided, either in the root of the request payload or as a required key within `config`, so we can fail early on unsupported models.
+- **1.4: Integrate `TrainerRegistry` dynamically in Celery Worker**
+  - **Why:** The Celery task currently hardcodes the initialization of `RandomForestClassifierTrainer`. We must refactor it to resolve the trainer class dynamically from the `TrainerRegistry` based on the specified `trainer_name`, allowing new models (like XGBoost) to work automatically once registered.
+
+### Phase 2 — Proper Storage Abstraction (Artifact Store)
+- **2.1: Implement `LocalArtifactStore`**
+  - **Why:** Storing trained models using raw `os.makedirs` and hardcoded paths inside the Celery worker bypasses the infrastructure abstraction. We need to implement `LocalArtifactStore` subclassing the abstract `ArtifactStore`.
+- **2.2: Refactor Training Tasks to use `ArtifactStore`**
+  - **Why:** Worker tasks should delegate artifact loading/saving to the `ArtifactStore`. This keeps worker logic decoupled from filesystem implementation details, allowing us to swap the storage backend to S3 (`S3Store`) in the future without changing task code.
+
+### Phase 3 — Domain Validation & Testing
+- **3.1: Add Basic Domain Validation (Experiment Exists)**
+  - **Why:** Currently, runs can be created with arbitrary `experiment_id` values. Adding a stub check establishes correct service-layer validation boundaries for relational entities.
+- **3.2: Write Unit and Integration Tests for Registry & Storage**
+  - **Why:** We must verify robust registration/resolution, configuration validation errors, and successful/failed artifact saving/loading.
+
+---
+
 ## Development Workflows
 - **API Changes:** Always create both a SQLAlchemy model and a Pydantic schema (Base, Create, and Response) to maintain separation of concerns.
 - **Training Logic:** Keep it inside the `trainers/` directory, decoupled from the API and Workers.
