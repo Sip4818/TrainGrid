@@ -197,18 +197,46 @@ Only read these after the backend flow is clear.
 
 ### Reading Order Summary
 
-```
-docs/architecture.md
-    ↓
-shared/ (enums → errors → types)
-    ↓
-infrastructure/database/ (models → session)
-    ↓
-api/main.py → core/ → routers/runs.py → services/run_service.py
-    ↓
-workers/celery_app.py → workers/tasks/training_tasks.py
-    ↓
-trainers/base.py → trainers/registry.py → trainers/sklearn/trainer.py
-    ↓
-frontend/src/api/ → frontend/src/features/ → tests/api/test_runs.py
-```
+---
+
+## August 2026 Monthly Plan — "Vertical Slice to Multi-Model Platform"
+
+### Week 1 — Project Understanding
+- Read `docs/architecture.md`, `docs/api-reference.md`, and AGENTS.md reading guide (stages 1–5) in order
+- Explore `backend/shared/`, `backend/infrastructure/database/`, `backend/api/`, `backend/workers/`, `backend/trainers/`
+- Run backend (`uvicorn`), worker (`celery`), and frontend locally
+- Explore `frontend/` structure and `tests/`
+- Run `./check.sh` to see current quality gates
+- Note any unclear areas to address in Week 2
+
+### Week 2 — Complete Phases 1–3 (Backend Improvements)
+- Add `TrainerNotFoundError` to exception hierarchy
+- Register `RandomForestClassifierTrainer` in `TrainerRegistry`
+- Update run schema to validate `trainer_name`
+- Integrate `TrainerRegistry` dynamically in Celery worker
+- Implement `LocalArtifactStore`
+- Refactor training tasks to use `ArtifactStore`
+- Add experiment existence validation
+- Write unit/integration tests for registry + storage
+
+### Week 3 — Complete Phases 4–5 (Frontend Filtering + Testing)
+- Update dashboard summary cards to pass `?status=` query param
+- Parse status filter from URL in `RunsPage`
+- Filter runs table by active status
+- Add filter dropdown selector to runs page
+- Update frontend unit tests + Playwright E2E tests
+- Run full `./check.sh` — green across lint, types, tests
+
+### Week 4 — Add XGBoost Trainer + Model Comparison
+- Implement `XGBoostClassifierTrainer` (subclass `BaseTrainer`, config, register in registry)
+- Add `GET /runs/compare` endpoint (accept multiple run IDs, return metrics side-by-side)
+- Add comparison UI page in frontend (select runs, view metrics table)
+- Tests for XGBoost trainer + comparison endpoint + frontend comparison view
+
+### Week 5 — Experiment Management Hierarchy
+- Implement `Project` and `Experiment` SQLAlchemy models + Pydantic schemas
+- Implement CRUD `/projects` and `/experiments` endpoints
+- Update `POST /runs` to validate `experiment_id` against real experiments
+- Frontend: Projects list → Experiments list → Runs list drill-down navigation
+- Tests for new endpoints + frontend navigation
+- Final `./check.sh` + Docker compose smoke test
