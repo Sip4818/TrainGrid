@@ -1,5 +1,6 @@
 from typing import TypeAlias
 
+from backend.shared.errors import TrainerNotFoundError
 from backend.trainers.base import BaseTrainer
 
 TrainerClass: TypeAlias = type[BaseTrainer]
@@ -13,7 +14,10 @@ class TrainerRegistry:
         self._trainers[name] = trainer_class
 
     def get(self, name: str) -> TrainerClass:
-        return self._trainers[name]
+        try:
+            return self._trainers[name]
+        except KeyError:
+            raise TrainerNotFoundError(name) from None
 
 
 trainer_registry = TrainerRegistry()

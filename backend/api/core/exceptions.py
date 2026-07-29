@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from backend.shared.errors import NotFoundError, TrainGridError
+from backend.shared.errors import NotFoundError, TrainerNotFoundError, TrainGridError
 
 
 async def handle_traingrid_error(request: Request, exc: Exception) -> JSONResponse:
@@ -17,6 +17,14 @@ async def handle_not_found(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=404,
         content={"detail": {"code": "NOT_FOUND", "message": str(exc)}},
+    )
+
+
+async def handle_trainer_not_found(request: Request, exc: Exception) -> JSONResponse:
+    """Catch TrainerNotFoundError and return a 422."""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": {"code": "TRAINER_NOT_FOUND", "message": str(exc)}},
     )
 
 
@@ -37,4 +45,5 @@ def register_exception_handlers(app: FastAPI) -> None:
     """Register all custom exception handlers on the FastAPI app."""
     app.add_exception_handler(TrainGridError, handle_traingrid_error)
     app.add_exception_handler(NotFoundError, handle_not_found)
+    app.add_exception_handler(TrainerNotFoundError, handle_trainer_not_found)
     app.add_exception_handler(Exception, handle_generic_error)

@@ -33,6 +33,7 @@ celery -A backend.workers.celery_app worker --loglevel=info
 
 - **Playwright E2E tests fail in `./check.sh`:** The E2E tests require the frontend dev server to be running on `localhost:3000`, but `check.sh` does not start it. This needs to be fixed — either by starting the frontend server before the tests, or by spinning up the Docker Compose stack. Until then, the Playwright step is commented out in `check.sh` (it is already commented out in CI).
   - See `frontend/e2e/runs.spec.ts` — all 4 tests fail with `net::ERR_CONNECTION_REFUSED` when no server is available.
+- **Unnecessary `async` on exception handlers in `backend/api/core/exceptions.py`:** The three handler functions (`handle_traingrid_error`, `handle_not_found`, `handle_generic_error`) are declared `async` but never `await` anything — they only return a `JSONResponse`. FastAPI accepts both sync and async handlers, so these signatures work, but the `async` keyword is misleading. They should either be sync functions or should be removed if there's no I/O planned. Low priority — purely cosmetic.
 
 ## Current Status
 
@@ -150,6 +151,8 @@ Before reading any business logic, know exactly what shape the data takes in the
 | `backend/api/schemas/` | Pydantic schemas (`RunBase`, `RunCreate`, `RunResponse`) — the difference between what the API accepts vs what it returns |
 
 **Key insight:** The SQLAlchemy model = database shape. The Pydantic schema = API contract. They are deliberately kept separate.
+
+**Note on `get_db()` and `yield`:** `get_db()` in `session.py` uses `yield` instead of `return` because FastAPI supports **dependencies with teardown**. The code before `yield` runs as setup (creates the session), the handler runs, then the code after `yield` runs as cleanup (`db.close()`). This guarantees the session is always returned to the pool, even if the handler crashes. If we used `return`, nobody would ever call `db.close()` — leaking connections.
 
 ---
 

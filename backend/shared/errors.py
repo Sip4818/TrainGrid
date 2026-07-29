@@ -12,3 +12,11 @@ class TrainingRunNotFoundError(NotFoundError):
     def __init__(self, run_id: int) -> None:
         self.run_id = run_id
         super().__init__(f"Training run with id '{run_id}' not found")
+
+
+class TrainerNotFoundError(TrainGridError):
+    """Raised when a specified trainer name is not registered."""
+
+    def __init__(self, trainer_name: str) -> None:
+        self.trainer_name = trainer_name
+        super().__init__(f"Trainer '{trainer_name}' is not registered")
