@@ -5,5 +5,8 @@ description = "Monorepo root for Frontend and Backend"
 requires-python = ">=3.10"
 
 # This tells uv to look inside the backend folder for a Python project
+[tool.ruff.lint]
+select = ["I", "E", "F", "W"]
+
 [tool.uv.workspace]
 members = ["backend"]

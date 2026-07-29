@@ -1,10 +1,11 @@
-import pandas as pd  # type: ignore[import-untyped]
 import joblib  # type: ignore[import-untyped]
+import pandas as pd  # type: ignore[import-untyped]
 from sklearn.ensemble import RandomForestClassifier  # type: ignore[import-untyped]
-from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
 from sklearn.metrics import accuracy_score  # type: ignore[import-untyped]
+from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
 
 from backend.trainers.base import BaseTrainer
+
 from .config import RandomForestClassifierConfig
 
 

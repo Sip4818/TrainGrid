@@ -1,14 +1,14 @@
 import os
 from datetime import datetime, timezone
 
-from backend.workers.celery_app import celery_app
 from backend.api.core.logging import get_logger
-from backend.infrastructure.database.session import SessionLocal
 from backend.infrastructure.database.models import RunModel
+from backend.infrastructure.database.session import SessionLocal
 from backend.shared.enums import RunStatus
 from backend.shared.errors import TrainingRunNotFoundError
 from backend.trainers.sklearn.config import RandomForestClassifierConfig
 from backend.trainers.sklearn.trainer import RandomForestClassifierTrainer
+from backend.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
 

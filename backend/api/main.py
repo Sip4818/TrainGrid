@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api.routers import health, runs
-from backend.infrastructure.database.session import engine, Base
-from backend.api.core.logging import configure_logging
 from backend.api.core.exceptions import register_exception_handlers
+from backend.api.core.logging import configure_logging
+from backend.api.routers import health, runs
+from backend.infrastructure.database.session import Base, engine
 
 
 def create_app() -> FastAPI:

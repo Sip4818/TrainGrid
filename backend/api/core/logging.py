@@ -7,7 +7,10 @@ def configure_logging() -> None:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(
         logging.Formatter(
-            "%(asctime)s | %(levelname)-8s | %(name)s | %(filename)s:%(lineno)d | %(message)s"
+            (
+                "%(asctime)s | %(levelname)-8s | %(name)s"
+                " | %(filename)s:%(lineno)d | %(message)s"
+            )
         )
     )
     root = logging.getLogger()

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from backend.shared.errors import TrainGridError, NotFoundError
+from backend.shared.errors import NotFoundError, TrainGridError
 
 
 async def handle_traingrid_error(request: Request, exc: Exception) -> JSONResponse:

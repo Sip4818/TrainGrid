@@ -1,6 +1,9 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime, Enum as SQLEnum
-from backend.infrastructure.database.session import Base
 from datetime import datetime
+
+from sqlalchemy import JSON, Column, DateTime, Integer, String
+from sqlalchemy import Enum as SQLEnum
+
+from backend.infrastructure.database.session import Base
 from backend.shared.enums import RunStatus
 
 
