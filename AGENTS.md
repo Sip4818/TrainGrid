@@ -29,6 +29,11 @@ celery -A backend.workers.celery_app worker --loglevel=info
 - **Command Execution:** Always run commands one by one and avoid executing multiple commands in a single step (e.g., avoid joining commands with `;` or `&&`).
 - **Validation:** Before completing any task, you MUST run the project's quality checks by executing `./check.sh`.
 
+## Known Issues
+
+- **Playwright E2E tests fail in `./check.sh`:** The E2E tests require the frontend dev server to be running on `localhost:3000`, but `check.sh` does not start it. This needs to be fixed — either by starting the frontend server before the tests, or by spinning up the Docker Compose stack. Until then, the Playwright step is commented out in `check.sh` (it is already commented out in CI).
+  - See `frontend/e2e/runs.spec.ts` — all 4 tests fail with `net::ERR_CONNECTION_REFUSED` when no server is available.
+
 ## Current Status
 
 The backend is fully instrumented and the frontend connects correctly — training runs can be created, tracked, and viewed end-to-end.
