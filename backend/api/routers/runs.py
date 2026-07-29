@@ -13,7 +13,7 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 
 
 @router.get("/{run_id}")
-def get_run(run_id: int, db: Session = Depends(get_db)):
+def get_run(run_id: int, db: Session = Depends(get_db)):  # noqa: B008
     """
     Retrieve a training run by its ID.
     """
@@ -26,7 +26,7 @@ def get_run(run_id: int, db: Session = Depends(get_db)):
 
 # get all the runs
 @router.get("/")
-def get_runs(db: Session = Depends(get_db)):
+def get_runs(db: Session = Depends(get_db)):  # noqa: B008
     """
     Retrieve all training runs.
     """
@@ -38,7 +38,7 @@ def get_runs(db: Session = Depends(get_db)):
 
 
 @router.post("/")
-def create_run(payload: RunCreate, db: Session = Depends(get_db)):
+def create_run(payload: RunCreate, db: Session = Depends(get_db)):  # noqa: B008
     """
     Create a new training run with the given configuration.
     """

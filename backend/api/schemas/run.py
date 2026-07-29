@@ -22,7 +22,6 @@ class RunCreate(RunBase):
     The user only provides the experiment_id and the configuration.
     """
 
-    pass
 
 
 class Run(RunBase):

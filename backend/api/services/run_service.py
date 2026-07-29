@@ -42,7 +42,7 @@ class RunService:
         try:
             start_training_run.delay(str(run.id))
             logger.info("Celery task dispatched for run_id=%d", run.id)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.error("Failed to enqueue Celery task for run_id=%d: %s", run.id, exc)
             run.status = RunStatus.FAILED  # type: ignore[assignment]
             run.metrics = {"error": f"Failed to enqueue training task: {exc}"}  # type: ignore[assignment]

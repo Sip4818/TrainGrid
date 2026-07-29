@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from backend.workers.celery_app import celery_app
 from backend.api.core.logging import get_logger
@@ -24,7 +24,7 @@ def start_training_run(run_id: str) -> dict[str, str]:
             raise TrainingRunNotFoundError(int(run_id))
 
         run.status = RunStatus.RUNNING  # type: ignore[assignment]
-        run.started_at = datetime.utcnow()  # type: ignore[assignment]
+        run.started_at = datetime.now(tz=timezone.utc)  # type: ignore[assignment]
         db.commit()
         logger.info("Training started for run_id=%s", run_id)
 
@@ -43,17 +43,17 @@ def start_training_run(run_id: str) -> dict[str, str]:
         run.metrics = metrics  # type: ignore[assignment]
         run.artifact_path = artifact_path  # type: ignore[assignment]
         run.status = RunStatus.COMPLETED  # type: ignore[assignment]
-        run.finished_at = datetime.utcnow()  # type: ignore[assignment]
+        run.finished_at = datetime.now(tz=timezone.utc)  # type: ignore[assignment]
         db.commit()
 
         return {"run_id": run_id, "status": "completed"}
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Training failed for run_id=%s error=%s", run_id, e)
         run = db.query(RunModel).filter(RunModel.id == int(run_id)).first()
         if run:
             run.status = RunStatus.FAILED  # type: ignore[assignment]
-            run.finished_at = datetime.utcnow()  # type: ignore[assignment]
+            run.finished_at = datetime.now(tz=timezone.utc)  # type: ignore[assignment]
             run.metrics = {"error": str(e)}  # type: ignore[assignment]
             db.commit()
         return {"run_id": run_id, "status": "failed", "error": str(e)}
