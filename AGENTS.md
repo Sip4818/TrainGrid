@@ -218,7 +218,7 @@ Only read these after the backend flow is clear.
 - Note any unclear areas to address in Week 2
 
 ### Week 2 — Complete Phases 1–3 (Backend Improvements)
-- Add `TrainerNotFoundError` to exception hierarchy
+- ✅ Add `TrainerNotFoundError` to exception hierarchy
 - Register `RandomForestClassifierTrainer` in `TrainerRegistry`
 - Update run schema to validate `trainer_name`
 - Integrate `TrainerRegistry` dynamically in Celery worker
