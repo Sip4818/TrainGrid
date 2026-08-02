@@ -47,9 +47,12 @@ The backend is fully instrumented and the frontend connects correctly — traini
 - CI/CD via GitHub Actions: ruff (lint), mypy (types), pytest (tests)
 
 ### Frontend
-> **Note:** The owner has zero knowledge of the React/Vite/TypeScript stack.
-> All frontend code is **implemented and validated by AI** through automated test suites (Vitest, Playwright) and CI checks.
-> The owner validates only that `./check.sh` passes and the Docker stack starts without errors.
+> **Note:** The frontend is built in React/Vite/TypeScript. The owner has
+> worked through the codebase to understand the architecture — hooks (and why
+> they are used), the typed API client layer (`apiClient`, `ApiError`, endpoint
+> constants), and how pages wire features/components together through hooks.
+> All frontend code is validated via automated test suites (Vitest, Playwright)
+> and CI checks.
 
 - Vite + React + TypeScript app under `frontend/` with full runs list/detail views
 - API client layer with `apiClient` fetch wrapper, `ApiError` class, and endpoint constants
