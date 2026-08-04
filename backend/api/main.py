@@ -5,6 +5,7 @@ from backend.api.core.exceptions import register_exception_handlers
 from backend.api.core.logging import configure_logging
 from backend.api.routers import health, runs
 from backend.infrastructure.database.session import Base, engine
+from backend.trainers.registration import register_all
 
 
 def create_app() -> FastAPI:
@@ -13,6 +14,9 @@ def create_app() -> FastAPI:
 
     # 1. Initialize Database Tables
     Base.metadata.create_all(bind=engine)
+
+    # 2. Register available trainers so they can be resolved by name
+    register_all()
 
     # 2. Create App
     app = FastAPI(title="TrainGrid API")
