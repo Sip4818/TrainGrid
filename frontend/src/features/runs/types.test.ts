@@ -74,6 +74,7 @@ describe("RunCreate interface", () => {
   it("accepts a valid run create payload", () => {
     const payload: RunCreate = {
       experiment_id: 42,
+      trainer_name: "random_forest",
       config: {
         dataset_path: "data.csv",
         target_column: "label",
@@ -81,12 +82,14 @@ describe("RunCreate interface", () => {
       },
     };
     expect(payload.experiment_id).toBe(42);
+    expect(payload.trainer_name).toBe("random_forest");
     expect(payload.config.dataset_path).toBe("data.csv");
   });
 
-  it("requires both experiment_id and config", () => {
+  it("requires experiment_id, trainer_name and config", () => {
     const payload: RunCreate = {
       experiment_id: 1,
+      trainer_name: "random_forest",
       config: {
         dataset_path: "x",
         target_column: "y",
@@ -94,6 +97,7 @@ describe("RunCreate interface", () => {
       },
     };
     expect(payload).toHaveProperty("experiment_id");
+    expect(payload).toHaveProperty("trainer_name");
     expect(payload).toHaveProperty("config");
   });
 });

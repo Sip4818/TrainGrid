@@ -136,6 +136,7 @@ describe("getRun", () => {
 describe("createRun", () => {
   const newRunPayload: RunCreate = {
     experiment_id: 42,
+    trainer_name: "random_forest",
     config: {
       dataset_path: "data.csv",
       target_column: "label",
