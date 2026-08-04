@@ -31,8 +31,8 @@ celery -A backend.workers.celery_app worker --loglevel=info
 
 ## Known Issues
 
-- **Playwright E2E tests fail in `./check.sh`:** The E2E tests require the frontend dev server to be running on `localhost:3000`, but `check.sh` does not start it. This needs to be fixed — either by starting the frontend server before the tests, or by spinning up the Docker Compose stack. Until then, the Playwright step is commented out in `check.sh` (it is already commented out in CI).
-  - See `frontend/e2e/runs.spec.ts` — all 4 tests fail with `net::ERR_CONNECTION_REFUSED` when no server is available.
+- **Playwright E2E tests fail in `./check.sh` (local only):** The E2E tests require the frontend dev server to be running on `localhost:3000`, but `check.sh` does not start it, so the Playwright step stays commented out in `check.sh`. **Fixed in CI** — the `e2e-tests` job in `.github/workflows/ci.yml` starts the Docker Compose stack, seeds a training run, and runs `npx playwright test`; all 4 tests pass there.
+  - See `frontend/e2e/runs.spec.ts` — all 4 tests fail locally with `net::ERR_CONNECTION_REFUSED` when no server is available.
 - **Unnecessary `async` on exception handlers in `backend/api/core/exceptions.py`:** The three handler functions (`handle_traingrid_error`, `handle_not_found`, `handle_generic_error`) are declared `async` but never `await` anything — they only return a `JSONResponse`. FastAPI accepts both sync and async handlers, so these signatures work, but the `async` keyword is misleading. They should either be sync functions or should be removed if there's no I/O planned. Low priority — purely cosmetic.
 
 ## Current Status
@@ -42,9 +42,9 @@ The backend is fully instrumented and the frontend connects correctly — traini
 ### Backend
 - FastAPI + SQLAlchemy + Celery fully wired with structured logging and exception handling
 - Errors return `{"detail": {"code": "...", "message": "..."}}` with correct HTTP status codes
-- RandomForest trainer implemented in `trainers/sklearn/`
+- RandomForest trainer implemented in `trainers/sklearn/` and registered in the `TrainerRegistry` via self-registration + auto-discovery (`backend/trainers/registration.py`)
 - Containerized via Docker Compose (PostgreSQL + Redis + API + Worker); SQLite used for local dev
-- CI/CD via GitHub Actions: ruff (lint), mypy (types), pytest (tests)
+- CI/CD via GitHub Actions: ruff (lint), mypy (types), pytest (backend tests), Vitest (frontend unit tests), and Playwright E2E tests (Docker Compose stack)
 
 ### Frontend
 > **Note:** The frontend is built in React/Vite/TypeScript. The owner has
@@ -68,8 +68,8 @@ Before we scale horizontally by adding new models, we should make the existing v
 ### Phase 1 — Trainer Registry & Error Handling Integration
 - **1.1: Add `TrainerNotFoundError` to Exception Hierarchy**
   - **Why:** If the user specifies an invalid trainer name in the run configuration, the system should raise a structured `TrainerNotFoundError` rather than throwing a generic `KeyError`. This error should map to a clean HTTP 404/422 status code in FastAPI exception handlers.
-- **1.2: Register `RandomForestClassifierTrainer` in `TrainerRegistry`**
-  - **Why:** The `TrainerRegistry` is currently empty and `RandomForestClassifierTrainer` is never registered. We need to initialize/register it on startup so that it can be resolved dynamically.
+- **1.2: ✅ Register `RandomForestClassifierTrainer` in `TrainerRegistry`**
+  - **Why:** The `TrainerRegistry` is currently empty and `RandomForestClassifierTrainer` is never registered. We need to initialize/register it on startup so that it can be resolved dynamically. Implemented via self-registration + auto-discovery — `backend/trainers/registration.py` exposes `register_all()` (called from both `backend/api/main.py` and `backend/workers/celery_app.py`), and each trainer module self-registers on import. `get("random_forest")` resolves correctly and `get("unknown")` raises `TrainerNotFoundError`.
 - **1.3: Update Run Schema to Validate `trainer_name`**
   - **Why:** The FastAPI endpoint accepts an arbitrary `config` dict. We must validate that a valid `trainer_name` (e.g., `"random_forest"`) is provided, either in the root of the request payload or as a required key within `config`, so we can fail early on unsupported models.
 - **1.4: Integrate `TrainerRegistry` dynamically in Celery Worker**
@@ -104,9 +104,14 @@ Before we scale horizontally by adding new models, we should make the existing v
 ---
 
 ## Development Workflows
+- **Change Workflow:** For every change, follow this process instead of pushing directly to `main`:
+  1. **Create an issue** describing the work (so progress is tracked).
+  2. **Create a new branch** (e.g. `feat/...`) for the change.
+  3. **Create a PR** from the branch to `main`, referencing the issue.
+  4. **Merge only if CI passes** — never merge a PR with failing checks.
 - **API Changes:** Always create both a SQLAlchemy model and a Pydantic schema (Base, Create, and Response) to maintain separation of concerns.
 - **Training Logic:** Keep it inside the `trainers/` directory, decoupled from the API and Workers.
-- **Commits:** Use `feat:`, `fix:`, or `docs:` prefixes. Push changes after successful implementation of a component.
+- **Commits:** Use `feat:`, `fix:`, or `docs:` prefixes.
 - **AI Commits:** If a commit is made by AI or with AI assistance, the commit message must include the AI model name and state that it was generated with AI assistance. Format: `feat: description [generated with ai assistant]`. This ensures traceability of AI-generated contributions.
 
 ---
@@ -186,10 +191,11 @@ Now that you understand how a training job is triggered, see how the actual mode
 |------|-----------------|
 | `backend/trainers/base.py` | The `BaseTrainer` abstract class — the interface every trainer must implement |
 | `backend/trainers/registry.py` | How trainers are looked up by name (e.g. `"random_forest"` → `RandomForestTrainer`) |
+| `backend/trainers/registration.py` | Auto-discovery: `register_all()` imports every trainer module; each module self-registers on import |
 | `backend/trainers/configs/` | How model hyperparameters are defined without hardcoding |
 | `backend/trainers/sklearn/trainer.py` | The only fully implemented trainer. Read this to understand the `train()` method contract |
 
-**Key insight:** Adding a new model type means subclassing `BaseTrainer` and registering it in `registry.py` — nothing else changes.
+**Key insight:** Adding a new model type means subclassing `BaseTrainer` and adding a self-registration line in the new trainer module — `register_all()` discovers it automatically. Nothing else changes.
 
 ---
 
@@ -222,7 +228,7 @@ Only read these after the backend flow is clear.
 
 ### Week 2 — Complete Phases 1–3 (Backend Improvements)
 - ✅ Add `TrainerNotFoundError` to exception hierarchy
-- Register `RandomForestClassifierTrainer` in `TrainerRegistry`
+- ✅ Register `RandomForestClassifierTrainer` in `TrainerRegistry`
 - Update run schema to validate `trainer_name`
 - Integrate `TrainerRegistry` dynamically in Celery worker
 - Implement `LocalArtifactStore`
