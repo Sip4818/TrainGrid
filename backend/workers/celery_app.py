@@ -1,6 +1,7 @@
 from celery import Celery  # type: ignore[import-untyped]
 
 from backend.api.core.config import settings
+from backend.trainers.registration import register_all
 
 celery_app = Celery("traingrid")
 
@@ -13,3 +14,6 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
 )
+
+# Populate the trainer registry before any task resolves a trainer by name.
+register_all()

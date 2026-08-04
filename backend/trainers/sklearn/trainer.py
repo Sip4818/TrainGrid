@@ -5,6 +5,7 @@ from sklearn.metrics import accuracy_score  # type: ignore[import-untyped]
 from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
 
 from backend.trainers.base import BaseTrainer
+from backend.trainers.registry import trainer_registry
 
 from .config import RandomForestClassifierConfig
 
@@ -66,3 +67,6 @@ class RandomForestClassifierTrainer(BaseTrainer):
     def save(self, output_path: str) -> None:
         if self.model is not None:
             joblib.dump(self.model, output_path)
+
+
+trainer_registry.register("random_forest", RandomForestClassifierTrainer)
