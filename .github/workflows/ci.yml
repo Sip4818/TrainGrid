@@ -124,9 +124,11 @@ jobs:
 
       - name: Seed a training run so the runs table has data
         run: |
-          curl -sf -X POST http://localhost:8000/runs \
+          response=$(curl -sf -X POST http://localhost:8000/runs/ \
             -H "Content-Type: application/json" \
-            -d '{"experiment_id":1,"config":{"dataset_path":"backend/datasets/sample.csv","target_column":"target","feature_columns":["feature1","feature2"],"n_estimators":50}}'
+            -d '{"experiment_id":1,"config":{"dataset_path":"backend/datasets/sample.csv","target_column":"target","feature_columns":["feature1","feature2"],"n_estimators":50}}')
+          echo "$response"
+          echo "$response" | grep -q '"id"' || { echo "Seed failed: no run was created"; exit 1; }
           echo "Seed run created."
 
       - name: Run Playwright E2E tests
