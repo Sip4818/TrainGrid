@@ -5,6 +5,7 @@ from backend.api.schemas.run import RunCreate
 from backend.infrastructure.database.models import RunModel
 from backend.shared.enums import RunStatus
 from backend.shared.errors import TrainingRunNotFoundError
+from backend.trainers.registry import trainer_registry
 
 logger = get_logger(__name__)
 
@@ -22,10 +23,12 @@ class RunService:
 
     def create_run(self, payload: RunCreate) -> RunModel:
         logger.info("Creating run for experiment_id=%d", payload.experiment_id)
+        trainer_registry.get(payload.trainer_name)
+        config = {**payload.config, "trainer_name": payload.trainer_name}
         run = RunModel(
             experiment_id=payload.experiment_id,
             status=RunStatus.PENDING,
-            config=payload.config,
+            config=config,
             metrics={},
             artifact_path=None,
         )
