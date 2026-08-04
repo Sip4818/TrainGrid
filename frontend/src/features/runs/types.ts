@@ -28,6 +28,7 @@ export interface RunConfig {
  */
 export interface RunCreate {
   experiment_id: number;
+  trainer_name: string;
   config: RunConfig;
 }
 

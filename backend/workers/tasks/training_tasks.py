@@ -28,7 +28,8 @@ def start_training_run(run_id: str) -> dict[str, str]:
         db.commit()
         logger.info("Training started for run_id=%s", run_id)
 
-        config_data = run.config
+        config_data = dict(run.config)
+        config_data.pop("trainer_name", None)
         rf_config = RandomForestClassifierConfig(**config_data)
 
         trainer = RandomForestClassifierTrainer(config=rf_config)

@@ -21,8 +21,12 @@ class RunBase(BaseModel):
 class RunCreate(RunBase):
     """
     Schema for the 'Input' (Request).
-    The user only provides the experiment_id and the configuration.
+    The user provides the experiment_id, the trainer name, and the configuration.
     """
+
+    trainer_name: str = Field(
+        ..., description="Registered trainer name, e.g. 'random_forest'"
+    )
 
 
 class Run(RunBase):

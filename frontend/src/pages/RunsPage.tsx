@@ -39,6 +39,7 @@ export function RunsPage(): React.ReactElement {
     createRunMutation.mutate(
       {
         experiment_id: Number(experimentId),
+        trainer_name: "random_forest",
         config: {
           dataset_path: datasetPath,
           target_column: targetColumn,
