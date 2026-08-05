@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, ClassVar
 
 
 class BaseTrainer(ABC):
+    config_class: ClassVar[type]
+
     @abstractmethod
     def train(self) -> Any:
         raise NotImplementedError
