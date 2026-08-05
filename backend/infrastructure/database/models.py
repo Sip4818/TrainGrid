@@ -7,6 +7,24 @@ from backend.infrastructure.database.session import Base
 from backend.shared.enums import RunStatus
 
 
+class ExperimentModel(Base):
+    """
+    SQLAlchemy model for the 'experiments' table.
+    Runs reference an experiment through 'runs.experiment_id'.
+    """
+
+    __tablename__ = "experiments"
+
+    # Primary key, indexed for fast lookups
+    id: Column = Column(Integer, primary_key=True, index=True)
+
+    # Human-readable experiment name
+    name: Column = Column(String, nullable=False)
+
+    # Automatically set when the row is created
+    created_at: Column = Column(DateTime, default=datetime.utcnow)
+
+
 class RunModel(Base):
     """
     SQLAlchemy model for the 'runs' table.

@@ -20,3 +20,11 @@ class TrainerNotFoundError(TrainGridError):
     def __init__(self, trainer_name: str) -> None:
         self.trainer_name = trainer_name
         super().__init__(f"Trainer '{trainer_name}' is not registered")
+
+
+class ExperimentNotFoundError(NotFoundError):
+    """Raised when a referenced experiment does not exist."""
+
+    def __init__(self, experiment_id: int) -> None:
+        self.experiment_id = experiment_id
+        super().__init__(f"Experiment with id '{experiment_id}' not found")

@@ -82,8 +82,8 @@ Before we scale horizontally by adding new models, we should make the existing v
   - **Why:** Worker tasks should delegate artifact loading/saving to the `ArtifactStore`. This keeps worker logic decoupled from filesystem implementation details, allowing us to swap the storage backend to S3 (`S3Store`) in the future without changing task code. `start_training_run` now writes the model to a temp file, saves it via `local_artifact_store.save()`, and persists the store-relative key in `run.artifact_path` (`backend/workers/tasks/training_tasks.py`). Design rationale documented in `docs/architecture.md` (Infrastructure Layer).
 
 ### Phase 3 — Domain Validation & Testing
-- **3.1: Add Basic Domain Validation (Experiment Exists)**
-  - **Why:** Currently, runs can be created with arbitrary `experiment_id` values. Adding a stub check establishes correct service-layer validation boundaries for relational entities.
+- **3.1: ✅ Add Basic Domain Validation (Experiment Exists)**
+  - **Why:** Currently, runs can be created with arbitrary `experiment_id` values. Adding a stub check establishes correct service-layer validation boundaries for relational entities. `ExperimentModel` (`backend/infrastructure/database/models.py`) and `ExperimentNotFoundError` (`backend/shared/errors.py`) were added; `RunService._validate_experiment` rejects unknown `experiment_id` with HTTP 404 (`backend/api/services/run_service.py`). A default experiment is seeded on startup (`backend/infrastructure/database/seed.py`, wired in `backend/api/main.py`) so the current frontend flow (default `experiment_id=1`) keeps working until Week 5 adds experiment CRUD. Covered by `test_create_run_unknown_experiment` in `tests/api/test_runs.py`.
 - **3.2: Write Unit and Integration Tests for Registry & Storage**
   - **Why:** We must verify robust registration/resolution, configuration validation errors, and successful/failed artifact saving/loading.
 
@@ -235,7 +235,7 @@ Only read these after the backend flow is clear.
 - ✅ Integrate `TrainerRegistry` dynamically in Celery worker
 - ✅ Implement `LocalArtifactStore`
 - ✅ Refactor training tasks to use `ArtifactStore`
-- Add experiment existence validation
+- ✅ Add experiment existence validation
 - Write unit/integration tests for registry + storage
 
 ### Week 3 — Complete Phases 4–5 (Frontend Filtering + Testing)
