@@ -33,7 +33,9 @@ def start_training_run(run_id: str) -> dict[str, str]:
             raise ValueError(f"No trainer_name configured for run_id={run_id}")
 
         trainer_cls = trainer_registry.get(trainer_name)
-        trainer = trainer_cls(config=trainer_cls.config_class(**config_data))
+        trainer = trainer_cls(  # type: ignore[call-arg]
+            config=trainer_cls.config_class(**config_data)
+        )
         trainer.train()
         metrics = trainer.evaluate()
         logger.info("Training completed for run_id=%s metrics=%s", run_id, metrics)
