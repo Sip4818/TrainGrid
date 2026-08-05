@@ -132,8 +132,9 @@ infrastructure/tracking/ metrics and log persistence stubs
 
 | File | Content | Status |
 |------|---------|--------|
-| `database/models.py` | `RunModel` (id, experiment_id, status, config, metrics, artifact_path, timestamps) | ✅ Active — used by RunService and Celery task |
+| `database/models.py` | `RunModel` (id, experiment_id, status, config, metrics, artifact_path, timestamps), `ExperimentModel` (id, name, created_at) | ✅ Active — used by RunService and Celery task |
 | `database/session.py` | Engine factory, SessionLocal, Base, get_db generator | ✅ Active — handles SQLite and PostgreSQL |
+| `database/seed.py` | `seed_default_experiment()` | ✅ Active — creates the default experiment on startup so run creation has a valid reference |
 | `storage/artifact_store.py` | `ArtifactStore` ABC (save, load) | ✅ Scaffold — implement concrete stores per deployment |
 | `storage/local_store.py` | `LocalArtifactStore` (save, load) | ✅ Active — used by the Celery training task |
 | `storage/s3_store.py` | — | ⏳ Stub |
