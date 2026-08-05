@@ -64,3 +64,20 @@ def test_get_run_not_found():
     data = response.json()
     assert data["detail"]["code"] == "NOT_FOUND"
     assert "not found" in data["detail"]["message"].lower()
+
+
+def test_create_run_unknown_experiment():
+    payload = {
+        "experiment_id": 999999,
+        "trainer_name": "random_forest",
+        "config": {
+            "dataset_path": "dummy.csv",
+            "target_column": "target",
+            "feature_columns": ["f1", "f2"],
+        },
+    }
+    response = client.post("/runs/", json=payload)
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+    assert "experiment" in data["detail"]["message"].lower()
