@@ -1,9 +1,11 @@
-import os
+import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 
 from backend.api.core.logging import get_logger
 from backend.infrastructure.database.models import RunModel
 from backend.infrastructure.database.session import SessionLocal
+from backend.infrastructure.storage.local_store import local_artifact_store
 from backend.shared.enums import RunStatus
 from backend.shared.errors import TrainingRunNotFoundError
 from backend.trainers.registry import trainer_registry
@@ -40,12 +42,14 @@ def start_training_run(run_id: str) -> dict[str, str]:
         metrics = trainer.evaluate()
         logger.info("Training completed for run_id=%s metrics=%s", run_id, metrics)
 
-        os.makedirs("artifacts", exist_ok=True)
-        artifact_path = f"artifacts/model_{run_id}.joblib"
-        trainer.save(artifact_path)
+        artifact_key = f"runs/{run_id}/model.joblib"
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_model = Path(tmp_dir) / "model.joblib"
+            trainer.save(str(tmp_model))
+            local_artifact_store.save(tmp_model, artifact_key)
 
         run.metrics = metrics  # type: ignore[assignment]
-        run.artifact_path = artifact_path  # type: ignore[assignment]
+        run.artifact_path = artifact_key  # type: ignore[assignment]
         run.status = RunStatus.COMPLETED  # type: ignore[assignment]
         run.finished_at = datetime.now(tz=timezone.utc)  # type: ignore[assignment]
         db.commit()
