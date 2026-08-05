@@ -109,6 +109,7 @@ Before we scale horizontally by adding new models, we should make the existing v
   2. **Create a new branch** (e.g. `feat/...`) for the change.
   3. **Create a PR** from the branch to `main`, referencing the issue.
   4. **Merge only if CI passes** — never merge a PR with failing checks.
+- **No Plan Numbers in Issues, Commits, or PRs:** Never reference phase numbers, week numbers, or step identifiers (e.g., "1.3", "Phase 2", "Week 3", "3.2") in issue titles/bodies, commit messages, or PR titles/bodies. Months later these numbers mean nothing. Use descriptive, self-explanatory names (e.g., "Validate experiment exists when creating a run"). Plan numbering is only for internal tracking in AGENTS.md — it never leaves this file.
 - **API Changes:** Always create both a SQLAlchemy model and a Pydantic schema (Base, Create, and Response) to maintain separation of concerns.
 - **Training Logic:** Keep it inside the `trainers/` directory, decoupled from the API and Workers.
 - **Commits:** Use `feat:`, `fix:`, or `docs:` prefixes.
