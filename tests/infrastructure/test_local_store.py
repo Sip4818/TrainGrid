@@ -1,3 +1,5 @@
+import pytest
+
 from backend.infrastructure.storage.local_store import LocalArtifactStore
 
 
@@ -35,3 +37,18 @@ def test_save_creates_nested_directories(tmp_path):
     store.save(source, "runs/2/nested/model.joblib")
 
     assert (tmp_path / "artifacts" / "runs" / "2" / "nested" / "model.joblib").is_file()
+
+
+def test_save_missing_source_raises_file_not_found(tmp_path):
+    store = LocalArtifactStore(root=tmp_path / "artifacts")
+    missing_source = tmp_path / "missing.joblib"
+
+    with pytest.raises(FileNotFoundError):
+        store.save(missing_source, "runs/1/model.joblib")
+
+
+def test_load_missing_artifact_raises_file_not_found(tmp_path):
+    store = LocalArtifactStore(root=tmp_path / "artifacts")
+
+    with pytest.raises(FileNotFoundError):
+        store.load("runs/1/model.joblib", tmp_path / "restored" / "model.joblib")
