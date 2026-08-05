@@ -70,8 +70,8 @@ Before we scale horizontally by adding new models, we should make the existing v
   - **Why:** If the user specifies an invalid trainer name in the run configuration, the system should raise a structured `TrainerNotFoundError` rather than throwing a generic `KeyError`. This error should map to a clean HTTP 404/422 status code in FastAPI exception handlers.
 - **1.2: ✅ Register `RandomForestClassifierTrainer` in `TrainerRegistry`**
   - **Why:** The `TrainerRegistry` is currently empty and `RandomForestClassifierTrainer` is never registered. We need to initialize/register it on startup so that it can be resolved dynamically. Implemented via self-registration + auto-discovery — `backend/trainers/registration.py` exposes `register_all()` (called from both `backend/api/main.py` and `backend/workers/celery_app.py`), and each trainer module self-registers on import. `get("random_forest")` resolves correctly and `get("unknown")` raises `TrainerNotFoundError`.
-- **1.3: Update Run Schema to Validate `trainer_name`**
-  - **Why:** The FastAPI endpoint accepts an arbitrary `config` dict. We must validate that a valid `trainer_name` (e.g., `"random_forest"`) is provided, either in the root of the request payload or as a required key within `config`, so we can fail early on unsupported models.
+- **1.3: ✅ Update Run Schema to Validate `trainer_name`**
+  - **Why:** The FastAPI endpoint accepts an arbitrary `config` dict. We must validate that a valid `trainer_name` (e.g., `"random_forest"`) is provided, either in the root of the request payload or as a required key within `config`, so we can fail early on unsupported models. `RunCreate` now requires `trainer_name` (`backend/api/schemas/run.py`), `RunService.create_run` resolves it against the `TrainerRegistry` (`backend/api/services/run_service.py`), and an unknown trainer returns HTTP 422 with `{"code": "TRAINER_NOT_FOUND"}` (`backend/api/core/exceptions.py`). Covered by `test_create_run_unknown_trainer` in `tests/api/test_runs.py`.
 - **1.4: Integrate `TrainerRegistry` dynamically in Celery Worker**
   - **Why:** The Celery task currently hardcodes the initialization of `RandomForestClassifierTrainer`. We must refactor it to resolve the trainer class dynamically from the `TrainerRegistry` based on the specified `trainer_name`, allowing new models (like XGBoost) to work automatically once registered.
 
@@ -229,7 +229,7 @@ Only read these after the backend flow is clear.
 ### Week 2 — Complete Phases 1–3 (Backend Improvements)
 - ✅ Add `TrainerNotFoundError` to exception hierarchy
 - ✅ Register `RandomForestClassifierTrainer` in `TrainerRegistry`
-- Update run schema to validate `trainer_name`
+- ✅ Update run schema to validate `trainer_name`
 - Integrate `TrainerRegistry` dynamically in Celery worker
 - Implement `LocalArtifactStore`
 - Refactor training tasks to use `ArtifactStore`
