@@ -66,8 +66,8 @@ The backend is fully instrumented and the frontend connects correctly — traini
 Before we scale horizontally by adding new models, we should make the existing vertical slice clean and robust. Currently, several structural abstractions (like the trainer registry and artifact storage) are bypassed or unused. Addressing these first makes adding new models trivial.
 
 ### Phase 1 — Trainer Registry & Error Handling Integration
-- **1.1: Add `TrainerNotFoundError` to Exception Hierarchy**
-  - **Why:** If the user specifies an invalid trainer name in the run configuration, the system should raise a structured `TrainerNotFoundError` rather than throwing a generic `KeyError`. This error should map to a clean HTTP 404/422 status code in FastAPI exception handlers.
+- **1.1: ✅ Add `TrainerNotFoundError` to Exception Hierarchy**
+  - **Why:** If the user specifies an invalid trainer name in the run configuration, the system should raise a structured `TrainerNotFoundError` rather than throwing a generic `KeyError`. This error should map to a clean HTTP 404/422 status code in FastAPI exception handlers. `TrainerNotFoundError` lives in `backend/shared/errors.py` and `handle_traingrid_error` maps it to HTTP 422 (`backend/api/core/exceptions.py`).
 - **1.2: ✅ Register `RandomForestClassifierTrainer` in `TrainerRegistry`**
   - **Why:** The `TrainerRegistry` is currently empty and `RandomForestClassifierTrainer` is never registered. We need to initialize/register it on startup so that it can be resolved dynamically. Implemented via self-registration + auto-discovery — `backend/trainers/registration.py` exposes `register_all()` (called from both `backend/api/main.py` and `backend/workers/celery_app.py`), and each trainer module self-registers on import. `get("random_forest")` resolves correctly and `get("unknown")` raises `TrainerNotFoundError`.
 - **1.3: ✅ Update Run Schema to Validate `trainer_name`**
