@@ -2,9 +2,12 @@ from sqlalchemy.orm import Session
 
 from backend.api.core.logging import get_logger
 from backend.api.schemas.run import RunCreate
-from backend.infrastructure.database.models import RunModel
+from backend.infrastructure.database.models import ExperimentModel, RunModel
 from backend.shared.enums import RunStatus
-from backend.shared.errors import TrainingRunNotFoundError
+from backend.shared.errors import (
+    ExperimentNotFoundError,
+    TrainingRunNotFoundError,
+)
 from backend.trainers.registry import trainer_registry
 
 logger = get_logger(__name__)
@@ -23,6 +26,7 @@ class RunService:
 
     def create_run(self, payload: RunCreate) -> RunModel:
         logger.info("Creating run for experiment_id=%d", payload.experiment_id)
+        self._validate_experiment(payload.experiment_id)
         trainer_registry.get(payload.trainer_name)
         config = {**payload.config, "trainer_name": payload.trainer_name}
         run = RunModel(
@@ -52,6 +56,11 @@ class RunService:
             self.db.commit()
 
         return run
+
+    def _validate_experiment(self, experiment_id: int) -> None:
+        if self.db.get(ExperimentModel, experiment_id) is None:
+            logger.warning("Experiment experiment_id=%d not found", experiment_id)
+            raise ExperimentNotFoundError(experiment_id)
 
     def get_run(self, run_id: int) -> RunModel:
         logger.info("Fetching run run_id=%d", run_id)
