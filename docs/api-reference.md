@@ -11,6 +11,7 @@ Create a new training run with the given configuration.
 ```json
 {
   "experiment_id": 1,
+  "trainer_name": "random_forest",
   "config": {
     "dataset_path": "dataset.csv",
     "target_column": "target",
@@ -23,7 +24,8 @@ Create a new training run with the given configuration.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `experiment_id` | int | Yes | Links the run to an experiment |
+| `experiment_id` | int | Yes | Links the run to an existing experiment |
+| `trainer_name` | string | Yes | Trainer to use (must be registered, e.g. `random_forest`) |
 | `config.dataset_path` | string | Yes | Path to the CSV file (e.g. `dataset.csv`) |
 | `config.target_column` | string | Yes | Name of the target/label column |
 | `config.feature_columns` | list[string] | Yes | Names of the feature columns |
@@ -37,6 +39,7 @@ curl -X POST http://localhost:8000/runs/ \
   -H "Content-Type: application/json" \
   -d '{
     "experiment_id": 1,
+    "trainer_name": "random_forest",
     "config": {
       "dataset_path": "dataset.csv",
       "target_column": "target",
@@ -46,6 +49,13 @@ curl -X POST http://localhost:8000/runs/ \
     }
   }'
 ```
+
+**Error responses:**
+
+| Status | `detail.code` | When |
+|---|---|---|
+| 422 | `TRAINER_NOT_FOUND` | `trainer_name` is not registered |
+| 404 | `NOT_FOUND` | `experiment_id` does not exist |
 
 ### `GET /runs/{run_id}`
 
