@@ -84,8 +84,8 @@ Before we scale horizontally by adding new models, we should make the existing v
 ### Phase 3 — Domain Validation & Testing
 - **3.1: ✅ Add Basic Domain Validation (Experiment Exists)**
   - **Why:** Currently, runs can be created with arbitrary `experiment_id` values. Adding a stub check establishes correct service-layer validation boundaries for relational entities. `ExperimentModel` (`backend/infrastructure/database/models.py`) and `ExperimentNotFoundError` (`backend/shared/errors.py`) were added; `RunService._validate_experiment` rejects unknown `experiment_id` with HTTP 404 (`backend/api/services/run_service.py`). A default experiment is seeded on startup (`backend/infrastructure/database/seed.py`, wired in `backend/api/main.py`) so the current frontend flow (default `experiment_id=1`) keeps working until Week 5 adds experiment CRUD. Covered by `test_create_run_unknown_experiment` in `tests/api/test_runs.py`.
-- **3.2: Write Unit and Integration Tests for Registry & Storage**
-  - **Why:** We must verify robust registration/resolution, configuration validation errors, and successful/failed artifact saving/loading.
+- **3.2: ✅ Write Unit and Integration Tests for Registry & Storage**
+  - **Why:** We must verify robust registration/resolution, configuration validation errors, and successful/failed artifact saving/loading. Covered by `tests/trainers/test_registry.py` (register/get, unknown trainer, fresh instance), `tests/trainers/test_registration.py` (auto-discovery resolves `random_forest`), `tests/trainers/test_configs.py` (required fields, unknown keys, defaults), and failure-path tests in `tests/infrastructure/test_local_store.py`.
 
 ### Phase 4 — Frontend Status Filtering (Dashboard to Runs List)
 - **4.1: Update Dashboard Summary Card Navigation**
@@ -237,7 +237,7 @@ Only read these after the backend flow is clear.
 - ✅ Implement `LocalArtifactStore`
 - ✅ Refactor training tasks to use `ArtifactStore`
 - ✅ Add experiment existence validation
-- Write unit/integration tests for registry + storage
+- ✅ Write unit/integration tests for registry + storage
 
 ### Week 3 — Complete Phases 4–5 (Frontend Filtering + Testing)
 - Update dashboard summary cards to pass `?status=` query param
