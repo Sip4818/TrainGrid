@@ -6,8 +6,7 @@ from backend.infrastructure.database.models import RunModel
 from backend.infrastructure.database.session import SessionLocal
 from backend.shared.enums import RunStatus
 from backend.shared.errors import TrainingRunNotFoundError
-from backend.trainers.sklearn.config import RandomForestClassifierConfig
-from backend.trainers.sklearn.trainer import RandomForestClassifierTrainer
+from backend.trainers.registry import trainer_registry
 from backend.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -29,10 +28,12 @@ def start_training_run(run_id: str) -> dict[str, str]:
         logger.info("Training started for run_id=%s", run_id)
 
         config_data = dict(run.config)
-        config_data.pop("trainer_name", None)
-        rf_config = RandomForestClassifierConfig(**config_data)
+        trainer_name = config_data.pop("trainer_name", None)
+        if not trainer_name:
+            raise ValueError(f"No trainer_name configured for run_id={run_id}")
 
-        trainer = RandomForestClassifierTrainer(config=rf_config)
+        trainer_cls = trainer_registry.get(trainer_name)
+        trainer = trainer_cls(config=trainer_cls.config_class(**config_data))
         trainer.train()
         metrics = trainer.evaluate()
         logger.info("Training completed for run_id=%s metrics=%s", run_id, metrics)
