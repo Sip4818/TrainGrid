@@ -11,6 +11,8 @@ from .config import RandomForestClassifierConfig
 
 
 class RandomForestClassifierTrainer(BaseTrainer):
+    config_class = RandomForestClassifierConfig
+
     def __init__(self, config: RandomForestClassifierConfig):
         self.config = config
         self.data = None
