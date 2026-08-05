@@ -53,12 +53,15 @@ def test_start_training_run_resolves_trainer_via_registry(tmp_path):
     run_id = run.id
     db.close()
 
-    with patch(
-        "backend.trainers.registry.trainer_registry.get",
-        return_value=FakeTrainer,
-    ) as mock_get, patch(
-        "backend.workers.tasks.training_tasks.local_artifact_store",
-        LocalArtifactStore(root=tmp_path),
+    with (
+        patch(
+            "backend.trainers.registry.trainer_registry.get",
+            return_value=FakeTrainer,
+        ) as mock_get,
+        patch(
+            "backend.workers.tasks.training_tasks.local_artifact_store",
+            LocalArtifactStore(root=tmp_path),
+        ),
     ):
         result = start_training_run(str(run_id))
 

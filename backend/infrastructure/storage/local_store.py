@@ -1,5 +1,5 @@
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 from backend.api.core.config import settings
 from backend.infrastructure.storage.artifact_store import ArtifactStore

@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from backend.infrastructure.storage.local_store import LocalArtifactStore
 
