@@ -72,14 +72,14 @@ Before we scale horizontally by adding new models, we should make the existing v
   - **Why:** The `TrainerRegistry` is currently empty and `RandomForestClassifierTrainer` is never registered. We need to initialize/register it on startup so that it can be resolved dynamically. Implemented via self-registration + auto-discovery — `backend/trainers/registration.py` exposes `register_all()` (called from both `backend/api/main.py` and `backend/workers/celery_app.py`), and each trainer module self-registers on import. `get("random_forest")` resolves correctly and `get("unknown")` raises `TrainerNotFoundError`.
 - **1.3: ✅ Update Run Schema to Validate `trainer_name`**
   - **Why:** The FastAPI endpoint accepts an arbitrary `config` dict. We must validate that a valid `trainer_name` (e.g., `"random_forest"`) is provided, either in the root of the request payload or as a required key within `config`, so we can fail early on unsupported models. `RunCreate` now requires `trainer_name` (`backend/api/schemas/run.py`), `RunService.create_run` resolves it against the `TrainerRegistry` (`backend/api/services/run_service.py`), and an unknown trainer returns HTTP 422 with `{"code": "TRAINER_NOT_FOUND"}` (`backend/api/core/exceptions.py`). Covered by `test_create_run_unknown_trainer` in `tests/api/test_runs.py`.
-- **1.4: Integrate `TrainerRegistry` dynamically in Celery Worker**
-  - **Why:** The Celery task currently hardcodes the initialization of `RandomForestClassifierTrainer`. We must refactor it to resolve the trainer class dynamically from the `TrainerRegistry` based on the specified `trainer_name`, allowing new models (like XGBoost) to work automatically once registered.
+- **1.4: ✅ Integrate `TrainerRegistry` dynamically in Celery Worker**
+  - **Why:** The Celery task currently hardcodes the initialization of `RandomForestClassifierTrainer`. We must refactor it to resolve the trainer class dynamically from the `TrainerRegistry` based on the specified `trainer_name`, allowing new models (like XGBoost) to work automatically once registered. `BaseTrainer` now declares a `config_class` contract (`backend/trainers/base.py`), `RandomForestClassifierTrainer` sets it (`backend/trainers/sklearn/trainer.py`), and `start_training_run` resolves both via `trainer_registry.get(trainer_name)` + `trainer_cls.config_class(**config)` (`backend/workers/tasks/training_tasks.py`). Covered by `test_start_training_run_resolves_trainer_via_registry` in `tests/workers/test_training_tasks.py`.
 
 ### Phase 2 — Proper Storage Abstraction (Artifact Store)
-- **2.1: Implement `LocalArtifactStore`**
-  - **Why:** Storing trained models using raw `os.makedirs` and hardcoded paths inside the Celery worker bypasses the infrastructure abstraction. We need to implement `LocalArtifactStore` subclassing the abstract `ArtifactStore`.
-- **2.2: Refactor Training Tasks to use `ArtifactStore`**
-  - **Why:** Worker tasks should delegate artifact loading/saving to the `ArtifactStore`. This keeps worker logic decoupled from filesystem implementation details, allowing us to swap the storage backend to S3 (`S3Store`) in the future without changing task code.
+- **2.1: ✅ Implement `LocalArtifactStore`**
+  - **Why:** Storing trained models using raw `os.makedirs` and hardcoded paths inside the Celery worker bypasses the infrastructure abstraction. We need to implement `LocalArtifactStore` subclassing the abstract `ArtifactStore`. `LocalArtifactStore` (`backend/infrastructure/storage/local_store.py`) stores under `settings.artifact_root` (`backend/api/core/config.py`) and exposes `save()`/`load()` as a transport contract that returns store-relative keys (e.g. `runs/{id}/model.joblib`). Covered by `tests/infrastructure/test_local_store.py`.
+- **2.2: ✅ Refactor Training Tasks to use `ArtifactStore`**
+  - **Why:** Worker tasks should delegate artifact loading/saving to the `ArtifactStore`. This keeps worker logic decoupled from filesystem implementation details, allowing us to swap the storage backend to S3 (`S3Store`) in the future without changing task code. `start_training_run` now writes the model to a temp file, saves it via `local_artifact_store.save()`, and persists the store-relative key in `run.artifact_path` (`backend/workers/tasks/training_tasks.py`). Design rationale documented in `docs/architecture.md` (Infrastructure Layer).
 
 ### Phase 3 — Domain Validation & Testing
 - **3.1: Add Basic Domain Validation (Experiment Exists)**
@@ -112,6 +112,8 @@ Before we scale horizontally by adding new models, we should make the existing v
 - **API Changes:** Always create both a SQLAlchemy model and a Pydantic schema (Base, Create, and Response) to maintain separation of concerns.
 - **Training Logic:** Keep it inside the `trainers/` directory, decoupled from the API and Workers.
 - **Commits:** Use `feat:`, `fix:`, or `docs:` prefixes.
+- **One Commit Per File Change:** Each file change must be committed separately — never bundle multiple files into a single commit. If lint auto-fixes touch several files after the fact, commit them as a single `style:` pass.
+- **Merging:** Always merge with a merge commit — **never squash**. Each per-file commit must be preserved in `main` history.
 - **AI Commits:** If a commit is made by AI or with AI assistance, the commit message must include the AI model name and state that it was generated with AI assistance. Format: `feat: description [generated with ai assistant]`. This ensures traceability of AI-generated contributions.
 
 ---
@@ -230,9 +232,9 @@ Only read these after the backend flow is clear.
 - ✅ Add `TrainerNotFoundError` to exception hierarchy
 - ✅ Register `RandomForestClassifierTrainer` in `TrainerRegistry`
 - ✅ Update run schema to validate `trainer_name`
-- Integrate `TrainerRegistry` dynamically in Celery worker
-- Implement `LocalArtifactStore`
-- Refactor training tasks to use `ArtifactStore`
+- ✅ Integrate `TrainerRegistry` dynamically in Celery worker
+- ✅ Implement `LocalArtifactStore`
+- ✅ Refactor training tasks to use `ArtifactStore`
 - Add experiment existence validation
 - Write unit/integration tests for registry + storage
 

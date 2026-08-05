@@ -76,7 +76,7 @@ workers/tasks/           task modules for training, evaluation, deployment
 
 | Task file | Active task | Status |
 |-----------|-------------|--------|
-| `training_tasks.py` | `start_training_run(run_id)` | ✅ Loads config, runs RandomForestClassifier, saves artifact, updates DB |
+| `training_tasks.py` | `start_training_run(run_id)` | ✅ Loads config, runs trainer via registry, saves artifact via `LocalArtifactStore`, updates DB |
 | `deployment_tasks.py` | — | ⏳ Stub |
 | `evaluation_tasks.py` | — | ⏳ Stub |
 
@@ -135,8 +135,18 @@ infrastructure/tracking/ metrics and log persistence stubs
 | `database/models.py` | `RunModel` (id, experiment_id, status, config, metrics, artifact_path, timestamps) | ✅ Active — used by RunService and Celery task |
 | `database/session.py` | Engine factory, SessionLocal, Base, get_db generator | ✅ Active — handles SQLite and PostgreSQL |
 | `storage/artifact_store.py` | `ArtifactStore` ABC (save, load) | ✅ Scaffold — implement concrete stores per deployment |
-| `storage/local_store.py` | — | ⏳ Stub |
+| `storage/local_store.py` | `LocalArtifactStore` (save, load) | ✅ Active — used by the Celery training task |
 | `storage/s3_store.py` | — | ⏳ Stub |
+
+**Artifact storage design:** `ArtifactStore.save(source_path, artifact_path)` is a
+*transport* contract, not a literal file copy. The trainer writes its model to a
+temporary local path; the store then transports those bytes to their final home —
+a `shutil.copy2` for `LocalArtifactStore`, or an S3 object upload for `S3Store`
+later. This is required because S3 cannot be written to like a filesystem (every
+write is an HTTP `PUT` of bytes), so a local source path is the common
+denominator. `RunModel.artifact_path` stores the store-relative key (e.g.
+`runs/{id}/model.joblib`), which is backend-agnostic — the same key works for
+local disk and S3.
 
 Infrastructure code should be replaceable behind interfaces where practical.
 For example, trainer code should not care whether artifacts are stored locally

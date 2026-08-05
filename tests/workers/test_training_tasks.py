@@ -1,7 +1,9 @@
+from pathlib import Path
 from unittest.mock import patch
 
 from backend.infrastructure.database.models import RunModel
 from backend.infrastructure.database.session import Base, SessionLocal, engine
+from backend.infrastructure.storage.local_store import LocalArtifactStore
 from backend.shared.enums import RunStatus
 from backend.trainers.base import BaseTrainer
 from backend.workers.tasks.training_tasks import start_training_run
@@ -27,10 +29,10 @@ class FakeTrainer(BaseTrainer):
         return {"accuracy": 0.95}
 
     def save(self, output_path: str) -> None:
-        pass
+        Path(output_path).write_bytes(b"model-bytes")
 
 
-def test_start_training_run_resolves_trainer_via_registry():
+def test_start_training_run_resolves_trainer_via_registry(tmp_path):
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
@@ -51,10 +53,16 @@ def test_start_training_run_resolves_trainer_via_registry():
     run_id = run.id
     db.close()
 
-    with patch(
-        "backend.trainers.registry.trainer_registry.get",
-        return_value=FakeTrainer,
-    ) as mock_get:
+    with (
+        patch(
+            "backend.trainers.registry.trainer_registry.get",
+            return_value=FakeTrainer,
+        ) as mock_get,
+        patch(
+            "backend.workers.tasks.training_tasks.local_artifact_store",
+            LocalArtifactStore(root=tmp_path),
+        ),
+    ):
         result = start_training_run(str(run_id))
 
     assert result["status"] == "completed"
@@ -64,4 +72,6 @@ def test_start_training_run_resolves_trainer_via_registry():
     updated = db.get(RunModel, run_id)
     assert updated.status == RunStatus.COMPLETED
     assert updated.metrics == {"accuracy": 0.95}
+    assert updated.artifact_path == f"runs/{run_id}/model.joblib"
     db.close()
+    assert (tmp_path / "runs" / str(run_id) / "model.joblib").is_file()
