@@ -1,4 +1,3 @@
-
 from backend.infrastructure.storage.local_store import LocalArtifactStore
 
 
