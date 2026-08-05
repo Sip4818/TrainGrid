@@ -16,7 +16,7 @@ backend/                  Python package for all backend code
   domain/           Core entities and repository interfaces
   infrastructure/   Database, storage, queue, and tracking integrations
   shared/           Common constants, enums, errors, and shared types
-frontend/           React dashboard UI (scaffolded only)
+frontend/           React dashboard UI (runs list/detail views)
 tests/              Automated tests organized by layer
 docs/               Project documentation and durable design context
 ```
@@ -159,8 +159,8 @@ The `backend/shared/` package contains cross-cutting concerns.
 
 ```text
 shared/enums.py      RunStatus (PENDING, RUNNING, COMPLETED, FAILED, CANCELLED) and DeploymentStatus
-shared/errors.py     NotFoundError and TrainGridError base exception
-tshared/constants.py  APP_NAME = "TrainGrid"
+shared/errors.py     Exception hierarchy: TrainGridError, NotFoundError, TrainerNotFoundError, TrainingRunNotFoundError, ExperimentNotFoundError
+shared/constants.py  APP_NAME = "TrainGrid"
 shared/types.py      Shared type aliases (stub)
 ```
 
@@ -178,8 +178,10 @@ frontend/src/lib/        formatting and utility helpers
 frontend/src/styles/     global styles
 ```
 
-**Status:** Scaffolded only — boilerplate pages and components exist but the API
-client layer is not connected to the backend. No Docker containerization yet.
+**Status:** Functional — runs list/detail pages are wired to the backend through
+the typed API client (`apiClient`, `ApiError`, endpoint constants), with 108 unit
+tests across 18 files plus Playwright E2E tests. Containerized via a multi-stage
+Dockerfile (Node build → nginx) serving on port 3000.
 
 The UI should behave like an operations dashboard: tables, status badges,
 charts, logs, config panels, and direct workflow actions.
@@ -196,16 +198,18 @@ tabular CSV dataset
   -> sklearn RandomForestClassifier trainer
   -> local artifact storage (artifacts/ directory)
   -> persisted run metrics and status (SQLite/PostgreSQL)
-  -> frontend run detail view (not yet wired)
+  -> frontend run detail view
 ```
 
-The vertical slice is **functional but rough**:
+The vertical slice is **functional end-to-end**:
 
 - `RandomForestClassifier` for classification on tabular data
 - typed trainer config (`RandomForestClassifierConfig`) for model parameters and dataset settings
-- local filesystem storage for artifacts
-- minimal persistence for run metadata, metrics, and status transitions
-- 4 API tests covering the health and runs endpoints
+- trainer registry with self-registration and auto-discovery
+- local filesystem storage for artifacts (`LocalArtifactStore`)
+- persistence for run metadata, metrics, status transitions, and artifacts
+- experiment validation on run creation (unknown `experiment_id` → 404, unknown `trainer_name` → 422)
+- 20 pytest tests across API, workers, trainers, and infrastructure
 
 ## Containerization
 
