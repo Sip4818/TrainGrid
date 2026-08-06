@@ -16,6 +16,7 @@ dependencies = [
     "httpx",
     "scikit-learn",
     "pandas",
+    "xgboost",
 ]
 
 [tool.setuptools]
