@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -23,13 +23,16 @@ const sampleRun: Run = {
   finished_at: null,
 };
 
-function renderWithProviders(ui: React.ReactElement) {
+function renderWithProviders(
+  ui: React.ReactElement,
+  options: { initialEntries?: string[] } = {},
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{ui}</MemoryRouter>
+      <MemoryRouter initialEntries={options.initialEntries}>{ui}</MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -77,5 +80,86 @@ describe("RunsPage", () => {
     await waitFor(() => screen.getByText("New Run"));
     screen.getByText("New Run").click();
     await waitFor(() => screen.getByText("Create Training Run"));
+  });
+
+  it("filters runs by status from the URL query param", async () => {
+    const runs = [
+      { ...sampleRun, id: 1, status: RunStatus.PENDING },
+      { ...sampleRun, id: 2, status: RunStatus.COMPLETED },
+    ];
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(runs), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    renderWithProviders(<RunsPage />, {
+      initialEntries: ["/runs?status=pending"],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("1")).toBeDefined();
+    });
+    expect(screen.getByText("pending")).toBeDefined();
+    expect(screen.queryByText("completed")).toBeNull();
+  });
+
+  it("filters runs via the status dropdown selector", async () => {
+    const runs = [
+      { ...sampleRun, id: 1, status: RunStatus.PENDING },
+      { ...sampleRun, id: 2, status: RunStatus.COMPLETED },
+    ];
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(runs), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("1")).toBeDefined();
+    });
+    expect(screen.getByLabelText("Filter by status")).toBeDefined();
+
+    fireEvent.change(screen.getByLabelText("Filter by status"), {
+      target: { value: "completed" },
+    });
+
+    expect(screen.queryByText("pending")).toBeNull();
+    expect(screen.getByText("completed")).toBeDefined();
+  });
+
+  it("shows all runs when the status filter is cleared", async () => {
+    const runs = [
+      { ...sampleRun, id: 1, status: RunStatus.PENDING },
+      { ...sampleRun, id: 2, status: RunStatus.COMPLETED },
+    ];
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(runs), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    renderWithProviders(<RunsPage />, {
+      initialEntries: ["/runs?status=pending"],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("1")).toBeDefined();
+    });
+    expect(screen.queryByText("completed")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Filter by status"), {
+      target: { value: "" },
+    });
+
+    expect(screen.getByText("1")).toBeDefined();
+    expect(screen.getByText("2")).toBeDefined();
+    expect(screen.getByText("pending")).toBeDefined();
+    expect(screen.getByText("completed")).toBeDefined();
   });
 });
