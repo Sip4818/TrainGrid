@@ -72,4 +72,30 @@ test.describe("Runs flow", () => {
     // Detail page should show run details
     await expect(page.getByText(/status|config|metrics/i).first()).toBeVisible();
   });
+
+  test("navigates from dashboard to a status-filtered runs list", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    const errorMessage = page.getByText(/failed to load dashboard/i);
+    await page.waitForLoadState("networkidle");
+
+    if (await errorMessage.isVisible({ timeout: 1000 }).catch(() => false)) {
+      test.skip();
+      return;
+    }
+
+    // Click the Pending summary card (CI seeds a pending run)
+    await page.getByText("Pending").click();
+
+    await expect(page).toHaveURL(/\/runs\?status=pending/);
+
+    // Every row in the table should be a pending run
+    const statusBadges = page.locator("table tbody tr td span");
+    const badgeCount = await statusBadges.count();
+    for (let i = 0; i < badgeCount; i++) {
+      await expect(statusBadges.nth(i)).toContainText("pending");
+    }
+  });
 });

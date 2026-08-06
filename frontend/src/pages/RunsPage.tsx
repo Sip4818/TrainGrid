@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useRuns, useCreateRun } from "../features/runs/hooks";
-import type { RunStatus } from "../features/runs/types";
+import { RunStatus } from "../features/runs/types";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Table } from "../components/ui/Table";
 import { Modal } from "../components/ui/Modal";
 import { Input } from "../components/ui/Input";
 import { Spinner } from "../components/ui/Spinner";
+import { Select } from "../components/ui/Select";
 import { PageHeader } from "../components/layout/PageHeader";
 
 interface RunRow extends Record<string, unknown> {
@@ -19,6 +20,7 @@ interface RunRow extends Record<string, unknown> {
 
 export function RunsPage(): React.ReactElement {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const runsQuery = useRuns();
   const createRunMutation = useCreateRun();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,6 +35,34 @@ export function RunsPage(): React.ReactElement {
   const isLoading = runsQuery.isLoading;
   const isError = runsQuery.isError;
   const error = runsQuery.error as Error | null;
+
+  const rawStatus = searchParams.get("status");
+  const activeStatus = Object.values(RunStatus).includes(rawStatus as RunStatus)
+    ? (rawStatus as RunStatus)
+    : null;
+
+  const filteredRuns = activeStatus
+    ? runs.filter((run) => run.status === activeStatus)
+    : runs;
+
+  const statusFilterOptions = [
+    { value: "", label: "All Statuses" },
+    { value: RunStatus.PENDING, label: "Pending" },
+    { value: RunStatus.RUNNING, label: "Running" },
+    { value: RunStatus.COMPLETED, label: "Completed" },
+    { value: RunStatus.FAILED, label: "Failed" },
+    { value: RunStatus.CANCELLED, label: "Cancelled" },
+  ];
+
+  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      searchParams.delete("status");
+    } else {
+      searchParams.set("status", value);
+    }
+    setSearchParams(searchParams);
+  };
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -97,6 +127,12 @@ export function RunsPage(): React.ReactElement {
         title="Runs"
         description="Manage training runs and monitor status"
       >
+        <Select
+          aria-label="Filter by status"
+          value={activeStatus ?? ""}
+          onChange={handleStatusFilterChange}
+          options={statusFilterOptions}
+        />
         <Button
           onClick={() => setIsModalOpen(true)}
           disabled={createRunMutation.isPending}
@@ -120,7 +156,7 @@ export function RunsPage(): React.ReactElement {
         {!isLoading && !isError && (
           <Table
             columns={columns}
-            rows={runs}
+            rows={filteredRuns}
             onRowClick={(row) => navigate(`/runs/${row.id}`)}
           />
         )}
