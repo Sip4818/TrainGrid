@@ -6,6 +6,16 @@ import { DashboardPage } from "./DashboardPage";
 import type { Run } from "../features/runs/types";
 import { RunStatus } from "../features/runs/types";
 
+const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }));
+
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router-dom")>();
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
+
 const sampleRuns: Run[] = [
   {
     id: 1,
@@ -145,5 +155,30 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Completed")).toBeDefined();
     expect(screen.getByText("Failed")).toBeDefined();
     expect(screen.getByText("Cancelled")).toBeDefined();
+  });
+
+  it("navigates to filtered runs when a status card is clicked", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(sampleRuns), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    navigateMock.mockClear();
+
+    renderWithProviders(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Failed")).toBeDefined();
+    });
+
+    screen.getByText("Failed").click();
+    expect(navigateMock).toHaveBeenCalledWith("/runs?status=failed");
+
+    screen.getByText("Completed").click();
+    expect(navigateMock).toHaveBeenCalledWith("/runs?status=completed");
+
+    screen.getByText("Total").click();
+    expect(navigateMock).toHaveBeenCalledWith("/runs");
   });
 });
