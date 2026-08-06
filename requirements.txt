@@ -9,6 +9,7 @@ alembic
 httpx
 scikit-learn
 pandas
+xgboost
 
 # Code quality and tests
 ruff
