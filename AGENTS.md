@@ -56,7 +56,7 @@ The backend is fully instrumented and the frontend connects correctly — traini
 
 - Vite + React + TypeScript app under `frontend/` with full runs list/detail views
 - API client layer with `apiClient` fetch wrapper, `ApiError` class, and endpoint constants
-- 108 unit tests across 18 files + Playwright E2E tests
+- 112 unit tests across 18 files + Playwright E2E tests
 - Containerized — multi-stage Dockerfile (node build → nginx serve) on port 3000
 
 ---
@@ -88,18 +88,18 @@ Before we scale horizontally by adding new models, we should make the existing v
   - **Why:** We must verify robust registration/resolution, configuration validation errors, and successful/failed artifact saving/loading. Covered by `tests/trainers/test_registry.py` (register/get, unknown trainer, fresh instance), `tests/trainers/test_registration.py` (auto-discovery resolves `random_forest`), `tests/trainers/test_configs.py` (required fields, unknown keys, defaults), and failure-path tests in `tests/infrastructure/test_local_store.py`.
 
 ### Phase 4 — Frontend Status Filtering (Dashboard to Runs List)
-- **4.1: Update Dashboard Summary Card Navigation**
-  - **Why:** Clicking status summary cards on the dashboard should not just navigate to `/runs` unconditionally. It should pass the selected status as a query parameter (e.g., `/runs?status=failed`), except for the "Total" card.
-- **4.2: Parse Status Query Parameter in RunsPage**
-  - **Why:** The `RunsPage` needs to extract the active status filter from the URL query parameters using React Router's `useSearchParams` hook.
+- **4.1: ✅ Update Dashboard Summary Card Navigation**
+  - **Why:** Clicking status summary cards on the dashboard should not just navigate to `/runs` unconditionally. It should pass the selected status as a query parameter (e.g., `/runs?status=failed`), except for the "Total" card. Implemented in `DashboardPage.tsx` — the card `onClick` now builds `/runs?status=<status>` for real status cards and keeps plain `/runs` for "Total".
+- **4.2: ✅ Parse Status Query Parameter in RunsPage**
+  - **Why:** The `RunsPage` needs to extract the active status filter from the URL query parameters using React Router's `useSearchParams` hook. `RunsPage.tsx` reads `status`, validates it against the `RunStatus` enum (invalid values are ignored), and derives the active filter from it.
 
 ### Phase 5 — Interactive Runs List Filter UI & Testing
-- **5.1: Filter the Runs Table Data Source**
-  - **Why:** The frontend table needs to only render runs matching the parsed status filter.
-- **5.2: Add a Filter Dropdown Selector to the Runs Page**
-  - **Why:** Users need a simple select box in the Runs Page header to clear, inspect, or modify the active status filter directly without having to navigate back to the dashboard.
-- **5.3: Update Frontend Unit and E2E Tests**
-  - **Why:** We must verify navigation, search parameter parsing, filtering behavior, and verify the frontend build and test suites pass successfully.
+- **5.1: ✅ Filter the Runs Table Data Source**
+  - **Why:** The frontend table needs to only render runs matching the parsed status filter. `RunsPage.tsx` filters the already-fetched `runs` array client-side (`filteredRuns`) and passes it to the `<Table>` — no API or backend change needed since all runs are already loaded.
+- **5.2: ✅ Add a Filter Dropdown Selector to the Runs Page**
+  - **Why:** Users need a simple select box in the Runs Page header to clear, inspect, or modify the active status filter directly without having to navigate back to the dashboard. Implemented with the existing `Select` UI component in the `PageHeader`; it writes back to the same `status` URL param so the URL stays the single source of truth.
+- **5.3: ✅ Update Frontend Unit and E2E Tests**
+  - **Why:** We must verify navigation, search parameter parsing, filtering behavior, and verify the frontend build and test suites pass successfully. Covered by new tests in `DashboardPage.test.tsx`, `RunsPage.test.tsx`, and a dashboard → filtered-runs flow in `frontend/e2e/runs.spec.ts`.
 
 ---
 
@@ -240,12 +240,12 @@ Only read these after the backend flow is clear.
 - ✅ Write unit/integration tests for registry + storage
 
 ### Week 3 — Complete Phases 4–5 (Frontend Filtering + Testing)
-- Update dashboard summary cards to pass `?status=` query param
-- Parse status filter from URL in `RunsPage`
-- Filter runs table by active status
-- Add filter dropdown selector to runs page
-- Update frontend unit tests + Playwright E2E tests
-- Run full `./check.sh` — green across lint, types, tests
+- ✅ Update dashboard summary cards to pass `?status=` query param
+- ✅ Parse status filter from URL in `RunsPage`
+- ✅ Filter runs table by active status
+- ✅ Add filter dropdown selector to runs page
+- ✅ Update frontend unit tests + Playwright E2E tests
+- ✅ Run full `./check.sh` — green across lint, types, tests
 
 ### Week 4 — Add XGBoost Trainer + Model Comparison
 - Implement `XGBoostClassifierTrainer` (subclass `BaseTrainer`, config, register in registry)
