@@ -164,7 +164,11 @@ export function DashboardPage(): React.ReactElement {
               status={card.status}
               count={card.count}
               accentColor={card.accentColor}
-              onClick={() => navigate("/runs")}
+              onClick={() =>
+                card.status === "total"
+                  ? navigate("/runs")
+                  : navigate(`/runs?status=${card.status}`)
+              }
             />
           ))}
         </div>
