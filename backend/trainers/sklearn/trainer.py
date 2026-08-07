@@ -12,6 +12,7 @@ from .config import RandomForestClassifierConfig
 
 class RandomForestClassifierTrainer(BaseTrainer):
     config_class = RandomForestClassifierConfig
+    label = "Random Forest Classifier"
 
     def __init__(self, config: RandomForestClassifierConfig):
         self.config = config
