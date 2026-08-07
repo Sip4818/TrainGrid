@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { endpoints } from "./endpoints";
 
+describe("endpoints.trainers", () => {
+  it("list() returns /trainers/", () => {
+    expect(endpoints.trainers.list()).toBe("/trainers/");
+  });
+});
+
 describe("endpoints.runs", () => {
   it("list() returns /runs/", () => {
     expect(endpoints.runs.list()).toBe("/runs/");
