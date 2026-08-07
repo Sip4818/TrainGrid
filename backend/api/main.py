@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.core.exceptions import register_exception_handlers
 from backend.api.core.logging import configure_logging
-from backend.api.routers import health, runs
+from backend.api.routers import health, models, runs
 from backend.infrastructure.database.seed import seed_default_experiment
 from backend.infrastructure.database.session import Base, engine
 from backend.trainers.registration import register_all
@@ -40,6 +40,7 @@ def create_app() -> FastAPI:
     # 4. Register Routers
     app.include_router(health.router)
     app.include_router(runs.router)
+    app.include_router(models.router)
 
     return app
 
