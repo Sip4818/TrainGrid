@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useRuns, useCreateRun } from "../features/runs/hooks";
+import { useTrainers } from "../features/models/hooks";
 import { RunStatus } from "../features/runs/types";
 import type { RunConfig } from "../features/runs/types";
 import { Button } from "../components/ui/Button";
@@ -19,11 +20,17 @@ interface RunRow extends Record<string, unknown> {
   created_at: string;
 }
 
+const DEFAULT_MODEL_OPTIONS = [
+  { value: "random_forest", label: "Random Forest Classifier" },
+  { value: "xgboost", label: "XGBoost Classifier" },
+];
+
 export function RunsPage(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const runsQuery = useRuns();
   const createRunMutation = useCreateRun();
+  const trainersQuery = useTrainers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [experimentId, setExperimentId] = useState("1");
   const [datasetPath, setDatasetPath] = useState("backend/datasets/sample.csv");
@@ -57,10 +64,13 @@ export function RunsPage(): React.ReactElement {
     { value: RunStatus.CANCELLED, label: "Cancelled" },
   ];
 
-  const modelOptions = [
-    { value: "random_forest", label: "Random Forest Classifier" },
-    { value: "xgboost", label: "XGBoost Classifier" },
-  ];
+  const modelOptions =
+    trainersQuery.data && trainersQuery.data.length > 0
+      ? trainersQuery.data.map((trainer) => ({
+          value: trainer.name,
+          label: trainer.label,
+        }))
+      : DEFAULT_MODEL_OPTIONS;
 
   const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
