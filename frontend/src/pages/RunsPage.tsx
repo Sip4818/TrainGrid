@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useRuns, useCreateRun } from "../features/runs/hooks";
+import { useTrainers } from "../features/models/hooks";
 import { RunStatus } from "../features/runs/types";
+import type { RunConfig } from "../features/runs/types";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Table } from "../components/ui/Table";
@@ -18,18 +20,26 @@ interface RunRow extends Record<string, unknown> {
   created_at: string;
 }
 
+const DEFAULT_MODEL_OPTIONS = [
+  { value: "random_forest", label: "Random Forest Classifier" },
+  { value: "xgboost", label: "XGBoost Classifier" },
+];
+
 export function RunsPage(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const runsQuery = useRuns();
   const createRunMutation = useCreateRun();
+  const trainersQuery = useTrainers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [experimentId, setExperimentId] = useState("1");
   const [datasetPath, setDatasetPath] = useState("backend/datasets/sample.csv");
   const [targetColumn, setTargetColumn] = useState("target");
   const [featureColumns, setFeatureColumns] = useState("feature1,feature2");
+  const [modelName, setModelName] = useState("random_forest");
   const [nEstimators, setNEstimators] = useState("100");
   const [maxDepth, setMaxDepth] = useState("");
+  const [learningRate, setLearningRate] = useState("");
 
   const runs = ((runsQuery.data ?? []) as unknown) as RunRow[];
   const isLoading = runsQuery.isLoading;
@@ -54,6 +64,14 @@ export function RunsPage(): React.ReactElement {
     { value: RunStatus.CANCELLED, label: "Cancelled" },
   ];
 
+  const modelOptions =
+    trainersQuery.data && trainersQuery.data.length > 0
+      ? trainersQuery.data.map((trainer) => ({
+          value: trainer.name,
+          label: trainer.label,
+        }))
+      : DEFAULT_MODEL_OPTIONS;
+
   const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     if (value === "") {
@@ -66,20 +84,26 @@ export function RunsPage(): React.ReactElement {
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const config: RunConfig = {
+      dataset_path: datasetPath,
+      target_column: targetColumn,
+      feature_columns: featureColumns
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      n_estimators: Number(nEstimators),
+    };
+    if (maxDepth !== "") {
+      config.max_depth = Number(maxDepth);
+    }
+    if (modelName === "xgboost" && learningRate !== "") {
+      config.learning_rate = Number(learningRate);
+    }
     createRunMutation.mutate(
       {
         experiment_id: Number(experimentId),
-        trainer_name: "random_forest",
-        config: {
-          dataset_path: datasetPath,
-          target_column: targetColumn,
-          feature_columns: featureColumns
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          n_estimators: Number(nEstimators),
-          max_depth: maxDepth === "" ? null : Number(maxDepth),
-        },
+        trainer_name: modelName,
+        config,
       },
       {
         onSuccess: () => {
@@ -175,6 +199,12 @@ export function RunsPage(): React.ReactElement {
               gap: "16px",
             } as React.CSSProperties}
           >
+            <Select
+              label="Model"
+              value={modelName}
+              onChange={(e) => setModelName(e.target.value)}
+              options={modelOptions}
+            />
             <Input
               label="Experiment ID"
               type="number"
@@ -212,6 +242,15 @@ export function RunsPage(): React.ReactElement {
               value={maxDepth}
               onChange={(e) => setMaxDepth(e.target.value)}
             />
+            {modelName === "xgboost" && (
+              <Input
+                label="Learning Rate"
+                type="number"
+                step="0.01"
+                value={learningRate}
+                onChange={(e) => setLearningRate(e.target.value)}
+              />
+            )}
             {createRunMutation.isError && (
               <div style={{ color: "#dc2626", fontSize: "13px" }}>
                 {(createRunMutation.error as Error)?.message}

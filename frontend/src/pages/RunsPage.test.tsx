@@ -23,6 +23,34 @@ const sampleRun: Run = {
   finished_at: null,
 };
 
+const defaultTrainers = [
+  {
+    name: "random_forest",
+    label: "Random Forest Classifier",
+    config_schema: {},
+  },
+  { name: "xgboost", label: "XGBoost Classifier", config_schema: {} },
+];
+
+function mockApi(runs: unknown[] = [], trainers: unknown[] = defaultTrainers) {
+  return vi.spyOn(globalThis, "fetch").mockImplementation(
+    async (input, init) => {
+      const method = (init?.method as string | undefined) ?? "GET";
+      if (method === "POST") {
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const body = String(input).includes("/trainers/") ? trainers : runs;
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+  );
+}
+
 function renderWithProviders(
   ui: React.ReactElement,
   options: { initialEntries?: string[] } = {},
@@ -51,12 +79,7 @@ describe("RunsPage", () => {
   });
 
   it("renders runs table after load", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify([sampleRun]), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    mockApi([sampleRun]);
 
     renderWithProviders(<RunsPage />);
 
@@ -68,12 +91,7 @@ describe("RunsPage", () => {
   });
 
   it("opens create run modal on button click", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    mockApi();
 
     renderWithProviders(<RunsPage />);
 
@@ -87,12 +105,7 @@ describe("RunsPage", () => {
       { ...sampleRun, id: 1, status: RunStatus.PENDING },
       { ...sampleRun, id: 2, status: RunStatus.COMPLETED },
     ];
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(runs), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    mockApi(runs);
 
     renderWithProviders(<RunsPage />, {
       initialEntries: ["/runs?status=pending"],
@@ -110,12 +123,7 @@ describe("RunsPage", () => {
       { ...sampleRun, id: 1, status: RunStatus.PENDING },
       { ...sampleRun, id: 2, status: RunStatus.COMPLETED },
     ];
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(runs), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    mockApi(runs);
 
     renderWithProviders(<RunsPage />);
 
@@ -137,12 +145,7 @@ describe("RunsPage", () => {
       { ...sampleRun, id: 1, status: RunStatus.PENDING },
       { ...sampleRun, id: 2, status: RunStatus.COMPLETED },
     ];
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(runs), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    mockApi(runs);
 
     renderWithProviders(<RunsPage />, {
       initialEntries: ["/runs?status=pending"],
@@ -161,5 +164,128 @@ describe("RunsPage", () => {
     expect(screen.getByText("2")).toBeDefined();
     expect(screen.getByText("pending")).toBeDefined();
     expect(screen.getByText("completed")).toBeDefined();
+  });
+
+  it("shows the model dropdown with classifier options in the create modal", async () => {
+    mockApi();
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    expect(screen.getByLabelText("Model")).toBeDefined();
+    expect(screen.getByText("Random Forest Classifier")).toBeDefined();
+    expect(screen.getByText("XGBoost Classifier")).toBeDefined();
+  });
+
+  it("uses the model options returned by the trainers endpoint", async () => {
+    mockApi([], [
+      { name: "logreg", label: "Logistic Regression", config_schema: {} },
+    ]);
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    expect(screen.getByText("Logistic Regression")).toBeDefined();
+    expect(screen.queryByText("Random Forest Classifier")).toBeNull();
+  });
+
+  it("falls back to default model options when the trainers endpoint fails", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).includes("/trainers/")) {
+        return new Response(JSON.stringify({ message: "Internal error" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    expect(screen.getByText("Random Forest Classifier")).toBeDefined();
+    expect(screen.getByText("XGBoost Classifier")).toBeDefined();
+  });
+
+  it("reveals the learning rate field only when xgboost is selected", async () => {
+    mockApi();
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    expect(screen.queryByLabelText("Learning Rate")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Model"), {
+      target: { value: "xgboost" },
+    });
+    expect(screen.getByLabelText("Learning Rate")).toBeDefined();
+
+    fireEvent.change(screen.getByLabelText("Model"), {
+      target: { value: "random_forest" },
+    });
+    expect(screen.queryByLabelText("Learning Rate")).toBeNull();
+  });
+
+  it("submits the chosen trainer_name with learning_rate and omits empty config fields", async () => {
+    let postedBody: Record<string, unknown> | null = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const method = (init?.method as string | undefined) ?? "GET";
+      if (method === "POST") {
+        postedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const body = String(input).includes("/trainers/") ? defaultTrainers : [];
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    fireEvent.change(screen.getByLabelText("Model"), {
+      target: { value: "xgboost" },
+    });
+    fireEvent.change(screen.getByLabelText("Learning Rate"), {
+      target: { value: "0.1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create Run" }));
+
+    await waitFor(() => {
+      expect(postedBody).not.toBeNull();
+    });
+
+    expect(postedBody).toMatchObject({
+      experiment_id: 1,
+      trainer_name: "xgboost",
+      config: {
+        n_estimators: 100,
+        learning_rate: 0.1,
+      },
+    });
+    const config = postedBody!.config as Record<string, unknown>;
+    expect("max_depth" in config).toBe(false);
   });
 });

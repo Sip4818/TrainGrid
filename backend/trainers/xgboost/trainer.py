@@ -12,6 +12,7 @@ from .config import XGBoostClassifierConfig
 
 class XGBoostClassifierTrainer(BaseTrainer):
     config_class = XGBoostClassifierConfig
+    label = "XGBoost Classifier"
 
     def __init__(self, config: XGBoostClassifierConfig):
         self.config = config

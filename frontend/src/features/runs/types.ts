@@ -19,6 +19,7 @@ export interface RunConfig {
   feature_columns: string[];
   n_estimators?: number;
   max_depth?: number | null;
+  learning_rate?: number;
   [key: string]: unknown;
 }
 
