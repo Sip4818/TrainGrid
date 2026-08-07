@@ -19,5 +19,9 @@ class TrainerRegistry:
         except KeyError:
             raise TrainerNotFoundError(name) from None
 
+    def registered_trainers(self) -> dict[str, TrainerClass]:
+        """Return a copy of all registered trainers keyed by name."""
+        return dict(self._trainers)
+
 
 trainer_registry = TrainerRegistry()
