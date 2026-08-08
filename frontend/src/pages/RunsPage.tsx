@@ -11,6 +11,12 @@ import { Modal } from "../components/ui/Modal";
 import { Input } from "../components/ui/Input";
 import { Spinner } from "../components/ui/Spinner";
 import { Select } from "../components/ui/Select";
+import {
+  ConfigForm,
+  buildConfigFromSchema,
+  seedConfigFromSchema,
+} from "../components/ui/ConfigForm";
+import type { JsonSchema } from "../components/ui/ConfigForm";
 import { PageHeader } from "../components/layout/PageHeader";
 
 interface RunRow extends Record<string, unknown> {
@@ -25,6 +31,32 @@ const DEFAULT_MODEL_OPTIONS = [
   { value: "xgboost", label: "XGBoost Classifier" },
 ];
 
+const DATA_SOURCE_DEFAULTS: Record<string, unknown> = {
+  dataset_path: "backend/datasets/sample.csv",
+  target_column: "target",
+  feature_columns: "feature1, feature2",
+};
+
+const DEFAULT_CONFIG_SCHEMA: JsonSchema = {
+  type: "object",
+  properties: {
+    dataset_path: { title: "Dataset Path", type: "string" },
+    target_column: { title: "Target Column", type: "string" },
+    feature_columns: {
+      title: "Feature Columns",
+      type: "array",
+      items: { type: "string" },
+    },
+    n_estimators: { title: "N Estimators", type: "integer", default: 100 },
+    max_depth: {
+      title: "Max Depth",
+      anyOf: [{ type: "integer" }, { type: "null" }],
+      default: null,
+    },
+  },
+  required: ["dataset_path", "target_column", "feature_columns"],
+};
+
 export function RunsPage(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -33,13 +65,31 @@ export function RunsPage(): React.ReactElement {
   const trainersQuery = useTrainers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [experimentId, setExperimentId] = useState("1");
-  const [datasetPath, setDatasetPath] = useState("backend/datasets/sample.csv");
-  const [targetColumn, setTargetColumn] = useState("target");
-  const [featureColumns, setFeatureColumns] = useState("feature1,feature2");
   const [modelName, setModelName] = useState("random_forest");
-  const [nEstimators, setNEstimators] = useState("100");
-  const [maxDepth, setMaxDepth] = useState("");
-  const [learningRate, setLearningRate] = useState("");
+  const [config, setConfig] = useState<Record<string, unknown>>({});
+
+  const selectedTrainer = trainersQuery.data?.find(
+    (trainer) => trainer.name === modelName
+  );
+  const configSchema = (selectedTrainer?.config_schema ??
+    DEFAULT_CONFIG_SCHEMA) as unknown as JsonSchema;
+
+  const resetConfigFor = (schema: JsonSchema) => {
+    setConfig({ ...seedConfigFromSchema(schema), ...DATA_SOURCE_DEFAULTS });
+  };
+
+  const openCreateModal = () => {
+    setIsModalOpen(true);
+    resetConfigFor(configSchema);
+  };
+
+  const handleModelChange = (value: string) => {
+    setModelName(value);
+    const trainer = trainersQuery.data?.find((t) => t.name === value);
+    const schema = (trainer?.config_schema ??
+      DEFAULT_CONFIG_SCHEMA) as unknown as JsonSchema;
+    resetConfigFor(schema);
+  };
 
   const runs = ((runsQuery.data ?? []) as unknown) as RunRow[];
   const isLoading = runsQuery.isLoading;
@@ -84,26 +134,15 @@ export function RunsPage(): React.ReactElement {
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const config: RunConfig = {
-      dataset_path: datasetPath,
-      target_column: targetColumn,
-      feature_columns: featureColumns
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      n_estimators: Number(nEstimators),
-    };
-    if (maxDepth !== "") {
-      config.max_depth = Number(maxDepth);
-    }
-    if (modelName === "xgboost" && learningRate !== "") {
-      config.learning_rate = Number(learningRate);
-    }
+    const configPayload = buildConfigFromSchema(
+      config,
+      configSchema
+    ) as unknown as RunConfig;
     createRunMutation.mutate(
       {
         experiment_id: Number(experimentId),
         trainer_name: modelName,
-        config,
+        config: configPayload,
       },
       {
         onSuccess: () => {
@@ -158,7 +197,7 @@ export function RunsPage(): React.ReactElement {
           options={statusFilterOptions}
         />
         <Button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
           disabled={createRunMutation.isPending}
         >
           New Run
@@ -202,7 +241,7 @@ export function RunsPage(): React.ReactElement {
             <Select
               label="Model"
               value={modelName}
-              onChange={(e) => setModelName(e.target.value)}
+              onChange={(e) => handleModelChange(e.target.value)}
               options={modelOptions}
             />
             <Input
@@ -212,45 +251,13 @@ export function RunsPage(): React.ReactElement {
               onChange={(e) => setExperimentId(e.target.value)}
               required
             />
-            <Input
-              label="Dataset Path"
-              value={datasetPath}
-              onChange={(e) => setDatasetPath(e.target.value)}
-              required
+            <ConfigForm
+              schema={configSchema}
+              values={config}
+              onChange={(key, value) =>
+                setConfig((prev) => ({ ...prev, [key]: value }))
+              }
             />
-            <Input
-              label="Target Column"
-              value={targetColumn}
-              onChange={(e) => setTargetColumn(e.target.value)}
-              required
-            />
-            <Input
-              label="Feature Columns (comma-separated)"
-              value={featureColumns}
-              onChange={(e) => setFeatureColumns(e.target.value)}
-              required
-            />
-            <Input
-              label="N Estimators"
-              type="number"
-              value={nEstimators}
-              onChange={(e) => setNEstimators(e.target.value)}
-            />
-            <Input
-              label="Max Depth (leave empty for unlimited)"
-              type="number"
-              value={maxDepth}
-              onChange={(e) => setMaxDepth(e.target.value)}
-            />
-            {modelName === "xgboost" && (
-              <Input
-                label="Learning Rate"
-                type="number"
-                step="0.01"
-                value={learningRate}
-                onChange={(e) => setLearningRate(e.target.value)}
-              />
-            )}
             {createRunMutation.isError && (
               <div style={{ color: "#dc2626", fontSize: "13px" }}>
                 {(createRunMutation.error as Error)?.message}
