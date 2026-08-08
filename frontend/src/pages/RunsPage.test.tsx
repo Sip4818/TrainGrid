@@ -225,7 +225,7 @@ describe("RunsPage", () => {
     expect(screen.queryByText("Random Forest Classifier")).toBeNull();
   });
 
-  it("falls back to default model options when the trainers endpoint fails", async () => {
+  it("shows an error and disables creation when the trainers endpoint fails", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       if (String(input).includes("/trainers/")) {
         return new Response(JSON.stringify({ message: "Internal error" }), {
@@ -245,8 +245,30 @@ describe("RunsPage", () => {
     screen.getByText("New Run").click();
     await waitFor(() => screen.getByText("Create Training Run"));
 
-    expect(screen.getByText("Random Forest Classifier")).toBeDefined();
-    expect(screen.getByText("XGBoost Classifier")).toBeDefined();
+    expect(screen.getByText(/Couldn't load models/)).toBeDefined();
+    expect(screen.queryByLabelText("Dataset Path")).toBeNull();
+    expect(screen.getByRole("button", { name: "Create Run" })).toBeDisabled();
+  });
+
+  it("shows a loading message while models are still loading", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).includes("/trainers/")) {
+        return new Promise(() => {}) as Promise<Response>;
+      }
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    expect(screen.getByText("Loading models...")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Create Run" })).toBeDisabled();
   });
 
   it("reveals the learning rate field only when xgboost is selected", async () => {
