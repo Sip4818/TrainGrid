@@ -23,13 +23,43 @@ const sampleRun: Run = {
   finished_at: null,
 };
 
+const randomForestSchema = {
+  type: "object",
+  properties: {
+    dataset_path: { title: "Dataset Path", type: "string" },
+    target_column: { title: "Target Column", type: "string" },
+    feature_columns: {
+      title: "Feature Columns",
+      type: "array",
+      items: { type: "string" },
+    },
+    n_estimators: { title: "N Estimators", type: "integer", default: 100 },
+    max_depth: {
+      title: "Max Depth",
+      anyOf: [{ type: "integer" }, { type: "null" }],
+      default: null,
+    },
+  },
+  required: ["dataset_path", "target_column", "feature_columns"],
+};
+
+const xgboostSchema = {
+  type: "object",
+  properties: {
+    ...randomForestSchema.properties,
+    max_depth: { title: "Max Depth", type: "integer", default: 6 },
+    learning_rate: { title: "Learning Rate", type: "number", default: 0.3 },
+  },
+  required: ["dataset_path", "target_column", "feature_columns"],
+};
+
 const defaultTrainers = [
   {
     name: "random_forest",
     label: "Random Forest Classifier",
-    config_schema: {},
+    config_schema: randomForestSchema,
   },
-  { name: "xgboost", label: "XGBoost Classifier", config_schema: {} },
+  { name: "xgboost", label: "XGBoost Classifier", config_schema: xgboostSchema },
 ];
 
 function mockApi(runs: unknown[] = [], trainers: unknown[] = defaultTrainers) {
@@ -241,6 +271,45 @@ describe("RunsPage", () => {
     expect(screen.queryByLabelText("Learning Rate")).toBeNull();
   });
 
+  it("renders config fields from the selected trainer's schema", async () => {
+    mockApi([], [
+      {
+        name: "logreg",
+        label: "Logistic Regression",
+        config_schema: {
+          type: "object",
+          properties: {
+            dataset_path: { title: "Dataset Path", type: "string" },
+            target_column: { title: "Target Column", type: "string" },
+            feature_columns: {
+              title: "Feature Columns",
+              type: "array",
+              items: { type: "string" },
+            },
+            penalty: { title: "Penalty", type: "string", enum: ["l1", "l2"] },
+            max_iter: { title: "Max Iter", type: "integer", default: 500 },
+          },
+          required: ["dataset_path", "target_column", "feature_columns"],
+        },
+      },
+    ]);
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    fireEvent.change(screen.getByLabelText("Model"), {
+      target: { value: "logreg" },
+    });
+
+    expect(screen.getByLabelText("Max Iter")).toBeInTheDocument();
+    expect(screen.getByLabelText("Max Iter")).toHaveValue(500);
+    expect(screen.getByLabelText("Penalty")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Learning Rate")).toBeNull();
+  });
+
   it("submits the chosen trainer_name with learning_rate and omits empty config fields", async () => {
     let postedBody: Record<string, unknown> | null = null;
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
@@ -268,6 +337,9 @@ describe("RunsPage", () => {
     fireEvent.change(screen.getByLabelText("Model"), {
       target: { value: "xgboost" },
     });
+    fireEvent.change(screen.getByLabelText("Max Depth"), {
+      target: { value: "" },
+    });
     fireEvent.change(screen.getByLabelText("Learning Rate"), {
       target: { value: "0.1" },
     });
@@ -281,6 +353,9 @@ describe("RunsPage", () => {
       experiment_id: 1,
       trainer_name: "xgboost",
       config: {
+        dataset_path: "backend/datasets/sample.csv",
+        target_column: "target",
+        feature_columns: ["feature1", "feature2"],
         n_estimators: 100,
         learning_rate: 0.1,
       },
