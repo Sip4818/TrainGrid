@@ -26,35 +26,10 @@ interface RunRow extends Record<string, unknown> {
   created_at: string;
 }
 
-const DEFAULT_MODEL_OPTIONS = [
-  { value: "random_forest", label: "Random Forest Classifier" },
-  { value: "xgboost", label: "XGBoost Classifier" },
-];
-
 const DATA_SOURCE_DEFAULTS: Record<string, unknown> = {
   dataset_path: "backend/datasets/sample.csv",
   target_column: "target",
   feature_columns: "feature1, feature2",
-};
-
-const DEFAULT_CONFIG_SCHEMA: JsonSchema = {
-  type: "object",
-  properties: {
-    dataset_path: { title: "Dataset Path", type: "string" },
-    target_column: { title: "Target Column", type: "string" },
-    feature_columns: {
-      title: "Feature Columns",
-      type: "array",
-      items: { type: "string" },
-    },
-    n_estimators: { title: "N Estimators", type: "integer", default: 100 },
-    max_depth: {
-      title: "Max Depth",
-      anyOf: [{ type: "integer" }, { type: "null" }],
-      default: null,
-    },
-  },
-  required: ["dataset_path", "target_column", "feature_columns"],
 };
 
 export function RunsPage(): React.ReactElement {
@@ -65,30 +40,47 @@ export function RunsPage(): React.ReactElement {
   const trainersQuery = useTrainers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [experimentId, setExperimentId] = useState("1");
-  const [modelName, setModelName] = useState("random_forest");
+  const [modelName, setModelName] = useState("");
   const [config, setConfig] = useState<Record<string, unknown>>({});
 
-  const selectedTrainer = trainersQuery.data?.find(
-    (trainer) => trainer.name === modelName
-  );
-  const configSchema = (selectedTrainer?.config_schema ??
-    DEFAULT_CONFIG_SCHEMA) as unknown as JsonSchema;
+  const selectedTrainer =
+    trainersQuery.data?.find((trainer) => trainer.name === modelName) ?? null;
+  const configSchema = selectedTrainer
+    ? (selectedTrainer.config_schema as unknown as JsonSchema)
+    : null;
 
   const resetConfigFor = (schema: JsonSchema) => {
-    setConfig({ ...seedConfigFromSchema(schema), ...DATA_SOURCE_DEFAULTS });
-  };
-
-  const openCreateModal = () => {
-    setIsModalOpen(true);
-    resetConfigFor(configSchema);
+    const seeded = seedConfigFromSchema(schema);
+    const properties = schema.properties ?? {};
+    for (const [key, value] of Object.entries(DATA_SOURCE_DEFAULTS)) {
+      if (key in properties) {
+        seeded[key] = value;
+      }
+    }
+    setConfig(seeded);
   };
 
   const handleModelChange = (value: string) => {
     setModelName(value);
     const trainer = trainersQuery.data?.find((t) => t.name === value);
-    const schema = (trainer?.config_schema ??
-      DEFAULT_CONFIG_SCHEMA) as unknown as JsonSchema;
-    resetConfigFor(schema);
+    if (trainer) {
+      resetConfigFor(trainer.config_schema);
+    } else {
+      setConfig({});
+    }
+  };
+
+  const openCreateModal = () => {
+    setIsModalOpen(true);
+    const trainers = trainersQuery.data ?? [];
+    const current = trainers.find((t) => t.name === modelName);
+    if (current) {
+      resetConfigFor(current.config_schema);
+    } else if (trainers.length > 0 && trainers[0]) {
+      handleModelChange(trainers[0].name);
+    } else {
+      setConfig({});
+    }
   };
 
   const runs = ((runsQuery.data ?? []) as unknown) as RunRow[];
@@ -114,13 +106,10 @@ export function RunsPage(): React.ReactElement {
     { value: RunStatus.CANCELLED, label: "Cancelled" },
   ];
 
-  const modelOptions =
-    trainersQuery.data && trainersQuery.data.length > 0
-      ? trainersQuery.data.map((trainer) => ({
-          value: trainer.name,
-          label: trainer.label,
-        }))
-      : DEFAULT_MODEL_OPTIONS;
+  const modelOptions = (trainersQuery.data ?? []).map((trainer) => ({
+    value: trainer.name,
+    label: trainer.label,
+  }));
 
   const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -134,6 +123,7 @@ export function RunsPage(): React.ReactElement {
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!selectedTrainer || !configSchema) return;
     const configPayload = buildConfigFromSchema(
       config,
       configSchema
@@ -141,7 +131,7 @@ export function RunsPage(): React.ReactElement {
     createRunMutation.mutate(
       {
         experiment_id: Number(experimentId),
-        trainer_name: modelName,
+        trainer_name: selectedTrainer.name,
         config: configPayload,
       },
       {
@@ -251,13 +241,28 @@ export function RunsPage(): React.ReactElement {
               onChange={(e) => setExperimentId(e.target.value)}
               required
             />
-            <ConfigForm
-              schema={configSchema}
-              values={config}
-              onChange={(key, value) =>
-                setConfig((prev) => ({ ...prev, [key]: value }))
-              }
-            />
+            {trainersQuery.isLoading && (
+              <div style={{ color: "#6b7280", fontSize: "13px" }}>
+                Loading models...
+              </div>
+            )}
+            {trainersQuery.isError && (
+              <div style={{ color: "#dc2626", fontSize: "13px" }}>
+                Couldn't load models:{" "}
+                {(trainersQuery.error as Error | null)?.message}
+              </div>
+            )}
+            {!trainersQuery.isLoading &&
+              !trainersQuery.isError &&
+              configSchema && (
+                <ConfigForm
+                  schema={configSchema}
+                  values={config}
+                  onChange={(key, value) =>
+                    setConfig((prev) => ({ ...prev, [key]: value }))
+                  }
+                />
+              )}
             {createRunMutation.isError && (
               <div style={{ color: "#dc2626", fontSize: "13px" }}>
                 {(createRunMutation.error as Error)?.message}
@@ -265,7 +270,7 @@ export function RunsPage(): React.ReactElement {
             )}
             <Button
               type="submit"
-              disabled={createRunMutation.isPending}
+              disabled={createRunMutation.isPending || !selectedTrainer}
               style={{ alignSelf: "flex-end" }}
             >
               {createRunMutation.isPending ? "Creating..." : "Create Run"}
