@@ -46,3 +46,28 @@ class Run(RunBase):
     class Config:
         # This allows Pydantic to read data directly from SQLAlchemy models
         from_attributes = True
+
+
+class RunComparisonItem(BaseModel):
+    """
+    A single run's configuration and metrics for the comparison matrix.
+    trainer_name is denormalized from the run config for easy display.
+    """
+
+    id: int
+    experiment_id: int
+    trainer_name: str
+    status: RunStatus
+    config: dict[str, Any]
+    metrics: dict[str, Any]
+
+
+class RunComparisonResponse(BaseModel):
+    """
+    Response for GET /runs/compare.
+    'runs' holds one entry per requested run; 'metrics' is the ordered union of
+    metric keys across all compared runs, which the UI renders as table rows.
+    """
+
+    runs: list[RunComparisonItem]
+    metrics: list[str]
