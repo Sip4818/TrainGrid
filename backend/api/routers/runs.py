@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from backend.api.core.logging import get_logger
-from backend.api.schemas.run import RunCreate
+from backend.api.schemas.run import RunComparisonResponse, RunCreate
 from backend.api.services.run_service import RunService
 from backend.infrastructure.database.session import get_db
 
@@ -10,6 +10,24 @@ logger = get_logger(__name__)
 
 # router
 router = APIRouter(prefix="/runs", tags=["runs"])
+
+
+@router.get("/compare", response_model=RunComparisonResponse)
+def compare_runs(
+    experiment_id: int = Query(
+        ..., description="Experiment to scope the comparison to"
+    ),
+    run_ids: list[int] = Query(..., description="Comma-separated run IDs to compare"),
+    db: Session = Depends(get_db),  # noqa: B008
+) -> RunComparisonResponse:
+    """
+    Compare multiple training runs side-by-side within an experiment.
+
+    Returns each run's config and metrics plus the ordered union of metric
+    keys across all compared runs.
+    """
+    logger.info("Comparing runs experiment_id=%d run_ids=%s", experiment_id, run_ids)
+    return RunService(db).compare_runs(experiment_id, run_ids)
 
 
 @router.get("/{run_id}")
