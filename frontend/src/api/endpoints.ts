@@ -16,6 +16,15 @@ export const endpoints = {
 
     /** POST /runs/ — create a new training run */
     create: () => "/runs/" as const,
+
+    /**
+     * GET /runs/compare — compare runs side-by-side within an experiment.
+     * run_ids are sent as repeated query params (e.g. run_ids=1&run_ids=2).
+     */
+    compare: (experimentId: number, runIds: number[]) =>
+      `/runs/compare?experiment_id=${experimentId}&${runIds
+        .map((id) => `run_ids=${id}`)
+        .join("&")}` as const,
   },
 } as const;
 
