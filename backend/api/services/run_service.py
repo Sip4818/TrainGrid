@@ -1,11 +1,14 @@
+from typing import Any, cast
+
 from sqlalchemy.orm import Session
 
 from backend.api.core.logging import get_logger
-from backend.api.schemas.run import RunCreate
+from backend.api.schemas.run import RunComparisonItem, RunComparisonResponse, RunCreate
 from backend.infrastructure.database.models import ExperimentModel, RunModel
 from backend.shared.enums import RunStatus
 from backend.shared.errors import (
     ExperimentNotFoundError,
+    RunNotInExperimentError,
     TrainingRunNotFoundError,
 )
 from backend.trainers.registry import trainer_registry
@@ -76,3 +79,50 @@ class RunService:
         runs = self.db.query(RunModel).all()
         logger.info("Retrieved %d runs", len(runs))
         return runs
+
+    def compare_runs(
+        self, experiment_id: int, run_ids: list[int]
+    ) -> RunComparisonResponse:
+        logger.info(
+            "Comparing runs experiment_id=%d run_ids=%s", experiment_id, run_ids
+        )
+        self._validate_experiment(experiment_id)
+
+        seen: set[int] = set()
+        runs: list[RunModel] = []
+        for run_id in run_ids:
+            if run_id in seen:
+                continue
+            seen.add(run_id)
+            run = self.get_run(run_id)
+            if run.experiment_id != experiment_id:
+                logger.warning(
+                    "Run run_id=%d belongs to experiment_id=%d, not %d",
+                    run_id,
+                    run.experiment_id,
+                    experiment_id,
+                )
+                raise RunNotInExperimentError(run_id, experiment_id)
+            runs.append(run)
+
+        metric_keys: list[str] = []
+        for run in runs:
+            for key in run.metrics.keys():
+                if key not in metric_keys:
+                    metric_keys.append(key)
+
+        logger.info("Compared %d runs for experiment_id=%d", len(runs), experiment_id)
+        return RunComparisonResponse(
+            runs=[
+                RunComparisonItem(
+                    id=cast(int, run.id),
+                    experiment_id=cast(int, run.experiment_id),
+                    trainer_name=cast(str, run.config.get("trainer_name", "")),
+                    status=cast(RunStatus, run.status),
+                    config=cast(dict[str, Any], run.config),
+                    metrics=cast(dict[str, Any], run.metrics),
+                )
+                for run in runs
+            ],
+            metrics=metric_keys,
+        )
