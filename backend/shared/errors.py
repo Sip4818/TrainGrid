@@ -28,3 +28,14 @@ class ExperimentNotFoundError(NotFoundError):
     def __init__(self, experiment_id: int) -> None:
         self.experiment_id = experiment_id
         super().__init__(f"Experiment with id '{experiment_id}' not found")
+
+
+class RunNotInExperimentError(TrainGridError):
+    """Raised when a run does not belong to the experiment being compared."""
+
+    def __init__(self, run_id: int, experiment_id: int) -> None:
+        self.run_id = run_id
+        self.experiment_id = experiment_id
+        super().__init__(
+            f"Run with id '{run_id}' does not belong to experiment '{experiment_id}'"
+        )
