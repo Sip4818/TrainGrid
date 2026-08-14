@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getRuns, getRun, createRun } from "./api";
-import type { Run, RunCreate } from "./types";
+import { getRuns, getRun, createRun, compareRuns } from "./api";
+import type { Run, RunComparisonResponse, RunCreate } from "./types";
 import { RunStatus } from "./types";
 import { ApiError } from "../../api/client";
 
@@ -208,6 +208,71 @@ describe("createRun", () => {
     await expect(promise).rejects.toThrow(ApiError);
     await expect(promise).rejects.toMatchObject({
       status: 0,
+    });
+  });
+});
+
+describe("compareRuns", () => {
+  const comparisonResponse: RunComparisonResponse = {
+    runs: [
+      {
+        id: 1,
+        experiment_id: 42,
+        trainer_name: "random_forest",
+        status: RunStatus.COMPLETED,
+        config: {
+          dataset_path: "data.csv",
+          target_column: "label",
+          feature_columns: ["a", "b"],
+          n_estimators: 100,
+        },
+        metrics: { accuracy: 0.95 },
+      },
+    ],
+    metrics: ["accuracy"],
+  };
+
+  it("returns the comparison payload on success", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(comparisonResponse), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await compareRuns(42, [1, 2]);
+    expect(result).toEqual(comparisonResponse);
+    expect(result.metrics).toEqual(["accuracy"]);
+  });
+
+  it("calls GET /runs/compare with experiment_id and repeated run_ids params", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(comparisonResponse), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await compareRuns(42, [2, 3]);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `${BASE_URL}/runs/compare?experiment_id=42&run_ids=2&run_ids=3`,
+      expect.any(Object),
+    );
+  });
+
+  it("throws ApiError on 404", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: "Not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const promise = compareRuns(42, [1, 999]);
+    await expect(promise).rejects.toThrow(ApiError);
+    await expect(promise).rejects.toMatchObject({
+      status: 404,
+      message: "Not found",
     });
   });
 });
