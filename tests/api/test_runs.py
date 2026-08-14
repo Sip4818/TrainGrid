@@ -46,7 +46,7 @@ def _create_completed_run(experiment_id: int) -> int:
 def _create_experiment(name: str) -> int:
     db = SessionLocal()
     try:
-        experiment = ExperimentModel(name=name)
+        experiment = ExperimentModel(name=name, project_id=1)
         db.add(experiment)
         db.commit()
         db.refresh(experiment)
@@ -104,6 +104,14 @@ def test_get_runs():
     response = client.get("/runs/")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+def test_get_runs_filtered_by_experiment():
+    response = client.get("/runs/", params={"experiment_id": 1})
+    assert response.status_code == 200
+    runs = response.json()
+    assert isinstance(runs, list)
+    assert all(run["experiment_id"] == 1 for run in runs)
 
 
 def test_get_run_not_found():
