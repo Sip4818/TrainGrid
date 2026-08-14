@@ -1,10 +1,12 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   MemoryRouter,
-  RouterProvider,
-  createMemoryRouter,
+  Route,
+  Routes,
+  useLocation,
 } from "react-router-dom";
 import { RunsPage } from "./RunsPage";
 import type { Run } from "../features/runs/types";
@@ -391,28 +393,31 @@ describe("RunsPage", () => {
   });
 });
 
-function renderWithRouter(runs: unknown[]): ReturnType<typeof createMemoryRouter> {
+function LocationSpy(): ReactElement {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname + location.search}</div>;
+}
+
+function renderWithRouter(runs: unknown[]): void {
   mockApi(runs);
-  const router = createMemoryRouter(
-    [
-      { path: "/runs", element: <RunsPage /> },
-      {
-        path: "/runs/compare",
-        element: <div>compare page</div>,
-      },
-    ],
-    { initialEntries: ["/runs"] },
-  );
   render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <RouterProvider router={router} />
+      <MemoryRouter initialEntries={["/runs"]}>
+        <LocationSpy />
+        <Routes>
+          <Route path="/runs" element={<RunsPage />} />
+          <Route
+            path="/runs/compare"
+            element={<div data-testid="compare-page">compare page</div>}
+          />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>,
   );
-  return router;
 }
 
 describe("RunsPage comparison selection", () => {
@@ -440,7 +445,7 @@ describe("RunsPage comparison selection", () => {
   });
 
   it("navigates to the comparison page with experiment and run ids", async () => {
-    const router = renderWithRouter(sameExperimentRuns);
+    renderWithRouter(sameExperimentRuns);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Compare run 1")).toBeDefined();
@@ -450,9 +455,11 @@ describe("RunsPage comparison selection", () => {
     fireEvent.click(screen.getByLabelText("Compare run 2"));
     fireEvent.click(screen.getByRole("button", { name: /Compare \(2\)/ }));
 
-    expect(router.state.location.pathname).toBe("/runs/compare");
-    expect(router.state.location.search).toBe(
-      "?experiment_id=1&run_ids=1&run_ids=2",
+    await waitFor(() => {
+      expect(screen.getByTestId("compare-page")).toBeDefined();
+    });
+    expect(screen.getByTestId("location").textContent).toBe(
+      "/runs/compare?experiment_id=1&run_ids=1&run_ids=2",
     );
   });
 
