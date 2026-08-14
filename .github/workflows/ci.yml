@@ -132,6 +132,18 @@ jobs:
           echo "$response" | grep -q '"id"' || { echo "Seed failed: no run was created"; exit 1; }
           echo "Seed run created."
 
+      - name: Seed completed runs so the comparison flow has data
+        run: |
+          docker compose exec -T api python -m backend.scripts.seed_compare_runs
+          response=$(curl -sf http://localhost:8000/runs/)
+          echo "$response"
+          completed=$(echo "$response" | grep -o '"completed"' | wc -l)
+          if [ "$completed" -lt 2 ]; then
+            echo "Seed failed: expected at least 2 completed runs, found $completed"
+            exit 1
+          fi
+          echo "Comparison runs seeded."
+
       - name: Run Playwright E2E tests
         working-directory: frontend
         run: npx playwright test
