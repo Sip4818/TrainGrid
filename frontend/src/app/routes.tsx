@@ -3,6 +3,7 @@ import { Layout } from "./layout";
 import { DashboardPage } from "../pages/DashboardPage";
 import { RunsPage } from "../pages/RunsPage";
 import { RunDetailPage } from "../pages/RunDetailPage";
+import { RunComparisonPage } from "../pages/RunComparisonPage";
 
 export const routes: RouteObject[] = [
   {
@@ -16,6 +17,10 @@ export const routes: RouteObject[] = [
       {
         path: "runs",
         element: <RunsPage />,
+      },
+      {
+        path: "runs/compare",
+        element: <RunComparisonPage />,
       },
       {
         path: "runs/:runId",
