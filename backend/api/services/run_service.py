@@ -74,9 +74,12 @@ class RunService:
         logger.info("Run run_id=%d found", run_id)
         return run
 
-    def get_runs(self) -> list[RunModel]:
-        logger.info("Listing all runs")
-        runs = self.db.query(RunModel).all()
+    def get_runs(self, experiment_id: int | None = None) -> list[RunModel]:
+        logger.info("Listing runs experiment_id=%s", experiment_id)
+        query = self.db.query(RunModel)
+        if experiment_id is not None:
+            query = query.filter(RunModel.experiment_id == experiment_id)
+        runs = query.all()
         logger.info("Retrieved %d runs", len(runs))
         return runs
 
