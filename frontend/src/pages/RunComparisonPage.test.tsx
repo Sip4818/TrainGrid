@@ -94,8 +94,8 @@ describe("RunComparisonPage", () => {
     expect(screen.getByText("0.9500")).toBeDefined();
     expect(screen.getByText("0.9700")).toBeDefined();
 
-    // Config row values
-    expect(screen.getByText("100")).toBeDefined();
+    // Config row values (n_estimators appears for both runs)
+    expect(screen.getAllByText("100").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("0.1000")).toBeDefined();
 
     // max_depth cells render as em dash (null / undefined)
