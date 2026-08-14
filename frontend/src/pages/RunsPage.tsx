@@ -32,6 +32,9 @@ const DATA_SOURCE_DEFAULTS: Record<string, unknown> = {
   feature_columns: "feature1, feature2",
 };
 
+/** Maximum number of runs that can be selected for comparison. */
+const MAX_COMPARE = 3;
+
 export function RunsPage(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -42,6 +45,8 @@ export function RunsPage(): React.ReactElement {
   const [experimentId, setExperimentId] = useState("1");
   const [modelName, setModelName] = useState("");
   const [config, setConfig] = useState<Record<string, unknown>>({});
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectionHint, setSelectionHint] = useState<string | null>(null);
 
   const selectedTrainer =
     trainersQuery.data?.find((trainer) => trainer.name === modelName) ?? null;
@@ -121,6 +126,38 @@ export function RunsPage(): React.ReactElement {
     setSearchParams(searchParams);
   };
 
+  const selectedExperimentId =
+    selectedIds.length > 0
+      ? (runs.find((run) => run.id === selectedIds[0])?.experiment_id ?? null)
+      : null;
+
+  const toggleSelect = (row: RunRow) => {
+    if (selectedIds.includes(row.id)) {
+      setSelectedIds(selectedIds.filter((id) => id !== row.id));
+      setSelectionHint(null);
+      return;
+    }
+    if (selectedIds.length >= MAX_COMPARE) {
+      setSelectionHint(`Select up to ${MAX_COMPARE} runs to compare.`);
+      return;
+    }
+    if (
+      selectedExperimentId !== null &&
+      row.experiment_id !== selectedExperimentId
+    ) {
+      setSelectionHint("Runs must belong to the same experiment to compare.");
+      return;
+    }
+    setSelectionHint(null);
+    setSelectedIds([...selectedIds, row.id]);
+  };
+
+  const handleCompare = () => {
+    if (selectedIds.length < 2 || selectedExperimentId === null) return;
+    const ids = selectedIds.map((id) => `run_ids=${id}`).join("&");
+    navigate(`/runs/compare?experiment_id=${selectedExperimentId}&${ids}`);
+  };
+
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedTrainer || !configSchema) return;
@@ -143,6 +180,19 @@ export function RunsPage(): React.ReactElement {
   };
 
   const columns = [
+    {
+      key: "selected" as const,
+      label: "Compare",
+      render: (_value: unknown, row: RunRow) => (
+        <input
+          type="checkbox"
+          aria-label={`Compare run ${String(row.id)}`}
+          checked={selectedIds.includes(row.id)}
+          onChange={() => toggleSelect(row)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+    },
     {
       key: "id" as const,
       label: "ID",
@@ -186,6 +236,9 @@ export function RunsPage(): React.ReactElement {
           onChange={handleStatusFilterChange}
           options={statusFilterOptions}
         />
+        <Button onClick={handleCompare} disabled={selectedIds.length < 2}>
+          Compare ({selectedIds.length})
+        </Button>
         <Button
           onClick={openCreateModal}
           disabled={createRunMutation.isPending}
@@ -194,6 +247,11 @@ export function RunsPage(): React.ReactElement {
         </Button>
       </PageHeader>
       <div style={{ flex: 1, overflow: "auto", padding: "0 32px 32px" }}>
+        {selectionHint && (
+          <div style={{ color: "#b45309", fontSize: "13px", padding: "12px 0" }}>
+            {selectionHint}
+          </div>
+        )}
         {isLoading && (
           <div
             style={{ display: "flex", justifyContent: "center", padding: "48px" }}

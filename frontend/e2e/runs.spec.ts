@@ -73,6 +73,54 @@ test.describe("Runs flow", () => {
     await expect(page.getByText(/status|config|metrics/i).first()).toBeVisible();
   });
 
+  test("compares two completed runs side-by-side", async ({ page }) => {
+    await page.goto("/runs");
+
+    const errorMessage = page.getByText(/failed to load runs/i);
+    await page.waitForLoadState("networkidle");
+
+    if (await errorMessage.isVisible({ timeout: 1000 }).catch(() => false)) {
+      test.skip();
+      return;
+    }
+
+    // CI seeds two completed runs (random_forest + xgboost) in experiment 1
+    const completedRows = page.locator("table tbody tr", {
+      hasText: "completed",
+    });
+    await expect(completedRows.first()).toBeVisible({ timeout: 10000 });
+    await expect(completedRows).toHaveCount(2);
+
+    // Select both completed runs for comparison
+    const compareCheckboxes = page.locator(
+      'table tbody tr:has-text("completed") input[type="checkbox"]',
+    );
+    for (let i = 0; i < (await compareCheckboxes.count()); i++) {
+      await compareCheckboxes.nth(i).check();
+    }
+
+    const compareButton = page.getByRole("button", {
+      name: /Compare \(2\)/,
+    });
+    await expect(compareButton).toBeEnabled();
+    await compareButton.click();
+
+    await expect(page).toHaveURL(
+      /\/runs\/compare\?experiment_id=1&run_ids=\d+&run_ids=\d+/,
+    );
+
+    // Comparison matrix should render both runs and their metrics
+    await expect(page.getByRole("heading", { name: "Run Comparison" })).toBeVisible();
+    await expect(page.getByText("Experiment #1")).toBeVisible();
+    await expect(
+      page.getByText(/Run #\d+ \u2014 random_forest/),
+    ).toBeVisible();
+    await expect(page.getByText(/Run #\d+ \u2014 xgboost/)).toBeVisible();
+    await expect(page.getByText("accuracy")).toBeVisible();
+    await expect(page.getByText("0.9300")).toBeVisible();
+    await expect(page.getByText("0.9700")).toBeVisible();
+  });
+
   test("navigates from dashboard to a status-filtered runs list", async ({
     page,
   }) => {

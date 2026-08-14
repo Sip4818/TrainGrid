@@ -1,7 +1,13 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 import { RunsPage } from "./RunsPage";
 import type { Run } from "../features/runs/types";
 import { RunStatus } from "../features/runs/types";
@@ -384,5 +390,119 @@ describe("RunsPage", () => {
     });
     const config = postedBody!.config as Record<string, unknown>;
     expect("max_depth" in config).toBe(false);
+  });
+});
+
+function LocationSpy(): ReactElement {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname + location.search}</div>;
+}
+
+function renderWithRouter(runs: unknown[]): void {
+  mockApi(runs);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/runs"]}>
+        <LocationSpy />
+        <Routes>
+          <Route path="/runs" element={<RunsPage />} />
+          <Route
+            path="/runs/compare"
+            element={<div data-testid="compare-page">compare page</div>}
+          />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+describe("RunsPage comparison selection", () => {
+  const sameExperimentRuns = [
+    { ...sampleRun, id: 1, experiment_id: 1, status: RunStatus.COMPLETED },
+    { ...sampleRun, id: 2, experiment_id: 1, status: RunStatus.COMPLETED },
+    { ...sampleRun, id: 3, experiment_id: 1, status: RunStatus.COMPLETED },
+    { ...sampleRun, id: 4, experiment_id: 1, status: RunStatus.COMPLETED },
+  ];
+
+  it("disables compare until at least two runs are selected", async () => {
+    renderWithRouter(sameExperimentRuns);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Compare run 1")).toBeDefined();
+    });
+
+    expect(screen.getByRole("button", { name: /Compare \(0\)/ })).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText("Compare run 1"));
+    expect(screen.getByRole("button", { name: /Compare \(1\)/ })).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText("Compare run 2"));
+    expect(screen.getByRole("button", { name: /Compare \(2\)/ })).toBeEnabled();
+  });
+
+  it("navigates to the comparison page with experiment and run ids", async () => {
+    renderWithRouter(sameExperimentRuns);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Compare run 1")).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByLabelText("Compare run 1"));
+    fireEvent.click(screen.getByLabelText("Compare run 2"));
+    fireEvent.click(screen.getByRole("button", { name: /Compare \(2\)/ }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("compare-page")).toBeDefined();
+    });
+    expect(screen.getByTestId("location").textContent).toBe(
+      "/runs/compare?experiment_id=1&run_ids=1&run_ids=2",
+    );
+  });
+
+  it("blocks selecting runs from a different experiment", async () => {
+    const mixedExperimentRuns = [
+      { ...sampleRun, id: 1, experiment_id: 1, status: RunStatus.COMPLETED },
+      { ...sampleRun, id: 2, experiment_id: 2, status: RunStatus.COMPLETED },
+    ];
+    renderWithRouter(mixedExperimentRuns);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Compare run 1")).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByLabelText("Compare run 1"));
+    fireEvent.click(screen.getByLabelText("Compare run 2"));
+
+    expect(
+      screen.getByText("Runs must belong to the same experiment to compare."),
+    ).toBeDefined();
+    const checkbox2 = screen.getByLabelText(
+      "Compare run 2",
+    ) as HTMLInputElement;
+    expect(checkbox2.checked).toBe(false);
+    expect(screen.getByRole("button", { name: /Compare \(1\)/ })).toBeDisabled();
+  });
+
+  it("caps selection at three runs", async () => {
+    renderWithRouter(sameExperimentRuns);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Compare run 1")).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByLabelText("Compare run 1"));
+    fireEvent.click(screen.getByLabelText("Compare run 2"));
+    fireEvent.click(screen.getByLabelText("Compare run 3"));
+    fireEvent.click(screen.getByLabelText("Compare run 4"));
+
+    expect(screen.getByText("Select up to 3 runs to compare.")).toBeDefined();
+    const checkbox4 = screen.getByLabelText(
+      "Compare run 4",
+    ) as HTMLInputElement;
+    expect(checkbox4.checked).toBe(false);
   });
 });

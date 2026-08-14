@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getRuns, getRun, createRun } from "./api";
-import type { Run, RunCreate } from "./types";
+import { getRuns, getRun, createRun, compareRuns } from "./api";
+import type { Run, RunComparisonResponse, RunCreate } from "./types";
 import { RunStatus } from "./types";
 
 /**
@@ -46,5 +46,17 @@ export function useCreateRun() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["runs"] });
     },
+  });
+}
+
+/**
+ * Fetch the comparison matrix for the given runs within an experiment.
+ * Only enabled when at least one run is selected.
+ */
+export function useRunComparison(experimentId: number, runIds: number[]) {
+  return useQuery<RunComparisonResponse>({
+    queryKey: ["runs", "compare", experimentId, runIds],
+    queryFn: () => compareRuns(experimentId, runIds),
+    enabled: runIds.length > 0,
   });
 }

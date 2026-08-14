@@ -49,3 +49,27 @@ export interface Run {
   finished_at: string | null;
 }
 
+/**
+ * RunComparisonItem is one run's entry in the comparison matrix.
+ * Mirrors the backend RunComparisonItem schema.
+ */
+export interface RunComparisonItem {
+  id: number;
+  experiment_id: number;
+  trainer_name: string;
+  status: RunStatus;
+  config: RunConfig;
+  metrics: Record<string, unknown>;
+}
+
+/**
+ * RunComparisonResponse is the payload from GET /runs/compare.
+ * 'runs' holds one entry per requested run; 'metrics' is the ordered union of
+ * metric keys across all compared runs, rendered as table rows.
+ * Mirrors the backend RunComparisonResponse schema.
+ */
+export interface RunComparisonResponse {
+  runs: RunComparisonItem[];
+  metrics: string[];
+}
+
