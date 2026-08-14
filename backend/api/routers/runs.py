@@ -44,13 +44,16 @@ def get_run(run_id: int, db: Session = Depends(get_db)):  # noqa: B008
 
 # get all the runs
 @router.get("/")
-def get_runs(db: Session = Depends(get_db)):  # noqa: B008
+def get_runs(
+    experiment_id: int | None = Query(None, description="Filter runs by experiment"),
+    db: Session = Depends(get_db),  # noqa: B008
+):  # noqa: ANN201
     """
-    Retrieve all training runs.
+    Retrieve all training runs, optionally scoped to an experiment.
     """
-    logger.info("Listing all runs")
+    logger.info("Listing runs experiment_id=%s", experiment_id)
     service = RunService(db)
-    runs = service.get_runs()
+    runs = service.get_runs(experiment_id=experiment_id)
     logger.info("Retrieved %d runs", len(runs))
     return runs
 
