@@ -27,6 +27,7 @@ const CONFIG_FIELDS = ["n_estimators", "max_depth", "learning_rate"] as const;
  */
 function formatValue(value: unknown): string {
   if (typeof value === "number") {
+    if (Number.isInteger(value)) return String(value);
     return Number.isFinite(value) ? value.toPrecision(4) : String(value);
   }
   if (value === null || value === undefined) return "\u2014";
