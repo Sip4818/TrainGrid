@@ -76,6 +76,10 @@ export function RunsPage(): React.ReactElement {
   };
 
   const openCreateModal = () => {
+    const urlExperimentId = searchParams.get("experiment_id");
+    if (urlExperimentId !== null) {
+      setExperimentId(urlExperimentId);
+    }
     setIsModalOpen(true);
     const trainers = trainersQuery.data ?? [];
     const current = trainers.find((t) => t.name === modelName);
@@ -98,9 +102,22 @@ export function RunsPage(): React.ReactElement {
     ? (rawStatus as RunStatus)
     : null;
 
-  const filteredRuns = activeStatus
-    ? runs.filter((run) => run.status === activeStatus)
-    : runs;
+  const rawExperimentId = searchParams.get("experiment_id");
+  const activeExperimentId =
+    rawExperimentId !== null && /^\d+$/.test(rawExperimentId)
+      ? Number(rawExperimentId)
+      : null;
+
+  const filteredRuns = runs.filter((run) => {
+    if (activeStatus && run.status !== activeStatus) return false;
+    if (
+      activeExperimentId !== null &&
+      run.experiment_id !== activeExperimentId
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const statusFilterOptions = [
     { value: "", label: "All Statuses" },
