@@ -1,7 +1,7 @@
 /**
  * TrainGrid API client.
  *
- * Provides typed fetch wrappers (get, post) that:
+ * Provides typed fetch wrappers (get, post, del) that:
  * - Use the base URL from VITE_API_BASE_URL (default: http://localhost:8000)
  * - Serialize/deserialize JSON automatically
  * - Throw ApiError on non-2xx responses
@@ -40,9 +40,9 @@ export class ApiError extends Error {
   }
 }
 
-/** Internal fetch wrapper shared by get/post. */
+/** Internal fetch wrapper shared by get/post/del. */
 async function request<T>(
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "DELETE",
   path: string,
   body?: unknown,
 ): Promise<T> {
@@ -90,6 +90,10 @@ export const apiClient = {
 
   post<T>(path: string, body?: unknown): Promise<T> {
     return request<T>("POST", path, body);
+  },
+
+  del<T>(path: string): Promise<T> {
+    return request<T>("DELETE", path);
   },
 };
 

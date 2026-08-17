@@ -30,6 +30,14 @@ class ExperimentNotFoundError(NotFoundError):
         super().__init__(f"Experiment with id '{experiment_id}' not found")
 
 
+class ProjectNotFoundError(NotFoundError):
+    """Raised when a referenced project does not exist."""
+
+    def __init__(self, project_id: int) -> None:
+        self.project_id = project_id
+        super().__init__(f"Project with id '{project_id}' not found")
+
+
 class RunNotInExperimentError(TrainGridError):
     """Raised when a run does not belong to the experiment being compared."""
 

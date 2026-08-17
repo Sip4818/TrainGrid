@@ -117,3 +117,102 @@ curl "http://localhost:8000/runs/compare?experiment_id=1&run_ids=1,2"
 | 422 | (validation) | `run_ids` missing, empty, or not valid integers |
 | 404 | `NOT_FOUND` | `experiment_id` does not exist, or a `run_id` does not exist |
 | 422 | `RUN_NOT_IN_EXPERIMENT` | A run exists but belongs to a different experiment |
+
+### `GET /runs/?experiment_id={id}`
+
+List training runs, optionally scoped to one experiment.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `experiment_id` | int | No | When provided, only runs in that experiment are returned |
+
+## Project & Experiment Hierarchy
+
+### `POST /projects/`
+
+Create a project. Body: `{"name": "...", "description": "..."}` (description optional).
+
+**Error responses:**
+
+| Status | `detail.code` | When |
+|---|---|---|
+| 422 | (validation) | `name` missing |
+
+### `GET /projects/`
+
+List all projects. Each project includes its nested `experiments` array.
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Default Project",
+    "description": "Default project for existing runs",
+    "created_at": "...",
+    "experiments": []
+  }
+]
+```
+
+### `GET /projects/{project_id}`
+
+Retrieve one project with its nested experiments.
+
+**Error responses:**
+
+| Status | `detail.code` | When |
+|---|---|---|
+| 404 | `NOT_FOUND` | `project_id` does not exist |
+
+### `PATCH /projects/{project_id}`
+
+Partially update a project (`name` and/or `description`).
+
+### `DELETE /projects/{project_id}`
+
+Delete a project. **Cascades** to its experiments and, through them, their runs.
+
+### `POST /experiments/`
+
+Create an experiment within a project. Body: `{"project_id": 1, "name": "..."}`.
+
+**Error responses:**
+
+| Status | `detail.code` | When |
+|---|---|---|
+| 404 | `NOT_FOUND` | `project_id` does not exist |
+| 422 | (validation) | `name` or `project_id` missing |
+
+### `GET /experiments/`
+
+List experiments. Use `?project_id={id}` to scope the list to one project.
+
+```json
+[
+  {
+    "id": 1,
+    "project_id": 1,
+    "name": "Default",
+    "created_at": "...",
+    "run_count": 0
+  }
+]
+```
+
+### `GET /experiments/{experiment_id}`
+
+Retrieve one experiment.
+
+**Error responses:**
+
+| Status | `detail.code` | When |
+|---|---|---|
+| 404 | `NOT_FOUND` | `experiment_id` does not exist |
+
+### `PATCH /experiments/{experiment_id}`
+
+Partially update an experiment (`name` and/or `project_id`).
+
+### `DELETE /experiments/{experiment_id}`
+
+Delete an experiment. **Cascades** to its runs.
