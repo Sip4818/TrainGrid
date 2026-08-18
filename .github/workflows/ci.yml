@@ -33,17 +33,17 @@ jobs:
         uses: astral-sh/setup-uv@v7.1.6
 
       - name: Install dependencies
-        run: uv pip install --system -r requirements.txt
+        run: uv sync --all-packages
 
       - name: Check formatting
-        run: ruff format --check .
+        run: uv run ruff format --check .
 
       - name: Lint
-        run: ruff check .
+        run: uv run ruff check .
       - name: Type check
         run: |
           if find . -path ./.venv -prune -o -name "*.py" -print -quit | grep -q .; then
-            mypy .
+            uv run mypy .
           else
             echo "No Python files found; skipping mypy."
           fi
@@ -51,7 +51,7 @@ jobs:
       - name: Test
         run: |
           if [ -d tests ]; then
-            pytest
+            uv run pytest
           else
             echo "No tests directory found; skipping pytest."
           fi
