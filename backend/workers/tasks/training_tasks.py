@@ -14,6 +14,24 @@ from backend.workers.celery_app import celery_app
 logger = get_logger(__name__)
 
 
+def resolve_dataset_path(dataset_path: str, tmp_dir: Path) -> str:
+    """Resolve a run's dataset_path into a filesystem path for the trainer.
+
+    dataset_path is dual-purpose: an artifact-store key referencing an uploaded
+    dataset (e.g. 'datasets/3/dataset.csv'), or a literal filesystem path for
+    local development / manual placement. Store keys are materialized into
+    tmp_dir; literal paths pass through unchanged so the BaseTrainer contract
+    stays path-based.
+    """
+    try:
+        return str(local_artifact_store.load(dataset_path, tmp_dir / "dataset.csv"))
+    except FileNotFoundError:
+        logger.info(
+            "dataset_path is not a store key, using literal path=%s", dataset_path
+        )
+        return dataset_path
+
+
 @celery_app.task(name="training.start_run")
 def start_training_run(run_id: str) -> dict[str, str]:
     logger.info("Training task received for run_id=%s", run_id)
@@ -34,17 +52,24 @@ def start_training_run(run_id: str) -> dict[str, str]:
         if not trainer_name:
             raise ValueError(f"No trainer_name configured for run_id={run_id}")
 
-        trainer_cls = trainer_registry.get(trainer_name)
-        trainer = trainer_cls(  # type: ignore[call-arg]
-            config=trainer_cls.config_class(**config_data)
-        )
-        trainer.train()
-        metrics = trainer.evaluate()
-        logger.info("Training completed for run_id=%s metrics=%s", run_id, metrics)
-
-        artifact_key = f"runs/{run_id}/model.joblib"
         with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_model = Path(tmp_dir) / "model.joblib"
+            tmp_root = Path(tmp_dir)
+            dataset_path = config_data.get("dataset_path")
+            if dataset_path:
+                config_data["dataset_path"] = resolve_dataset_path(
+                    dataset_path, tmp_root
+                )
+
+            trainer_cls = trainer_registry.get(trainer_name)
+            trainer = trainer_cls(  # type: ignore[call-arg]
+                config=trainer_cls.config_class(**config_data)
+            )
+            trainer.train()
+            metrics = trainer.evaluate()
+            logger.info("Training completed for run_id=%s metrics=%s", run_id, metrics)
+
+            artifact_key = f"runs/{run_id}/model.joblib"
+            tmp_model = tmp_root / "model.joblib"
             trainer.save(str(tmp_model))
             local_artifact_store.save(tmp_model, artifact_key)
 
