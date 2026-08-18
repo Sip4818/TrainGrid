@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from backend.shared.errors import (
+    DatasetUploadError,
     NotFoundError,
     RunNotInExperimentError,
     TrainerNotFoundError,
@@ -43,6 +44,14 @@ async def handle_run_not_in_experiment(
     )
 
 
+async def handle_dataset_upload_error(request: Request, exc: Exception) -> JSONResponse:
+    """Catch DatasetUploadError and return a 422."""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": {"code": "DATASET_UPLOAD_ERROR", "message": str(exc)}},
+    )
+
+
 async def handle_generic_error(request: Request, exc: Exception) -> JSONResponse:
     """Catch any unhandled exception and return a 500."""
     return JSONResponse(
@@ -62,4 +71,5 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(NotFoundError, handle_not_found)
     app.add_exception_handler(TrainerNotFoundError, handle_trainer_not_found)
     app.add_exception_handler(RunNotInExperimentError, handle_run_not_in_experiment)
+    app.add_exception_handler(DatasetUploadError, handle_dataset_upload_error)
     app.add_exception_handler(Exception, handle_generic_error)
