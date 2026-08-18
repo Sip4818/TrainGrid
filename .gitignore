@@ -232,4 +232,7 @@ __marimo__/
 backend/datasets/*.csv
 backend/datasets/*.parquet
 backend/datasets/*.json
+
+# Uploaded artifacts (trained models, uploaded datasets) via LocalArtifactStore
+artifacts/
 frontend/test-results/
