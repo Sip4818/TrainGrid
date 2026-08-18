@@ -47,3 +47,7 @@ class RunNotInExperimentError(TrainGridError):
         super().__init__(
             f"Run with id '{run_id}' does not belong to experiment '{experiment_id}'"
         )
+
+
+class DatasetUploadError(TrainGridError):
+    """Raised when an uploaded file is not a valid CSV dataset."""
