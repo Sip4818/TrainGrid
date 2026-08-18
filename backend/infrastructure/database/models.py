@@ -107,3 +107,26 @@ class RunModel(Base):
 
     # Run belongs to an experiment
     experiment = relationship("ExperimentModel", back_populates="runs")
+
+
+class DatasetModel(Base):
+    """
+    SQLAlchemy model for the 'datasets' table.
+    Tracks user-uploaded CSV datasets so training runs can reference them via
+    the artifact-store key 'datasets/{id}/dataset.csv', which both the API and
+    the Celery worker can read from the shared artifacts volume.
+    """
+
+    __tablename__ = "datasets"
+
+    # Primary key, indexed for fast lookups
+    id: Column = Column(Integer, primary_key=True, index=True)
+
+    # Display name of the uploaded file (defaults to the original filename)
+    name: Column = Column(String, nullable=False)
+
+    # Size of the uploaded file in bytes
+    size_bytes: Column = Column(Integer, nullable=False)
+
+    # Automatically set when the row is created
+    created_at: Column = Column(DateTime, default=datetime.utcnow)
