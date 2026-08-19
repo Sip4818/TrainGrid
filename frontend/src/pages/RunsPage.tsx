@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useRuns, useCreateRun } from "../features/runs/hooks";
 import { useTrainers } from "../features/models/hooks";
+import { useDatasets, useUploadDataset } from "../features/datasets/hooks";
 import { RunStatus } from "../features/runs/types";
 import type { RunConfig } from "../features/runs/types";
 import { Button } from "../components/ui/Button";
@@ -41,6 +42,8 @@ export function RunsPage(): React.ReactElement {
   const runsQuery = useRuns();
   const createRunMutation = useCreateRun();
   const trainersQuery = useTrainers();
+  const datasetsQuery = useDatasets();
+  const uploadDatasetMutation = useUploadDataset();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [experimentId, setExperimentId] = useState("1");
   const [modelName, setModelName] = useState("");
@@ -336,6 +339,24 @@ export function RunsPage(): React.ReactElement {
                   onChange={(key, value) =>
                     setConfig((prev) => ({ ...prev, [key]: value }))
                   }
+                  datasets={(datasetsQuery.data ?? []).map((dataset) => ({
+                    store_key: dataset.store_key,
+                    name: dataset.name,
+                  }))}
+                  onUploadDataset={(file) =>
+                    uploadDatasetMutation.mutate(
+                      { file, name: file.name },
+                      {
+                        onSuccess: (dataset) => {
+                          setConfig((prev) => ({
+                            ...prev,
+                            dataset_path: dataset.store_key,
+                          }));
+                        },
+                      },
+                    )
+                  }
+                  isUploading={uploadDatasetMutation.isPending}
                 />
               )}
             {createRunMutation.isError && (
