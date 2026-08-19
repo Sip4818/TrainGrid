@@ -64,5 +64,12 @@ export const endpoints = {
     /** DELETE /experiments/{id} — delete an experiment (cascades to runs) */
     delete: (id: number) => `/experiments/${id}` as const,
   },
+  datasets: {
+    /** GET /datasets/ — list all uploaded datasets */
+    list: () => "/datasets/" as const,
+
+    /** POST /datasets/ — upload a CSV dataset (multipart/form-data) */
+    upload: () => "/datasets/" as const,
+  },
 } as const;
 

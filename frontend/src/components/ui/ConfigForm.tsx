@@ -1,5 +1,7 @@
+import { useRef } from "react";
 import { Input } from "./Input";
 import { Select } from "./Select";
+import { Button } from "./Button";
 
 /**
  * Minimal JSON Schema subset emitted by Pydantic's model_json_schema().
@@ -12,6 +14,7 @@ export interface JsonSchemaProperty {
   enum?: unknown[];
   items?: { type?: string };
   anyOf?: Array<{ type?: string }>;
+  x_widget?: string;
 }
 
 export interface JsonSchema {
@@ -20,10 +23,25 @@ export interface JsonSchema {
   required?: string[];
 }
 
+/**
+ * A dataset selectable from the create-run modal picker. Kept as a plain
+ * type so the UI layer does not depend on the datasets feature module.
+ */
+export interface DatasetOption {
+  store_key: string;
+  name: string;
+}
+
+/** Sentinel select value that reveals the literal-path text input. */
+const CUSTOM_PATH = "__custom__";
+
 interface ConfigFormProps {
   schema: JsonSchema;
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
+  datasets?: DatasetOption[];
+  onUploadDataset?: (file: File) => void;
+  isUploading?: boolean;
 }
 
 /**
@@ -121,6 +139,9 @@ export function ConfigForm({
   schema,
   values,
   onChange,
+  datasets = [],
+  onUploadDataset,
+  isUploading = false,
 }: ConfigFormProps): React.ReactElement {
   const properties = (schema.properties ?? {}) as Record<
     string,
@@ -133,6 +154,14 @@ export function ConfigForm({
     return <></>;
   }
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) onUploadDataset?.(file);
+    e.target.value = "";
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       {entries.map(([name, prop]) => {
@@ -140,6 +169,86 @@ export function ConfigForm({
         const isRequired = required.has(name);
         const type = resolveType(prop);
         const value = values[name];
+
+        if (prop.x_widget === "dataset") {
+          const currentValue = String(value ?? "");
+          const matchesUploaded = datasets.some(
+            (d) => d.store_key === currentValue,
+          );
+          const isCustom = !matchesUploaded;
+          const selectedOption = matchesUploaded ? currentValue : CUSTOM_PATH;
+
+          return (
+            <div
+              key={name}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <Select
+                label={label}
+                required={isRequired}
+                value={selectedOption}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  onChange(name, val === CUSTOM_PATH ? "" : val);
+                }}
+                options={[
+                  ...datasets.map((d) => ({
+                    value: d.store_key,
+                    label: d.name,
+                  })),
+                  { value: CUSTOM_PATH, label: "Custom path\u2026" },
+                ]}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  alignItems: "center",
+                }}
+              >
+                {isCustom && (
+                  <Input
+                    aria-label={`${label} custom path`}
+                    type="text"
+                    placeholder="e.g. backend/datasets/sample.csv"
+                    value={currentValue}
+                    onChange={(e) => onChange(name, e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                )}
+                {onUploadDataset && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={isUploading}
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    {isUploading ? "Uploading\u2026" : "Upload dataset"}
+                  </Button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  aria-label={`${label} file input`}
+                  style={{ display: "none" }}
+                  onChange={handleFileSelect}
+                />
+              </div>
+              {datasets.length === 0 && currentValue === "" && (
+                <span style={{ fontSize: "12px", color: "#9ca3af" }}>
+                  {"No datasets uploaded yet \u2014 use a custom path or upload one."}
+                </span>
+              )}
+            </div>
+          );
+        }
 
         if (prop.enum) {
           return (

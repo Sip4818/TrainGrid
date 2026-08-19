@@ -32,7 +32,11 @@ const sampleRun: Run = {
 const randomForestSchema = {
   type: "object",
   properties: {
-    dataset_path: { title: "Dataset Path", type: "string" },
+    dataset_path: {
+      title: "Dataset Path",
+      type: "string",
+      x_widget: "dataset",
+    },
     target_column: { title: "Target Column", type: "string" },
     feature_columns: {
       title: "Feature Columns",
@@ -74,6 +78,12 @@ function mockApi(runs: unknown[] = [], trainers: unknown[] = defaultTrainers) {
       const method = (init?.method as string | undefined) ?? "GET";
       if (method === "POST") {
         return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (String(input).includes("/datasets/")) {
+        return new Response(JSON.stringify([]), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
@@ -504,5 +514,185 @@ describe("RunsPage comparison selection", () => {
       "Compare run 4",
     ) as HTMLInputElement;
     expect(checkbox4.checked).toBe(false);
+  });
+});
+
+describe("RunsPage dataset picker", () => {
+  const uploadedDatasets = [
+    {
+      id: 1,
+      name: "iris.csv",
+      size_bytes: 1024,
+      store_key: "datasets/1/dataset.csv",
+      created_at: "2026-08-01T00:00:00Z",
+    },
+  ];
+
+  it("lists uploaded datasets in the create modal picker", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const method = (init?.method as string | undefined) ?? "GET";
+      if (method === "POST") {
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (String(input).includes("/datasets/")) {
+        return new Response(JSON.stringify(uploadedDatasets), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const body = String(input).includes("/trainers/") ? defaultTrainers : [];
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    fireEvent.change(screen.getByLabelText("Model"), {
+      target: { value: "random_forest" },
+    });
+    await waitFor(() => screen.getByLabelText("Dataset Path"));
+
+    expect(screen.getByText("iris.csv")).toBeDefined();
+  });
+
+  it("sends the selected dataset store key in the create-run payload", async () => {
+    let postedBody: Record<string, unknown> | null = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const method = (init?.method as string | undefined) ?? "GET";
+      const url = String(input);
+      if (method === "POST") {
+        if (url.includes("/datasets/")) {
+          return new Response(JSON.stringify(uploadedDatasets[0]), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        postedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/datasets/")) {
+        return new Response(JSON.stringify(uploadedDatasets), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const body = url.includes("/trainers/") ? defaultTrainers : [];
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    fireEvent.change(screen.getByLabelText("Model"), {
+      target: { value: "random_forest" },
+    });
+    await waitFor(() => screen.getByLabelText("Dataset Path"));
+
+    fireEvent.change(screen.getByLabelText("Dataset Path"), {
+      target: { value: "datasets/1/dataset.csv" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create Run" }));
+
+    await waitFor(() => {
+      expect(postedBody).not.toBeNull();
+    });
+    expect(postedBody).toMatchObject({
+      config: {
+        dataset_path: "datasets/1/dataset.csv",
+      },
+    });
+  });
+
+  it("uploads a dataset and uses the returned store key as dataset_path", async () => {
+    let postedBody: Record<string, unknown> | null = null;
+    let datasetsList: unknown[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const method = (init?.method as string | undefined) ?? "GET";
+      const url = String(input);
+      if (method === "POST") {
+        if (url.includes("/datasets/")) {
+          const formData = init?.body as FormData;
+          expect(formData.get("file")).toBeInstanceOf(File);
+          const created = {
+            id: 9,
+            name: "uploaded.csv",
+            size_bytes: 512,
+            store_key: "datasets/9/dataset.csv",
+            created_at: "2026-08-02T00:00:00Z",
+          };
+          datasetsList = [created];
+          return new Response(JSON.stringify(created), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        postedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/datasets/")) {
+        return new Response(JSON.stringify(datasetsList), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const body = url.includes("/trainers/") ? defaultTrainers : [];
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    renderWithProviders(<RunsPage />);
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    fireEvent.change(screen.getByLabelText("Model"), {
+      target: { value: "random_forest" },
+    });
+    await waitFor(() => screen.getByLabelText("Dataset Path"));
+
+    const file = new File(["a,b\n1,2"], "uploaded.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Dataset Path file input"), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(
+        (screen.getByLabelText("Dataset Path") as HTMLSelectElement).value,
+      ).toBe("datasets/9/dataset.csv");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create Run" }));
+    await waitFor(() => {
+      expect(postedBody).not.toBeNull();
+    });
+    expect(postedBody).toMatchObject({
+      config: {
+        dataset_path: "datasets/9/dataset.csv",
+      },
+    });
   });
 });

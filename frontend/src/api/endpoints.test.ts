@@ -23,3 +23,13 @@ describe("endpoints.runs", () => {
     expect(endpoints.runs.create()).toBe("/runs/");
   });
 });
+
+describe("endpoints.datasets", () => {
+  it("list() returns /datasets/", () => {
+    expect(endpoints.datasets.list()).toBe("/datasets/");
+  });
+
+  it("upload() returns /datasets/", () => {
+    expect(endpoints.datasets.upload()).toBe("/datasets/");
+  });
+});
