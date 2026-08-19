@@ -4,6 +4,8 @@
  * Provides typed fetch wrappers (get, post, del) that:
  * - Use the base URL from VITE_API_BASE_URL (default: http://localhost:8000)
  * - Serialize/deserialize JSON automatically
+ * - Accept a FormData body for multipart uploads (JSON content-type is
+ *   skipped so the browser sets the multipart boundary itself)
  * - Throw ApiError on non-2xx responses
  * - Forward typed response bodies on success
  */
@@ -47,16 +49,23 @@ async function request<T>(
   body?: unknown,
 ): Promise<T> {
   const url = `${BASE_URL}${path}`;
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const isFormData = body instanceof FormData;
+  const headers: Record<string, string> = {};
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
 
   let response: Response;
   try {
     response = await fetch(url, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body:
+        body !== undefined
+          ? isFormData
+            ? body
+            : JSON.stringify(body)
+          : undefined,
     });
   } catch (error) {
     // Network failure (offline, DNS, timeout, etc.)
