@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
+import { useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import {
   ConfigForm,
   buildConfigFromSchema,
   seedConfigFromSchema,
 } from "./ConfigForm";
-import type { JsonSchema } from "./ConfigForm";
+import type { JsonSchema, DatasetOption } from "./ConfigForm";
 
 const schema: JsonSchema = {
   type: "object",
@@ -152,5 +153,173 @@ describe("buildConfigFromSchema", () => {
       scale: false,
       tree_method: "hist",
     });
+  });
+});
+
+describe("ConfigForm dataset widget", () => {
+  const datasetSchema: JsonSchema = {
+    type: "object",
+    properties: {
+      dataset_path: {
+        title: "Dataset Path",
+        type: "string",
+        x_widget: "dataset",
+      },
+      target_column: { title: "Target Column", type: "string" },
+    },
+    required: ["dataset_path", "target_column"],
+  };
+
+  const datasets: DatasetOption[] = [
+    { store_key: "datasets/1/dataset.csv", name: "iris.csv" },
+    { store_key: "datasets/2/dataset.csv", name: "titanic.csv" },
+  ];
+
+  const emptyValues = { dataset_path: "", target_column: "" };
+
+  function StatefulConfigForm({
+    initial,
+    datasets: opts = datasets,
+  }: {
+    initial: Record<string, unknown>;
+    datasets?: DatasetOption[];
+  }): React.ReactElement {
+    const [values, setValues] = useState(initial);
+    return (
+      <ConfigForm
+        schema={datasetSchema}
+        values={values}
+        onChange={(key, value) =>
+          setValues((prev) => ({ ...prev, [key]: value }))
+        }
+        datasets={opts}
+      />
+    );
+  }
+
+  it("renders a dataset picker with uploaded datasets and a custom path option", () => {
+    render(
+      <ConfigForm
+        schema={datasetSchema}
+        values={emptyValues}
+        onChange={() => {}}
+        datasets={datasets}
+      />,
+    );
+    const select = screen.getByLabelText("Dataset Path");
+    expect(select.tagName).toBe("SELECT");
+    expect(screen.getByText("iris.csv")).toBeInTheDocument();
+    expect(screen.getByText("titanic.csv")).toBeInTheDocument();
+    expect(screen.getByText("Custom path\u2026")).toBeInTheDocument();
+  });
+
+  it("calls onChange with the store key when an uploaded dataset is selected", () => {
+    const onChange = vi.fn();
+    render(
+      <ConfigForm
+        schema={datasetSchema}
+        values={emptyValues}
+        onChange={onChange}
+        datasets={datasets}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Dataset Path"), {
+      target: { value: "datasets/2/dataset.csv" },
+    });
+    expect(onChange).toHaveBeenCalledWith(
+      "dataset_path",
+      "datasets/2/dataset.csv",
+    );
+  });
+
+  it("shows the custom path input when the value is a literal path", () => {
+    render(
+      <ConfigForm
+        schema={datasetSchema}
+        values={{ dataset_path: "backend/datasets/sample.csv", target_column: "" }}
+        onChange={() => {}}
+        datasets={datasets}
+      />,
+    );
+    const customInput = screen.getByLabelText("Dataset Path custom path");
+    expect(customInput).toHaveValue("backend/datasets/sample.csv");
+  });
+
+  it("switches between an uploaded dataset and the custom path input", () => {
+    render(
+      <StatefulConfigForm
+        initial={{ dataset_path: "datasets/1/dataset.csv", target_column: "" }}
+      />,
+    );
+    expect(screen.queryByLabelText("Dataset Path custom path")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Dataset Path"), {
+      target: { value: "__custom__" },
+    });
+    expect(screen.getByLabelText("Dataset Path custom path")).toBeInTheDocument();
+  });
+
+  it("calls onChange with the literal path when typing in the custom input", () => {
+    const onChange = vi.fn();
+    render(
+      <ConfigForm
+        schema={datasetSchema}
+        values={{ dataset_path: "backend/datasets/sample.csv", target_column: "" }}
+        onChange={onChange}
+        datasets={datasets}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Dataset Path custom path"), {
+      target: { value: "backend/datasets/other.csv" },
+    });
+    expect(onChange).toHaveBeenCalledWith(
+      "dataset_path",
+      "backend/datasets/other.csv",
+    );
+  });
+
+  it("calls onUploadDataset with the chosen file", () => {
+    const onUpload = vi.fn();
+    render(
+      <ConfigForm
+        schema={datasetSchema}
+        values={emptyValues}
+        onChange={() => {}}
+        datasets={datasets}
+        onUploadDataset={onUpload}
+      />,
+    );
+    const file = new File(["a,b\n1,2"], "data.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Dataset Path file input"), {
+      target: { files: [file] },
+    });
+    expect(onUpload).toHaveBeenCalledWith(file);
+  });
+
+  it("disables the upload button while an upload is in progress", () => {
+    render(
+      <ConfigForm
+        schema={datasetSchema}
+        values={emptyValues}
+        onChange={() => {}}
+        datasets={datasets}
+        onUploadDataset={() => {}}
+        isUploading
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Uploading\u2026" })).toBeDisabled();
+  });
+
+  it("shows a hint when no datasets exist and no custom path is set", () => {
+    render(
+      <ConfigForm
+        schema={datasetSchema}
+        values={emptyValues}
+        onChange={() => {}}
+        datasets={[]}
+      />,
+    );
+    expect(
+      screen.getByText(/No datasets uploaded yet/),
+    ).toBeInTheDocument();
   });
 });
