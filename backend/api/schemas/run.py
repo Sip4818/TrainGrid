@@ -12,7 +12,10 @@ class RunBase(BaseModel):
     Using 'dict[str, Any]' for config allows flexibility across different ML models.
     """
 
-    experiment_id: int
+    experiment_id: int = Field(..., description="Experiment the run belongs to")
+    project_id: int = Field(
+        ..., description="Project owning the experiment the run belongs to"
+    )
     config: dict[str, Any] = Field(
         ..., description="Hyperparameters and dataset configuration"
     )
@@ -55,6 +58,7 @@ class RunComparisonItem(BaseModel):
     """
 
     id: int
+    project_id: int
     experiment_id: int
     trainer_name: str
     status: RunStatus
