@@ -4,10 +4,16 @@ from sqlalchemy.orm import Session
 
 from backend.api.core.logging import get_logger
 from backend.api.schemas.run import RunComparisonItem, RunComparisonResponse, RunCreate
-from backend.infrastructure.database.models import ExperimentModel, RunModel
+from backend.infrastructure.database.models import (
+    ExperimentModel,
+    ProjectModel,
+    RunModel,
+)
 from backend.shared.enums import RunStatus
 from backend.shared.errors import (
     ExperimentNotFoundError,
+    ExperimentNotInProjectError,
+    ProjectNotFoundError,
     RunNotInExperimentError,
     TrainingRunNotFoundError,
 )
@@ -28,8 +34,12 @@ class RunService:
         self.db = db
 
     def create_run(self, payload: RunCreate) -> RunModel:
-        logger.info("Creating run for experiment_id=%d", payload.experiment_id)
-        self._validate_experiment(payload.experiment_id)
+        logger.info(
+            "Creating run for experiment_id=%d project_id=%d",
+            payload.experiment_id,
+            payload.project_id,
+        )
+        self._validate_scope(payload.experiment_id, payload.project_id)
         trainer_registry.get(payload.trainer_name)
         config = {**payload.config, "trainer_name": payload.trainer_name}
         run = RunModel(
@@ -60,36 +70,87 @@ class RunService:
 
         return run
 
-    def _validate_experiment(self, experiment_id: int) -> None:
-        if self.db.get(ExperimentModel, experiment_id) is None:
+    def _validate_scope(self, experiment_id: int, project_id: int) -> ExperimentModel:
+        """Ensure the experiment exists and belongs to the given project."""
+        experiment = self.db.get(ExperimentModel, experiment_id)
+        if experiment is None:
             logger.warning("Experiment experiment_id=%d not found", experiment_id)
             raise ExperimentNotFoundError(experiment_id)
+        if self.db.get(ProjectModel, project_id) is None:
+            logger.warning("Project project_id=%d not found", project_id)
+            raise ProjectNotFoundError(project_id)
+        if cast(int, experiment.project_id) != project_id:
+            logger.warning(
+                "Experiment experiment_id=%d does not belong to project_id=%d",
+                experiment_id,
+                project_id,
+            )
+            raise ExperimentNotInProjectError(experiment_id, project_id)
+        return experiment
 
-    def get_run(self, run_id: int) -> RunModel:
-        logger.info("Fetching run run_id=%d", run_id)
+    def get_run(self, run_id: int, experiment_id: int, project_id: int) -> RunModel:
+        logger.info(
+            "Fetching run run_id=%d experiment_id=%d project_id=%d",
+            run_id,
+            experiment_id,
+            project_id,
+        )
         run = self.db.get(RunModel, run_id)
         if run is None:
             logger.warning("Run run_id=%d not found", run_id)
             raise TrainingRunNotFoundError(run_id)
+        if cast(int, run.experiment_id) != experiment_id:
+            logger.warning(
+                "Run run_id=%d belongs to experiment_id=%d, not %d",
+                run_id,
+                run.experiment_id,
+                experiment_id,
+            )
+            raise RunNotInExperimentError(run_id, experiment_id)
+        self._validate_scope(experiment_id, project_id)
         logger.info("Run run_id=%d found", run_id)
         return run
 
-    def get_runs(self, experiment_id: int | None = None) -> list[RunModel]:
-        logger.info("Listing runs experiment_id=%s", experiment_id)
-        query = self.db.query(RunModel)
-        if experiment_id is not None:
-            query = query.filter(RunModel.experiment_id == experiment_id)
-        runs = query.all()
+    def get_runs(self, experiment_id: int, project_id: int) -> list[RunModel]:
+        logger.info(
+            "Listing runs experiment_id=%d project_id=%d",
+            experiment_id,
+            project_id,
+        )
+        self._validate_scope(experiment_id, project_id)
+        runs = (
+            self.db.query(RunModel)
+            .filter(RunModel.experiment_id == experiment_id)
+            .all()
+        )
         logger.info("Retrieved %d runs", len(runs))
         return runs
 
+    def delete_run(
+        self, run_id: int, experiment_id: int, project_id: int
+    ) -> dict[str, str]:
+        logger.info(
+            "Deleting run run_id=%d experiment_id=%d project_id=%d",
+            run_id,
+            experiment_id,
+            project_id,
+        )
+        run = self.get_run(run_id, experiment_id, project_id)
+        self.db.delete(run)
+        self.db.commit()
+        logger.info("Run run_id=%d deleted", run_id)
+        return {"detail": f"Run with id '{run_id}' deleted"}
+
     def compare_runs(
-        self, experiment_id: int, run_ids: list[int]
+        self, experiment_id: int, project_id: int, run_ids: list[int]
     ) -> RunComparisonResponse:
         logger.info(
-            "Comparing runs experiment_id=%d run_ids=%s", experiment_id, run_ids
+            "Comparing runs experiment_id=%d project_id=%d run_ids=%s",
+            experiment_id,
+            project_id,
+            run_ids,
         )
-        self._validate_experiment(experiment_id)
+        self._validate_scope(experiment_id, project_id)
 
         seen: set[int] = set()
         runs: list[RunModel] = []
@@ -97,15 +158,7 @@ class RunService:
             if run_id in seen:
                 continue
             seen.add(run_id)
-            run = self.get_run(run_id)
-            if run.experiment_id != experiment_id:
-                logger.warning(
-                    "Run run_id=%d belongs to experiment_id=%d, not %d",
-                    run_id,
-                    run.experiment_id,
-                    experiment_id,
-                )
-                raise RunNotInExperimentError(run_id, experiment_id)
+            run = self.get_run(run_id, experiment_id, project_id)
             runs.append(run)
 
         metric_keys: list[str] = []
@@ -119,6 +172,7 @@ class RunService:
             runs=[
                 RunComparisonItem(
                     id=cast(int, run.id),
+                    project_id=cast(int, run.experiment.project_id),
                     experiment_id=cast(int, run.experiment_id),
                     trainer_name=cast(str, run.config.get("trainer_name", "")),
                     status=cast(RunStatus, run.status),

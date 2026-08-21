@@ -3,19 +3,24 @@ import { endpoints } from "../../api/endpoints";
 import type { Experiment, ExperimentCreate } from "./types";
 
 /**
- * Fetch all experiments, optionally scoped to a single project.
- * GET /experiments/
+ * Fetch all experiments within a project.
+ * GET /experiments/?project_id={projectId}
  */
-export function getExperiments(projectId?: number): Promise<Experiment[]> {
+export function getExperiments(projectId: number): Promise<Experiment[]> {
   return apiClient.get<Experiment[]>(endpoints.experiments.list(projectId));
 }
 
 /**
- * Fetch a single experiment by ID.
- * GET /experiments/{id}
+ * Fetch a single experiment by ID, scoped to its project.
+ * GET /experiments/{id}?project_id={projectId}
  */
-export function getExperiment(id: number): Promise<Experiment> {
-  return apiClient.get<Experiment>(endpoints.experiments.detail(id));
+export function getExperiment(
+  id: number,
+  projectId: number,
+): Promise<Experiment> {
+  return apiClient.get<Experiment>(
+    endpoints.experiments.detail(id, projectId),
+  );
 }
 
 /**
@@ -27,9 +32,12 @@ export function createExperiment(data: ExperimentCreate): Promise<Experiment> {
 }
 
 /**
- * Delete an experiment and all of its runs.
- * DELETE /experiments/{id}
+ * Delete an experiment and all of its runs, scoped to its project.
+ * DELETE /experiments/{id}?project_id={projectId}
  */
-export function deleteExperiment(id: number): Promise<void> {
-  return apiClient.del<void>(endpoints.experiments.delete(id));
+export function deleteExperiment(
+  id: number,
+  projectId: number,
+): Promise<void> {
+  return apiClient.del<void>(endpoints.experiments.delete(id, projectId));
 }

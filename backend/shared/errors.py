@@ -38,6 +38,18 @@ class ProjectNotFoundError(NotFoundError):
         super().__init__(f"Project with id '{project_id}' not found")
 
 
+class ExperimentNotInProjectError(NotFoundError):
+    """Raised when an experiment does not belong to the requested project."""
+
+    def __init__(self, experiment_id: int, project_id: int) -> None:
+        self.experiment_id = experiment_id
+        self.project_id = project_id
+        super().__init__(
+            f"Experiment with id '{experiment_id}' does not belong to "
+            f"project '{project_id}'"
+        )
+
+
 class RunNotInExperimentError(TrainGridError):
     """Raised when a run does not belong to the experiment being compared."""
 

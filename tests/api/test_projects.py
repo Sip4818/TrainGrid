@@ -90,6 +90,7 @@ def test_delete_project_cascades_to_experiments_and_runs():
 
     payload = {
         "experiment_id": experiment["id"],
+        "project_id": project["id"],
         "trainer_name": "random_forest",
         "config": {
             "dataset_path": "dummy.csv",
@@ -107,5 +108,17 @@ def test_delete_project_cascades_to_experiments_and_runs():
 
     response = client.delete(f"/projects/{project['id']}")
     assert response.status_code == 200
-    assert client.get(f"/experiments/{experiment['id']}").status_code == 404
-    assert client.get(f"/runs/{run_id}").status_code == 404
+    assert (
+        client.get(
+            f"/experiments/{experiment['id']}",
+            params={"project_id": project["id"]},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.get(
+            f"/runs/{run_id}",
+            params={"project_id": project["id"], "experiment_id": experiment["id"]},
+        ).status_code
+        == 404
+    )
