@@ -73,6 +73,7 @@ describe("RunConfig interface", () => {
 describe("RunCreate interface", () => {
   it("accepts a valid run create payload", () => {
     const payload: RunCreate = {
+      project_id: 10,
       experiment_id: 42,
       trainer_name: "random_forest",
       config: {
@@ -81,6 +82,7 @@ describe("RunCreate interface", () => {
         feature_columns: ["a", "b"],
       },
     };
+    expect(payload.project_id).toBe(10);
     expect(payload.experiment_id).toBe(42);
     expect(payload.trainer_name).toBe("random_forest");
     expect(payload.config.dataset_path).toBe("data.csv");
@@ -88,6 +90,7 @@ describe("RunCreate interface", () => {
 
   it("requires experiment_id, trainer_name and config", () => {
     const payload: RunCreate = {
+      project_id: 1,
       experiment_id: 1,
       trainer_name: "random_forest",
       config: {
@@ -105,6 +108,7 @@ describe("RunCreate interface", () => {
 describe("Run interface", () => {
   const sampleRun: Run = {
     id: 1,
+    project_id: 10,
     experiment_id: 42,
     config: {
       dataset_path: "data.csv",
@@ -172,6 +176,7 @@ describe("Run interface", () => {
     expect(keys).toEqual(
       [
         "id",
+        "project_id",
         "experiment_id",
         "config",
         "status",

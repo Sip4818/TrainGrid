@@ -8,26 +8,23 @@ import {
 import type { Experiment, ExperimentCreate } from "./types";
 
 /**
- * Fetch all experiments, optionally scoped to a project.
- * The query key includes the optional project id so each scope caches separately.
+ * Fetch all experiments within a project.
+ * The query key includes the project id so each scope caches separately.
  */
-export function useExperiments(projectId?: number) {
+export function useExperiments(projectId: number) {
   return useQuery<Experiment[]>({
-    queryKey:
-      projectId !== undefined
-        ? ["experiments", projectId]
-        : ["experiments"],
+    queryKey: ["experiments", projectId],
     queryFn: () => getExperiments(projectId),
   });
 }
 
 /**
- * Fetch a single experiment by ID.
+ * Fetch a single experiment by ID, scoped to its project.
  */
-export function useExperiment(id: number) {
+export function useExperiment(id: number, projectId: number) {
   return useQuery<Experiment>({
-    queryKey: ["experiment", id],
-    queryFn: () => getExperiment(id),
+    queryKey: ["experiment", id, projectId],
+    queryFn: () => getExperiment(id, projectId),
   });
 }
 
@@ -49,11 +46,12 @@ export function useCreateExperiment() {
 
 /**
  * Delete an experiment and invalidate experiments and projects queries on success.
+ * Mutation input: { id, projectId } — both required for the scoped API.
  */
 export function useDeleteExperiment() {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, number>({
-    mutationFn: deleteExperiment,
+  return useMutation<void, Error, { id: number; projectId: number }>({
+    mutationFn: ({ id, projectId }) => deleteExperiment(id, projectId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["experiments"] });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
