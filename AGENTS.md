@@ -129,7 +129,7 @@ Before we scale horizontally by adding new models, we should make the existing v
 - **Commits:** Use `feat:`, `fix:`, or `docs:` prefixes.
 - **One Commit Per File Change:** Each file change must be committed separately — never bundle multiple files into a single commit. If lint auto-fixes touch several files after the fact, commit them as a single `style:` pass.
 - **Merging:** Always merge with a merge commit — **never squash**. Each per-file commit must be preserved in `main` history.
-- **AI Commits:** If a commit is made by AI or with AI assistance, the commit message must include the AI model name and state that it was generated with AI assistance. Format: `feat: description [generated with ai assistant]`. This ensures traceability of AI-generated contributions.
+
 
 ---
 
