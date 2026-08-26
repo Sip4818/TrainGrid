@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { RunComparisonPage } from "./RunComparisonPage";
 import type { RunComparisonResponse } from "../features/runs/types";
 import { RunStatus } from "../features/runs/types";
@@ -10,6 +10,7 @@ const comparison: RunComparisonResponse = {
   runs: [
     {
       id: 1,
+      project_id: 1,
       experiment_id: 10,
       trainer_name: "random_forest",
       status: RunStatus.COMPLETED,
@@ -24,6 +25,7 @@ const comparison: RunComparisonResponse = {
     },
     {
       id: 2,
+      project_id: 1,
       experiment_id: 10,
       trainer_name: "xgboost",
       status: RunStatus.COMPLETED,
@@ -47,7 +49,9 @@ function renderWithProviders(route: string) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[route]}>
-        <RunComparisonPage />
+        <Routes>
+          <Route path="projects/:projectId/experiments/:experimentId/compare" element={<RunComparisonPage />} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -63,7 +67,7 @@ describe("RunComparisonPage", () => {
       () => new Promise(() => {}) as Promise<Response>,
     );
 
-    renderWithProviders("/runs/compare?experiment_id=10&run_ids=1&run_ids=2");
+    renderWithProviders("/projects/1/experiments/10/compare?run_ids=1&run_ids=2");
 
     expect(screen.getByRole("status")).toBeDefined();
   });
@@ -76,7 +80,7 @@ describe("RunComparisonPage", () => {
       }),
     );
 
-    renderWithProviders("/runs/compare?experiment_id=10&run_ids=1&run_ids=2");
+    renderWithProviders("/projects/1/experiments/10/compare?run_ids=1&run_ids=2");
 
     await waitFor(() => {
       expect(screen.getByText("accuracy")).toBeDefined();
@@ -113,7 +117,7 @@ describe("RunComparisonPage", () => {
   });
 
   it("shows empty state when no runs are selected", () => {
-    renderWithProviders("/runs/compare");
+    renderWithProviders("/projects/1/experiments/10/compare");
 
     expect(screen.getByText("Run Comparison")).toBeDefined();
     expect(
@@ -129,7 +133,7 @@ describe("RunComparisonPage", () => {
       new Error("Network error"),
     );
 
-    renderWithProviders("/runs/compare?experiment_id=10&run_ids=1&run_ids=2");
+    renderWithProviders("/projects/1/experiments/10/compare?run_ids=1&run_ids=2");
 
     await waitFor(() => {
       expect(
