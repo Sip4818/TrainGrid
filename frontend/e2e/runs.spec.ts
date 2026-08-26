@@ -10,16 +10,16 @@ test.describe("Project-first navigation flow", () => {
     const projectCell = page.getByRole("cell", { name: "Default Project", exact: true });
     await expect(projectCell).toBeVisible();
 
-    // Click the project link inside the table
-    await projectCell.getByRole("link").click();
+    // Click the row to navigate to project detail
+    await projectCell.click();
     await expect(page).toHaveURL(/\/projects\/\d+/);
 
     // Default experiment should be visible — use the table cell to be specific
     const experimentCell = page.getByRole("cell", { name: "Default", exact: true });
     await expect(experimentCell).toBeVisible();
 
-    // Click the experiment link inside the table
-    await experimentCell.getByRole("link").click();
+    // Click the row to navigate to experiment page
+    await experimentCell.click();
     await expect(page).toHaveURL(/\/projects\/\d+\/experiments\/\d+/);
 
     // Runs table should be visible with seeded runs
