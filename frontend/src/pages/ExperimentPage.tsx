@@ -10,7 +10,6 @@ import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Table } from "../components/ui/Table";
 import { Modal } from "../components/ui/Modal";
-import { Input } from "../components/ui/Input";
 import { Spinner } from "../components/ui/Spinner";
 import { Select } from "../components/ui/Select";
 import {
