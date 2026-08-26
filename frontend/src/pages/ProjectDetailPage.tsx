@@ -66,7 +66,7 @@ export function ProjectDetailPage(): React.ReactElement {
   };
 
   const handleDeleteExperiment = (experimentId: number) => {
-    deleteExperimentMutation.mutate(experimentId);
+    deleteExperimentMutation.mutate({ id: experimentId, projectId: id });
   };
 
   const handleDeleteProject = () => {
@@ -159,7 +159,7 @@ export function ProjectDetailPage(): React.ReactElement {
           <Table
             columns={columns}
             rows={rows}
-            onRowClick={(row) => navigate(`/runs?experiment_id=${row.id}`)}
+            onRowClick={(row) => navigate(`/projects/${id}/experiments/${row.id}`)}
           />
         )}
       </div>
