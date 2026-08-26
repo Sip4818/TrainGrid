@@ -8,6 +8,7 @@ import { RunStatus } from "../features/runs/types";
 
 const sampleRun: Run = {
   id: 1,
+  project_id: 1,
   experiment_id: 10,
   config: {
     dataset_path: "dataset.csv",
@@ -24,9 +25,17 @@ const sampleRun: Run = {
   finished_at: null,
 };
 
+const sampleExperiment = {
+  id: 10,
+  project_id: 1,
+  name: "Test Experiment",
+  created_at: "2024-01-01T00:00:00Z",
+  run_count: 1,
+};
+
 function renderWithProviders(
   ui: React.ReactElement,
-  { route = "/runs/1" }: { route?: string } = {},
+  { route = "/projects/1/experiments/10/runs/1" }: { route?: string } = {},
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -35,7 +44,7 @@ function renderWithProviders(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[route]}>
         <Routes>
-          <Route path="runs/:runId" element={ui} />
+          <Route path="projects/:projectId/experiments/:experimentId/runs/:runId" element={ui} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -59,12 +68,19 @@ describe("RunDetailPage", () => {
   });
 
   it("renders run details after successful load", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(sampleRun), {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/experiments/")) {
+        return new Response(JSON.stringify(sampleExperiment), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify(sampleRun), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
-    );
+      });
+    });
 
     renderWithProviders(<RunDetailPage />);
 
@@ -95,7 +111,7 @@ describe("RunDetailPage", () => {
     expect(screen.getByText("No metrics yet.")).toBeDefined();
 
     // Back button
-    expect(screen.getByText("Back to Runs")).toBeDefined();
+    expect(screen.getByText("Back to Experiment")).toBeDefined();
   });
 
   it("shows metrics when run has them", async () => {
@@ -106,12 +122,19 @@ describe("RunDetailPage", () => {
       finished_at: "2024-06-01T12:05:00Z",
     };
 
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(completedRun), {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/experiments/")) {
+        return new Response(JSON.stringify(sampleExperiment), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify(completedRun), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
-    );
+      });
+    });
 
     renderWithProviders(<RunDetailPage />);
 
@@ -142,11 +165,11 @@ describe("RunDetailPage", () => {
     });
 
     // Back button still shown
-    expect(screen.getByText("Back to Runs")).toBeDefined();
+    expect(screen.getByText("Back to Experiment")).toBeDefined();
   });
 
   it("shows invalid run ID for non-numeric IDs", () => {
-    renderWithProviders(<RunDetailPage />, { route: "/runs/abc" });
+    renderWithProviders(<RunDetailPage />, { route: "/projects/1/experiments/10/runs/abc" });
 
     expect(screen.getByText("Invalid Run")).toBeDefined();
     expect(
