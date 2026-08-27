@@ -17,19 +17,11 @@ logger = get_logger(__name__)
 def resolve_dataset_path(dataset_path: str, tmp_dir: Path) -> str:
     """Resolve a run's dataset_path into a filesystem path for the trainer.
 
-    dataset_path is dual-purpose: an artifact-store key referencing an uploaded
-    dataset (e.g. 'datasets/3/dataset.csv'), or a literal filesystem path for
-    local development / manual placement. Store keys are materialized into
-    tmp_dir; literal paths pass through unchanged so the BaseTrainer contract
-    stays path-based.
+    dataset_path must be an artifact-store key referencing an uploaded
+    dataset (e.g. 'datasets/3/dataset.csv'). Store keys are materialized
+    into tmp_dir for the trainer to read.
     """
-    try:
-        return str(local_artifact_store.load(dataset_path, tmp_dir / "dataset.csv"))
-    except FileNotFoundError:
-        logger.info(
-            "dataset_path is not a store key, using literal path=%s", dataset_path
-        )
-        return dataset_path
+    return str(local_artifact_store.load(dataset_path, tmp_dir / "dataset.csv"))
 
 
 @celery_app.task(name="training.start_run")
