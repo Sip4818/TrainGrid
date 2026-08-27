@@ -32,9 +32,6 @@ export interface DatasetOption {
   name: string;
 }
 
-/** Sentinel select value that reveals the literal-path text input. */
-const CUSTOM_PATH = "__custom__";
-
 interface ConfigFormProps {
   schema: JsonSchema;
   values: Record<string, unknown>;
@@ -172,11 +169,6 @@ export function ConfigForm({
 
         if (prop.x_widget === "dataset") {
           const currentValue = String(value ?? "");
-          const matchesUploaded = datasets.some(
-            (d) => d.store_key === currentValue,
-          );
-          const isCustom = !matchesUploaded;
-          const selectedOption = matchesUploaded ? currentValue : CUSTOM_PATH;
 
           return (
             <div
@@ -190,18 +182,12 @@ export function ConfigForm({
               <Select
                 label={label}
                 required={isRequired}
-                value={selectedOption}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  onChange(name, val === CUSTOM_PATH ? "" : val);
-                }}
-                options={[
-                  ...datasets.map((d) => ({
-                    value: d.store_key,
-                    label: d.name,
-                  })),
-                  { value: CUSTOM_PATH, label: "Custom path\u2026" },
-                ]}
+                value={currentValue}
+                onChange={(e) => onChange(name, e.target.value)}
+                options={datasets.map((d) => ({
+                  value: d.store_key,
+                  label: d.name,
+                }))}
               />
               <div
                 style={{
@@ -210,16 +196,6 @@ export function ConfigForm({
                   alignItems: "center",
                 }}
               >
-                {isCustom && (
-                  <Input
-                    aria-label={`${label} custom path`}
-                    type="text"
-                    placeholder="e.g. backend/datasets/sample.csv"
-                    value={currentValue}
-                    onChange={(e) => onChange(name, e.target.value)}
-                    style={{ flex: 1 }}
-                  />
-                )}
                 {onUploadDataset && (
                   <Button
                     type="button"
@@ -243,7 +219,7 @@ export function ConfigForm({
               </div>
               {datasets.length === 0 && currentValue === "" && (
                 <span style={{ fontSize: "12px", color: "#9ca3af" }}>
-                  {"No datasets uploaded yet \u2014 use a custom path or upload one."}
+                  {"No datasets uploaded yet \u2014 upload one to get started."}
                 </span>
               )}
             </div>
