@@ -26,7 +26,7 @@ def _config(trainer_name: str, **overrides: object) -> dict[str, object]:
     """Build a run config matching what ``RunService.create_run`` persists."""
     base: dict[str, object] = {
         "trainer_name": trainer_name,
-        "dataset_path": "backend/datasets/sample.csv",
+        "dataset_path": "datasets/1/dataset.csv",
         "target_column": "target",
         "feature_columns": ["feature1", "feature2"],
     }
