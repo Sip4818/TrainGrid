@@ -95,19 +95,27 @@ function KeyValue({
 }
 
 export function RunDetailPage(): React.ReactElement {
-  const { runId } = useParams<{ runId: string }>();
+  const { projectId, experimentId, runId } = useParams<{
+    projectId: string;
+    experimentId: string;
+    runId: string;
+  }>();
   const navigate = useNavigate();
+  const pid = Number(projectId);
+  const eid = Number(experimentId);
   const id = Number(runId);
 
-  const { data: run, isLoading, isError, error } = useRun(id);
+  const experimentBack = `/projects/${pid}/experiments/${eid}`;
+
+  const { data: run, isLoading, isError, error } = useRun(id, pid, eid);
 
   // Invalid run ID
   if (!runId || Number.isNaN(id)) {
     return (
       <div style={{ padding: "48px 32px" }}>
         <PageHeader title="Invalid Run" description="No valid run ID provided." />
-        <Button onClick={() => navigate("/runs")} style={{ marginTop: "16px" }}>
-          Back to Runs
+        <Button onClick={() => navigate(experimentBack)} style={{ marginTop: "16px" }}>
+          Back to Experiment
         </Button>
       </div>
     );
@@ -151,7 +159,7 @@ export function RunDetailPage(): React.ReactElement {
           >
             Failed to load run: {message}
           </div>
-          <Button onClick={() => navigate("/runs")}>Back to Runs</Button>
+          <Button onClick={() => navigate(experimentBack)}>Back to Experiment</Button>
         </div>
       </div>
     );
@@ -166,8 +174,8 @@ export function RunDetailPage(): React.ReactElement {
           <p style={{ color: "#6b7280", fontSize: "14px" }}>
             The requested run does not exist or has been deleted.
           </p>
-          <Button onClick={() => navigate("/runs")} style={{ marginTop: "16px" }}>
-            Back to Runs
+          <Button onClick={() => navigate(experimentBack)} style={{ marginTop: "16px" }}>
+            Back to Experiment
           </Button>
         </div>
       </div>
@@ -218,7 +226,7 @@ export function RunDetailPage(): React.ReactElement {
         title={`Run #${run.id}`}
         description={`Experiment #${run.experiment_id} \u2014 ${statusLabels[run.status as RunStatus] ?? run.status}`}
       >
-        <Button onClick={() => navigate("/runs")}>Back to Runs</Button>
+        <Button onClick={() => navigate(experimentBack)}>Back to Experiment</Button>
       </PageHeader>
 
       <div

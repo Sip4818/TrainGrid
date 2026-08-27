@@ -10,7 +10,11 @@ from backend.api.schemas.experiment import (
     ExperimentUpdate,
 )
 from backend.infrastructure.database.models import ExperimentModel, ProjectModel
-from backend.shared.errors import ExperimentNotFoundError, ProjectNotFoundError
+from backend.shared.errors import (
+    ExperimentNotFoundError,
+    ExperimentNotInProjectError,
+    ProjectNotFoundError,
+)
 
 logger = get_logger(__name__)
 
@@ -40,26 +44,38 @@ class ExperimentService:
         logger.info("Experiment persisted experiment_id=%d", experiment.id)
         return self._to_schema(experiment)
 
-    def list_experiments(self, project_id: int | None = None) -> list[Experiment]:
-        logger.info("Listing experiments project_id=%s", project_id)
-        query = self.db.query(ExperimentModel)
-        if project_id is not None:
-            query = query.filter(ExperimentModel.project_id == project_id)
-        experiments = query.all()
+    def list_experiments(self, project_id: int) -> list[Experiment]:
+        logger.info("Listing experiments project_id=%d", project_id)
+        if self.db.get(ProjectModel, project_id) is None:
+            logger.warning("Project project_id=%d not found", project_id)
+            raise ProjectNotFoundError(project_id)
+        experiments = (
+            self.db.query(ExperimentModel)
+            .filter(ExperimentModel.project_id == project_id)
+            .all()
+        )
         logger.info("Retrieved %d experiments", len(experiments))
         return [self._to_schema(experiment) for experiment in experiments]
 
-    def get_experiment(self, experiment_id: int) -> Experiment:
-        logger.info("Fetching experiment experiment_id=%d", experiment_id)
-        experiment = self._get_or_raise(experiment_id)
+    def get_experiment(self, experiment_id: int, project_id: int) -> Experiment:
+        logger.info(
+            "Fetching experiment experiment_id=%d project_id=%d",
+            experiment_id,
+            project_id,
+        )
+        experiment = self._validate_scope(experiment_id, project_id)
         logger.info("Experiment experiment_id=%d retrieved", experiment_id)
         return self._to_schema(experiment)
 
     def update_experiment(
-        self, experiment_id: int, payload: ExperimentUpdate
+        self, experiment_id: int, project_id: int, payload: ExperimentUpdate
     ) -> Experiment:
-        logger.info("Updating experiment experiment_id=%d", experiment_id)
-        experiment = self._get_or_raise(experiment_id)
+        logger.info(
+            "Updating experiment experiment_id=%d project_id=%d",
+            experiment_id,
+            project_id,
+        )
+        experiment = self._validate_scope(experiment_id, project_id)
         if payload.project_id is not None:
             self._validate_project(payload.project_id)
             experiment.project_id = payload.project_id  # type: ignore[assignment]
@@ -70,14 +86,33 @@ class ExperimentService:
         logger.info("Experiment experiment_id=%d updated", experiment_id)
         return self._to_schema(experiment)
 
-    def delete_experiment(self, experiment_id: int) -> None:
-        logger.info("Deleting experiment experiment_id=%d", experiment_id)
-        experiment = self._get_or_raise(experiment_id)
+    def delete_experiment(self, experiment_id: int, project_id: int) -> None:
+        logger.info(
+            "Deleting experiment experiment_id=%d project_id=%d",
+            experiment_id,
+            project_id,
+        )
+        experiment = self._validate_scope(experiment_id, project_id)
         self.db.delete(experiment)
         self.db.commit()
         logger.info(
             "Experiment experiment_id=%d deleted (cascaded to runs)", experiment_id
         )
+
+    def _validate_scope(self, experiment_id: int, project_id: int) -> ExperimentModel:
+        """Ensure the experiment exists and belongs to the given project."""
+        experiment = self._get_or_raise(experiment_id)
+        if self.db.get(ProjectModel, project_id) is None:
+            logger.warning("Project project_id=%d not found", project_id)
+            raise ProjectNotFoundError(project_id)
+        if cast(int, experiment.project_id) != project_id:
+            logger.warning(
+                "Experiment experiment_id=%d does not belong to project_id=%d",
+                experiment_id,
+                project_id,
+            )
+            raise ExperimentNotInProjectError(experiment_id, project_id)
+        return experiment
 
     def _validate_project(self, project_id: int) -> None:
         if self.db.get(ProjectModel, project_id) is None:

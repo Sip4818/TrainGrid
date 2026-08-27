@@ -108,6 +108,11 @@ class RunModel(Base):
     # Run belongs to an experiment
     experiment = relationship("ExperimentModel", back_populates="runs")
 
+    @property
+    def project_id(self) -> int:
+        """Project owning this run, derived from the parent experiment."""
+        return self.experiment.project_id  # type: ignore[return-value]
+
 
 class DatasetModel(Base):
     """

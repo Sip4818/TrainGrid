@@ -32,9 +32,14 @@ def test_create_experiment_unknown_project():
 
 
 def test_list_experiments():
-    response = client.get("/experiments/")
+    response = client.get("/experiments/", params={"project_id": 1})
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+def test_list_experiments_missing_project():
+    response = client.get("/experiments/")
+    assert response.status_code == 422
 
 
 def test_list_experiments_filtered_by_project():
@@ -59,17 +64,32 @@ def test_get_experiment():
         "/experiments/",
         json={"project_id": 1, "name": "Get me"},
     ).json()
-    response = client.get(f"/experiments/{experiment['id']}")
+    response = client.get(f"/experiments/{experiment['id']}", params={"project_id": 1})
     assert response.status_code == 200
     assert response.json()["name"] == "Get me"
 
 
 def test_get_experiment_not_found():
-    response = client.get("/experiments/999999")
+    response = client.get("/experiments/999999", params={"project_id": 1})
     assert response.status_code == 404
     data = response.json()
     assert data["detail"]["code"] == "NOT_FOUND"
     assert "experiment" in data["detail"]["message"].lower()
+
+
+def test_get_experiment_not_in_project():
+    other_project = client.post("/projects/", json={"name": "Other Project"}).json()
+    experiment = client.post(
+        "/experiments/",
+        json={"project_id": 1, "name": "Scoped"},
+    ).json()
+    response = client.get(
+        f"/experiments/{experiment['id']}",
+        params={"project_id": other_project["id"]},
+    )
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
 
 
 def test_update_experiment():
@@ -79,6 +99,7 @@ def test_update_experiment():
     ).json()
     response = client.patch(
         f"/experiments/{experiment['id']}",
+        params={"project_id": 1},
         json={"name": "Renamed"},
     )
     assert response.status_code == 200
@@ -88,7 +109,9 @@ def test_update_experiment():
 
 
 def test_update_experiment_not_found():
-    response = client.patch("/experiments/999999", json={"name": "Ghost"})
+    response = client.patch(
+        "/experiments/999999", params={"project_id": 1}, json={"name": "Ghost"}
+    )
     assert response.status_code == 404
 
 
@@ -97,9 +120,16 @@ def test_delete_experiment():
         "/experiments/",
         json={"project_id": 1, "name": "Temp"},
     ).json()
-    response = client.delete(f"/experiments/{experiment['id']}")
+    response = client.delete(
+        f"/experiments/{experiment['id']}", params={"project_id": 1}
+    )
     assert response.status_code == 200
-    assert client.get(f"/experiments/{experiment['id']}").status_code == 404
+    assert (
+        client.get(
+            f"/experiments/{experiment['id']}", params={"project_id": 1}
+        ).status_code
+        == 404
+    )
 
 
 def test_delete_experiment_cascades_to_runs():
@@ -110,6 +140,7 @@ def test_delete_experiment_cascades_to_runs():
 
     payload = {
         "experiment_id": experiment["id"],
+        "project_id": 1,
         "trainer_name": "random_forest",
         "config": {
             "dataset_path": "dummy.csv",
@@ -125,9 +156,17 @@ def test_delete_experiment_cascades_to_runs():
         run_id = response.json()["id"]
         mock_delay.assert_called_once_with(str(run_id))
 
-    response = client.delete(f"/experiments/{experiment['id']}")
+    response = client.delete(
+        f"/experiments/{experiment['id']}", params={"project_id": 1}
+    )
     assert response.status_code == 200
-    assert client.get(f"/runs/{run_id}").status_code == 404
+    assert (
+        client.get(
+            f"/runs/{run_id}",
+            params={"project_id": 1, "experiment_id": experiment["id"]},
+        ).status_code
+        == 404
+    )
 
 
 def test_experiment_run_count_reflects_runs():
@@ -138,6 +177,7 @@ def test_experiment_run_count_reflects_runs():
 
     payload = {
         "experiment_id": experiment["id"],
+        "project_id": 1,
         "trainer_name": "random_forest",
         "config": {
             "dataset_path": "dummy.csv",
@@ -148,6 +188,6 @@ def test_experiment_run_count_reflects_runs():
     with patch("backend.workers.tasks.training_tasks.start_training_run.delay"):
         client.post("/runs/", json=payload)
 
-    response = client.get(f"/experiments/{experiment['id']}")
+    response = client.get(f"/experiments/{experiment['id']}", params={"project_id": 1})
     assert response.status_code == 200
     assert response.json()["run_count"] == 1

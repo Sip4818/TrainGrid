@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useRuns, useCreateRun } from "../features/runs/hooks";
+import { useExperiment } from "../features/experiments/hooks";
 import { useTrainers } from "../features/models/hooks";
 import { useDatasets, useUploadDataset } from "../features/datasets/hooks";
 import { RunStatus } from "../features/runs/types";
@@ -9,7 +10,6 @@ import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Table } from "../components/ui/Table";
 import { Modal } from "../components/ui/Modal";
-import { Input } from "../components/ui/Input";
 import { Spinner } from "../components/ui/Spinner";
 import { Select } from "../components/ui/Select";
 import {
@@ -22,7 +22,6 @@ import { PageHeader } from "../components/layout/PageHeader";
 
 interface RunRow extends Record<string, unknown> {
   id: number;
-  experiment_id: number;
   status: RunStatus;
   created_at: string;
 }
@@ -36,16 +35,22 @@ const DATA_SOURCE_DEFAULTS: Record<string, unknown> = {
 /** Maximum number of runs that can be selected for comparison. */
 const MAX_COMPARE = 3;
 
-export function RunsPage(): React.ReactElement {
+export function ExperimentPage(): React.ReactElement {
   const navigate = useNavigate();
+  const { projectId, experimentId } = useParams<{
+    projectId: string;
+    experimentId: string;
+  }>();
+  const pid = Number(projectId);
+  const eid = Number(experimentId);
   const [searchParams, setSearchParams] = useSearchParams();
-  const runsQuery = useRuns();
+  const runsQuery = useRuns(pid, eid);
+  const experimentQuery = useExperiment(eid, pid);
   const createRunMutation = useCreateRun();
   const trainersQuery = useTrainers();
   const datasetsQuery = useDatasets();
   const uploadDatasetMutation = useUploadDataset();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [experimentId, setExperimentId] = useState("1");
   const [modelName, setModelName] = useState("");
   const [config, setConfig] = useState<Record<string, unknown>>({});
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -79,10 +84,6 @@ export function RunsPage(): React.ReactElement {
   };
 
   const openCreateModal = () => {
-    const urlExperimentId = searchParams.get("experiment_id");
-    if (urlExperimentId !== null) {
-      setExperimentId(urlExperimentId);
-    }
     setIsModalOpen(true);
     const trainers = trainersQuery.data ?? [];
     const current = trainers.find((t) => t.name === modelName);
@@ -105,20 +106,8 @@ export function RunsPage(): React.ReactElement {
     ? (rawStatus as RunStatus)
     : null;
 
-  const rawExperimentId = searchParams.get("experiment_id");
-  const activeExperimentId =
-    rawExperimentId !== null && /^\d+$/.test(rawExperimentId)
-      ? Number(rawExperimentId)
-      : null;
-
   const filteredRuns = runs.filter((run) => {
     if (activeStatus && run.status !== activeStatus) return false;
-    if (
-      activeExperimentId !== null &&
-      run.experiment_id !== activeExperimentId
-    ) {
-      return false;
-    }
     return true;
   });
 
@@ -146,11 +135,6 @@ export function RunsPage(): React.ReactElement {
     setSearchParams(searchParams);
   };
 
-  const selectedExperimentId =
-    selectedIds.length > 0
-      ? (runs.find((run) => run.id === selectedIds[0])?.experiment_id ?? null)
-      : null;
-
   const toggleSelect = (row: RunRow) => {
     if (selectedIds.includes(row.id)) {
       setSelectedIds(selectedIds.filter((id) => id !== row.id));
@@ -161,21 +145,16 @@ export function RunsPage(): React.ReactElement {
       setSelectionHint(`Select up to ${MAX_COMPARE} runs to compare.`);
       return;
     }
-    if (
-      selectedExperimentId !== null &&
-      row.experiment_id !== selectedExperimentId
-    ) {
-      setSelectionHint("Runs must belong to the same experiment to compare.");
-      return;
-    }
     setSelectionHint(null);
     setSelectedIds([...selectedIds, row.id]);
   };
 
   const handleCompare = () => {
-    if (selectedIds.length < 2 || selectedExperimentId === null) return;
+    if (selectedIds.length < 2) return;
     const ids = selectedIds.map((id) => `run_ids=${id}`).join("&");
-    navigate(`/runs/compare?experiment_id=${selectedExperimentId}&${ids}`);
+    navigate(
+      `/projects/${pid}/experiments/${eid}/compare?${ids}`,
+    );
   };
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -187,7 +166,8 @@ export function RunsPage(): React.ReactElement {
     ) as unknown as RunConfig;
     createRunMutation.mutate(
       {
-        experiment_id: Number(experimentId),
+        project_id: pid,
+        experiment_id: eid,
         trainer_name: selectedTrainer.name,
         config: configPayload,
       },
@@ -221,10 +201,6 @@ export function RunsPage(): React.ReactElement {
       ),
     },
     {
-      key: "experiment_id" as const,
-      label: "Experiment",
-    },
-    {
       key: "status" as const,
       label: "Status",
       render: (value: unknown) => (
@@ -247,9 +223,15 @@ export function RunsPage(): React.ReactElement {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <PageHeader
-        title="Runs"
-        description="Manage training runs and monitor status"
+        title={experimentQuery.data?.name ?? "Experiment"}
+        description="Training runs in this experiment"
       >
+        <Button
+          variant="secondary"
+          onClick={() => navigate(`/projects/${pid}`)}
+        >
+          Back to Project
+        </Button>
         <Select
           aria-label="Filter by status"
           value={activeStatus ?? ""}
@@ -288,7 +270,9 @@ export function RunsPage(): React.ReactElement {
           <Table
             columns={columns}
             rows={filteredRuns}
-            onRowClick={(row) => navigate(`/runs/${row.id}`)}
+            onRowClick={(row) =>
+              navigate(`/projects/${pid}/experiments/${eid}/runs/${row.id}`)
+            }
           />
         )}
       </div>
@@ -311,13 +295,6 @@ export function RunsPage(): React.ReactElement {
               value={modelName}
               onChange={(e) => handleModelChange(e.target.value)}
               options={modelOptions}
-            />
-            <Input
-              label="Experiment ID"
-              type="number"
-              value={experimentId}
-              onChange={(e) => setExperimentId(e.target.value)}
-              required
             />
             {trainersQuery.isLoading && (
               <div style={{ color: "#6b7280", fontSize: "13px" }}>

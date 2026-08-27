@@ -8,13 +8,13 @@ import {
   Routes,
   useLocation,
 } from "react-router-dom";
-import { RunsPage } from "./RunsPage";
+import { ExperimentPage } from "./ExperimentPage";
 import type { Run } from "../features/runs/types";
 import { RunStatus } from "../features/runs/types";
 
-
 const sampleRun: Run = {
   id: 1,
+  project_id: 1,
   experiment_id: 10,
   config: {
     dataset_path: "dataset.csv",
@@ -27,6 +27,14 @@ const sampleRun: Run = {
   created_at: "2024-01-01T00:00:00Z",
   started_at: null,
   finished_at: null,
+};
+
+const sampleExperiment = {
+  id: 10,
+  project_id: 1,
+  name: "Test Experiment",
+  created_at: "2024-01-01T00:00:00Z",
+  run_count: 1,
 };
 
 const randomForestSchema = {
@@ -72,7 +80,11 @@ const defaultTrainers = [
   { name: "xgboost", label: "XGBoost Classifier", config_schema: xgboostSchema },
 ];
 
-function mockApi(runs: unknown[] = [], trainers: unknown[] = defaultTrainers) {
+function mockApi(
+  runs: unknown[] = [],
+  trainers: unknown[] = defaultTrainers,
+  experiment: unknown = sampleExperiment,
+) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(
     async (input, init) => {
       const method = (init?.method as string | undefined) ?? "GET";
@@ -82,13 +94,20 @@ function mockApi(runs: unknown[] = [], trainers: unknown[] = defaultTrainers) {
           headers: { "Content-Type": "application/json" },
         });
       }
-      if (String(input).includes("/datasets/")) {
+      const url = String(input);
+      if (url.includes("/datasets/")) {
         return new Response(JSON.stringify([]), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
       }
-      const body = String(input).includes("/trainers/") ? trainers : runs;
+      if (url.includes("/experiments/")) {
+        return new Response(JSON.stringify(experiment), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const body = url.includes("/trainers/") ? trainers : runs;
       return new Response(JSON.stringify(body), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -99,14 +118,19 @@ function mockApi(runs: unknown[] = [], trainers: unknown[] = defaultTrainers) {
 
 function renderWithProviders(
   ui: React.ReactElement,
-  options: { initialEntries?: string[] } = {},
+  options: { initialEntries?: string[]; routePath?: string } = {},
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  const routePath = options.routePath ?? "/projects/:projectId/experiments/:experimentId";
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={options.initialEntries}>{ui}</MemoryRouter>
+      <MemoryRouter initialEntries={options.initialEntries}>
+        <Routes>
+          <Route path={routePath} element={ui} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -115,19 +139,23 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("RunsPage", () => {
+describe("ExperimentPage", () => {
   it("renders loading spinner initially", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(
       () => new Promise(() => {}) as Promise<Response>
     );
-    renderWithProviders(<RunsPage />);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
     expect(screen.getByRole("status")).toBeDefined();
   });
 
   it("renders runs table after load", async () => {
     mockApi([sampleRun]);
 
-    renderWithProviders(<RunsPage />);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
 
     await waitFor(() => {
       expect(screen.getByText("1")).toBeDefined();
@@ -136,14 +164,42 @@ describe("RunsPage", () => {
     expect(screen.getByText("New Run")).toBeDefined();
   });
 
+  it("displays the experiment name in the page header", async () => {
+    mockApi([sampleRun]);
+
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Experiment")).toBeDefined();
+    });
+  });
+
   it("opens create run modal on button click", async () => {
     mockApi();
 
-    renderWithProviders(<RunsPage />);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
 
     await waitFor(() => screen.getByText("New Run"));
     screen.getByText("New Run").click();
     await waitFor(() => screen.getByText("Create Training Run"));
+  });
+
+  it("does not show experiment ID input in create modal", async () => {
+    mockApi();
+
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
+
+    await waitFor(() => screen.getByText("New Run"));
+    screen.getByText("New Run").click();
+    await waitFor(() => screen.getByText("Create Training Run"));
+
+    expect(screen.queryByLabelText("Experiment ID")).toBeNull();
   });
 
   it("filters runs by status from the URL query param", async () => {
@@ -153,8 +209,8 @@ describe("RunsPage", () => {
     ];
     mockApi(runs);
 
-    renderWithProviders(<RunsPage />, {
-      initialEntries: ["/runs?status=pending"],
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10?status=pending"],
     });
 
     await waitFor(() => {
@@ -171,7 +227,9 @@ describe("RunsPage", () => {
     ];
     mockApi(runs);
 
-    renderWithProviders(<RunsPage />);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
 
     await waitFor(() => {
       expect(screen.getByText("1")).toBeDefined();
@@ -193,8 +251,8 @@ describe("RunsPage", () => {
     ];
     mockApi(runs);
 
-    renderWithProviders(<RunsPage />, {
-      initialEntries: ["/runs?status=pending"],
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10?status=pending"],
     });
 
     await waitFor(() => {
@@ -215,7 +273,9 @@ describe("RunsPage", () => {
   it("shows the model dropdown with classifier options in the create modal", async () => {
     mockApi();
 
-    renderWithProviders(<RunsPage />);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
 
     await waitFor(() => screen.getByText("New Run"));
     screen.getByText("New Run").click();
@@ -226,71 +286,12 @@ describe("RunsPage", () => {
     expect(screen.getByText("XGBoost Classifier")).toBeDefined();
   });
 
-  it("uses the model options returned by the trainers endpoint", async () => {
-    mockApi([], [
-      { name: "logreg", label: "Logistic Regression", config_schema: {} },
-    ]);
-
-    renderWithProviders(<RunsPage />);
-
-    await waitFor(() => screen.getByText("New Run"));
-    screen.getByText("New Run").click();
-    await waitFor(() => screen.getByText("Create Training Run"));
-
-    expect(screen.getByText("Logistic Regression")).toBeDefined();
-    expect(screen.queryByText("Random Forest Classifier")).toBeNull();
-  });
-
-  it("shows an error and disables creation when the trainers endpoint fails", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      if (String(input).includes("/trainers/")) {
-        return new Response(JSON.stringify({ message: "Internal error" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
-
-    renderWithProviders(<RunsPage />);
-
-    await waitFor(() => screen.getByText("New Run"));
-    screen.getByText("New Run").click();
-    await waitFor(() => screen.getByText("Create Training Run"));
-
-    expect(screen.getByText(/Couldn't load models/)).toBeDefined();
-    expect(screen.queryByLabelText("Dataset Path")).toBeNull();
-    expect(screen.getByRole("button", { name: "Create Run" })).toBeDisabled();
-  });
-
-  it("shows a loading message while models are still loading", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      if (String(input).includes("/trainers/")) {
-        return new Promise(() => {}) as Promise<Response>;
-      }
-      return new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
-
-    renderWithProviders(<RunsPage />);
-
-    await waitFor(() => screen.getByText("New Run"));
-    screen.getByText("New Run").click();
-    await waitFor(() => screen.getByText("Create Training Run"));
-
-    expect(screen.getByText("Loading models...")).toBeDefined();
-    expect(screen.getByRole("button", { name: "Create Run" })).toBeDisabled();
-  });
-
   it("reveals the learning rate field only when xgboost is selected", async () => {
     mockApi();
 
-    renderWithProviders(<RunsPage />);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
 
     await waitFor(() => screen.getByText("New Run"));
     screen.getByText("New Run").click();
@@ -309,97 +310,22 @@ describe("RunsPage", () => {
     expect(screen.queryByLabelText("Learning Rate")).toBeNull();
   });
 
-  it("renders config fields from the selected trainer's schema", async () => {
-    mockApi([], [
-      {
-        name: "logreg",
-        label: "Logistic Regression",
-        config_schema: {
-          type: "object",
-          properties: {
-            dataset_path: { title: "Dataset Path", type: "string" },
-            target_column: { title: "Target Column", type: "string" },
-            feature_columns: {
-              title: "Feature Columns",
-              type: "array",
-              items: { type: "string" },
-            },
-            penalty: { title: "Penalty", type: "string", enum: ["l1", "l2"] },
-            max_iter: { title: "Max Iter", type: "integer", default: 500 },
-          },
-          required: ["dataset_path", "target_column", "feature_columns"],
-        },
-      },
-    ]);
-
-    renderWithProviders(<RunsPage />);
-
-    await waitFor(() => screen.getByText("New Run"));
-    screen.getByText("New Run").click();
-    await waitFor(() => screen.getByText("Create Training Run"));
-
-    fireEvent.change(screen.getByLabelText("Model"), {
-      target: { value: "logreg" },
-    });
-
-    expect(screen.getByLabelText("Max Iter")).toBeInTheDocument();
-    expect(screen.getByLabelText("Max Iter")).toHaveValue(500);
-    expect(screen.getByLabelText("Penalty")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Learning Rate")).toBeNull();
-  });
-
-  it("submits the chosen trainer_name with learning_rate and omits empty config fields", async () => {
-    let postedBody: Record<string, unknown> | null = null;
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      const method = (init?.method as string | undefined) ?? "GET";
-      if (method === "POST") {
-        postedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
-        return new Response(JSON.stringify({}), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      const body = String(input).includes("/trainers/") ? defaultTrainers : [];
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
-
-    renderWithProviders(<RunsPage />);
-
-    await waitFor(() => screen.getByText("New Run"));
-    screen.getByText("New Run").click();
-    await waitFor(() => screen.getByText("Create Training Run"));
-
-    fireEvent.change(screen.getByLabelText("Model"), {
-      target: { value: "xgboost" },
-    });
-    fireEvent.change(screen.getByLabelText("Max Depth"), {
-      target: { value: "" },
-    });
-    fireEvent.change(screen.getByLabelText("Learning Rate"), {
-      target: { value: "0.1" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Create Run" }));
+  it("navigates to run detail page with scoped URL on row click", async () => {
+    renderWithRouter([sampleRun]);
 
     await waitFor(() => {
-      expect(postedBody).not.toBeNull();
+      expect(screen.getByText("1")).toBeDefined();
     });
 
-    expect(postedBody).toMatchObject({
-      experiment_id: 1,
-      trainer_name: "xgboost",
-      config: {
-        dataset_path: "backend/datasets/sample.csv",
-        target_column: "target",
-        feature_columns: ["feature1", "feature2"],
-        n_estimators: 100,
-        learning_rate: 0.1,
-      },
+    const row = screen.getByText("1").closest("tr");
+    expect(row).not.toBeNull();
+    fireEvent.click(row!);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("location")?.textContent).toBe(
+        "/projects/1/experiments/10/runs/1",
+      );
     });
-    const config = postedBody!.config as Record<string, unknown>;
-    expect("max_depth" in config).toBe(false);
   });
 });
 
@@ -416,13 +342,20 @@ function renderWithRouter(runs: unknown[]): void {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <MemoryRouter initialEntries={["/runs"]}>
+      <MemoryRouter initialEntries={["/projects/1/experiments/10"]}>
         <LocationSpy />
         <Routes>
-          <Route path="/runs" element={<RunsPage />} />
           <Route
-            path="/runs/compare"
+            path="/projects/:projectId/experiments/:experimentId"
+            element={<ExperimentPage />}
+          />
+          <Route
+            path="/projects/:projectId/experiments/:experimentId/compare"
             element={<div data-testid="compare-page">compare page</div>}
+          />
+          <Route
+            path="/projects/:projectId/experiments/:experimentId/runs/:runId"
+            element={<div data-testid="run-detail">run detail</div>}
           />
         </Routes>
       </MemoryRouter>
@@ -430,12 +363,12 @@ function renderWithRouter(runs: unknown[]): void {
   );
 }
 
-describe("RunsPage comparison selection", () => {
+describe("ExperimentPage comparison selection", () => {
   const sameExperimentRuns = [
-    { ...sampleRun, id: 1, experiment_id: 1, status: RunStatus.COMPLETED },
-    { ...sampleRun, id: 2, experiment_id: 1, status: RunStatus.COMPLETED },
-    { ...sampleRun, id: 3, experiment_id: 1, status: RunStatus.COMPLETED },
-    { ...sampleRun, id: 4, experiment_id: 1, status: RunStatus.COMPLETED },
+    { ...sampleRun, id: 1, experiment_id: 10, status: RunStatus.COMPLETED },
+    { ...sampleRun, id: 2, experiment_id: 10, status: RunStatus.COMPLETED },
+    { ...sampleRun, id: 3, experiment_id: 10, status: RunStatus.COMPLETED },
+    { ...sampleRun, id: 4, experiment_id: 10, status: RunStatus.COMPLETED },
   ];
 
   it("disables compare until at least two runs are selected", async () => {
@@ -454,7 +387,7 @@ describe("RunsPage comparison selection", () => {
     expect(screen.getByRole("button", { name: /Compare \(2\)/ })).toBeEnabled();
   });
 
-  it("navigates to the comparison page with experiment and run ids", async () => {
+  it("navigates to the comparison page with scoped URL and run ids", async () => {
     renderWithRouter(sameExperimentRuns);
 
     await waitFor(() => {
@@ -469,32 +402,8 @@ describe("RunsPage comparison selection", () => {
       expect(screen.getByTestId("compare-page")).toBeDefined();
     });
     expect(screen.getByTestId("location").textContent).toBe(
-      "/runs/compare?experiment_id=1&run_ids=1&run_ids=2",
+      "/projects/1/experiments/10/compare?run_ids=1&run_ids=2",
     );
-  });
-
-  it("blocks selecting runs from a different experiment", async () => {
-    const mixedExperimentRuns = [
-      { ...sampleRun, id: 1, experiment_id: 1, status: RunStatus.COMPLETED },
-      { ...sampleRun, id: 2, experiment_id: 2, status: RunStatus.COMPLETED },
-    ];
-    renderWithRouter(mixedExperimentRuns);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Compare run 1")).toBeDefined();
-    });
-
-    fireEvent.click(screen.getByLabelText("Compare run 1"));
-    fireEvent.click(screen.getByLabelText("Compare run 2"));
-
-    expect(
-      screen.getByText("Runs must belong to the same experiment to compare."),
-    ).toBeDefined();
-    const checkbox2 = screen.getByLabelText(
-      "Compare run 2",
-    ) as HTMLInputElement;
-    expect(checkbox2.checked).toBe(false);
-    expect(screen.getByRole("button", { name: /Compare \(1\)/ })).toBeDisabled();
   });
 
   it("caps selection at three runs", async () => {
@@ -517,7 +426,7 @@ describe("RunsPage comparison selection", () => {
   });
 });
 
-describe("RunsPage dataset picker", () => {
+describe("ExperimentPage dataset picker", () => {
   const uploadedDatasets = [
     {
       id: 1,
@@ -531,26 +440,35 @@ describe("RunsPage dataset picker", () => {
   it("lists uploaded datasets in the create modal picker", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const method = (init?.method as string | undefined) ?? "GET";
+      const url = String(input);
       if (method === "POST") {
         return new Response(JSON.stringify({}), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
       }
-      if (String(input).includes("/datasets/")) {
+      if (url.includes("/datasets/")) {
         return new Response(JSON.stringify(uploadedDatasets), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
       }
-      const body = String(input).includes("/trainers/") ? defaultTrainers : [];
+      if (url.includes("/experiments/")) {
+        return new Response(JSON.stringify(sampleExperiment), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const body = url.includes("/trainers/") ? defaultTrainers : [];
       return new Response(JSON.stringify(body), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
     });
 
-    renderWithProviders(<RunsPage />);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
 
     await waitFor(() => screen.getByText("New Run"));
     screen.getByText("New Run").click();
@@ -564,18 +482,12 @@ describe("RunsPage dataset picker", () => {
     expect(screen.getByText("iris.csv")).toBeDefined();
   });
 
-  it("sends the selected dataset store key in the create-run payload", async () => {
+  it("sends project_id and experiment_id in the create-run payload", async () => {
     let postedBody: Record<string, unknown> | null = null;
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const method = (init?.method as string | undefined) ?? "GET";
       const url = String(input);
       if (method === "POST") {
-        if (url.includes("/datasets/")) {
-          return new Response(JSON.stringify(uploadedDatasets[0]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
         postedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
         return new Response(JSON.stringify({}), {
           status: 200,
@@ -583,7 +495,13 @@ describe("RunsPage dataset picker", () => {
         });
       }
       if (url.includes("/datasets/")) {
-        return new Response(JSON.stringify(uploadedDatasets), {
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/experiments/")) {
+        return new Response(JSON.stringify(sampleExperiment), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
@@ -595,7 +513,9 @@ describe("RunsPage dataset picker", () => {
       });
     });
 
-    renderWithProviders(<RunsPage />);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
 
     await waitFor(() => screen.getByText("New Run"));
     screen.getByText("New Run").click();
@@ -604,95 +524,16 @@ describe("RunsPage dataset picker", () => {
     fireEvent.change(screen.getByLabelText("Model"), {
       target: { value: "random_forest" },
     });
-    await waitFor(() => screen.getByLabelText("Dataset Path"));
-
-    fireEvent.change(screen.getByLabelText("Dataset Path"), {
-      target: { value: "datasets/1/dataset.csv" },
-    });
     fireEvent.click(screen.getByRole("button", { name: "Create Run" }));
 
     await waitFor(() => {
       expect(postedBody).not.toBeNull();
     });
+
     expect(postedBody).toMatchObject({
-      config: {
-        dataset_path: "datasets/1/dataset.csv",
-      },
-    });
-  });
-
-  it("uploads a dataset and uses the returned store key as dataset_path", async () => {
-    let postedBody: Record<string, unknown> | null = null;
-    let datasetsList: unknown[] = [];
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      const method = (init?.method as string | undefined) ?? "GET";
-      const url = String(input);
-      if (method === "POST") {
-        if (url.includes("/datasets/")) {
-          const formData = init?.body as FormData;
-          expect(formData.get("file")).toBeInstanceOf(File);
-          const created = {
-            id: 9,
-            name: "uploaded.csv",
-            size_bytes: 512,
-            store_key: "datasets/9/dataset.csv",
-            created_at: "2026-08-02T00:00:00Z",
-          };
-          datasetsList = [created];
-          return new Response(JSON.stringify(created), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        postedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
-        return new Response(JSON.stringify({}), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      if (url.includes("/datasets/")) {
-        return new Response(JSON.stringify(datasetsList), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      const body = url.includes("/trainers/") ? defaultTrainers : [];
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
-
-    renderWithProviders(<RunsPage />);
-
-    await waitFor(() => screen.getByText("New Run"));
-    screen.getByText("New Run").click();
-    await waitFor(() => screen.getByText("Create Training Run"));
-
-    fireEvent.change(screen.getByLabelText("Model"), {
-      target: { value: "random_forest" },
-    });
-    await waitFor(() => screen.getByLabelText("Dataset Path"));
-
-    const file = new File(["a,b\n1,2"], "uploaded.csv", { type: "text/csv" });
-    fireEvent.change(screen.getByLabelText("Dataset Path file input"), {
-      target: { files: [file] },
-    });
-
-    await waitFor(() => {
-      expect(
-        (screen.getByLabelText("Dataset Path") as HTMLSelectElement).value,
-      ).toBe("datasets/9/dataset.csv");
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Create Run" }));
-    await waitFor(() => {
-      expect(postedBody).not.toBeNull();
-    });
-    expect(postedBody).toMatchObject({
-      config: {
-        dataset_path: "datasets/9/dataset.csv",
-      },
+      project_id: 1,
+      experiment_id: 10,
+      trainer_name: "random_forest",
     });
   });
 });

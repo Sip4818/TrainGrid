@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getRuns, getRun, createRun, compareRuns } from "./api";
+import { getRuns, getRun, createRun, deleteRun, compareRuns } from "./api";
 import type { Run, RunComparisonResponse, RunCreate } from "./types";
 import { RunStatus } from "./types";
 import { ApiError } from "../../api/client";
@@ -8,6 +8,7 @@ const BASE_URL = "http://localhost:8000";
 
 const sampleRun: Run = {
   id: 1,
+  project_id: 10,
   experiment_id: 42,
   config: {
     dataset_path: "data.csv",
@@ -40,12 +41,12 @@ describe("getRuns", () => {
       }),
     );
 
-    const result = await getRuns();
+    const result = await getRuns(10, 42);
     expect(result).toEqual(runs);
     expect(result).toHaveLength(2);
   });
 
-  it("calls GET /runs/", async () => {
+  it("calls GET /runs/?project_id={projectId}&experiment_id={experimentId}", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify([]), {
         status: 200,
@@ -53,8 +54,11 @@ describe("getRuns", () => {
       }),
     );
 
-    await getRuns();
-    expect(fetchSpy).toHaveBeenCalledWith(`${BASE_URL}/runs/`, expect.any(Object));
+    await getRuns(10, 42);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `${BASE_URL}/runs/?project_id=10&experiment_id=42`,
+      expect.any(Object),
+    );
   });
 
   it("throws ApiError on non-ok response", async () => {
@@ -65,15 +69,17 @@ describe("getRuns", () => {
       }),
     );
 
-    const promise = getRuns();
+    const promise = getRuns(10, 42);
     await expect(promise).rejects.toThrow(ApiError);
     await expect(promise).rejects.toMatchObject({ status: 500 });
   });
 
   it("throws ApiError on network failure", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Network error"));
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+      new Error("Network error"),
+    );
 
-    const promise = getRuns();
+    const promise = getRuns(10, 42);
     await expect(promise).rejects.toThrow(ApiError);
     await expect(promise).rejects.toMatchObject({ status: 0 });
   });
@@ -88,12 +94,12 @@ describe("getRun", () => {
       }),
     );
 
-    const result = await getRun(1);
+    const result = await getRun(1, 10, 42);
     expect(result).toEqual(sampleRun);
     expect(result.id).toBe(1);
   });
 
-  it("calls GET /runs/1", async () => {
+  it("calls GET /runs/{id}?project_id={projectId}&experiment_id={experimentId}", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify(sampleRun), {
         status: 200,
@@ -101,9 +107,9 @@ describe("getRun", () => {
       }),
     );
 
-    await getRun(1);
+    await getRun(1, 10, 42);
     expect(fetchSpy).toHaveBeenCalledWith(
-      `${BASE_URL}/runs/1`,
+      `${BASE_URL}/runs/1?project_id=10&experiment_id=42`,
       expect.any(Object),
     );
   });
@@ -116,7 +122,7 @@ describe("getRun", () => {
       }),
     );
 
-    const promise = getRun(999);
+    const promise = getRun(999, 10, 42);
     await expect(promise).rejects.toThrow(ApiError);
     await expect(promise).rejects.toMatchObject({
       status: 404,
@@ -127,7 +133,7 @@ describe("getRun", () => {
   it("throws ApiError on network failure", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Offline"));
 
-    const promise = getRun(1);
+    const promise = getRun(1, 10, 42);
     await expect(promise).rejects.toThrow(ApiError);
     await expect(promise).rejects.toMatchObject({ status: 0 });
   });
@@ -135,6 +141,7 @@ describe("getRun", () => {
 
 describe("createRun", () => {
   const newRunPayload: RunCreate = {
+    project_id: 10,
     experiment_id: 42,
     trainer_name: "random_forest",
     config: {
@@ -182,7 +189,9 @@ describe("createRun", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
-          detail: [{ loc: ["body", "config"], msg: "field required", type: "value_error" }],
+          detail: [
+            { loc: ["body", "config"], msg: "field required", type: "value_error" },
+          ],
         }),
         {
           status: 422,
@@ -212,11 +221,49 @@ describe("createRun", () => {
   });
 });
 
+describe("deleteRun", () => {
+  it("calls DELETE /runs/{id}?project_id={projectId}&experiment_id={experimentId}", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(null, { status: 204 }),
+    );
+
+    await deleteRun(1, 10, 42);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `${BASE_URL}/runs/1?project_id=10&experiment_id=42`,
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
+  it("throws ApiError on 404", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: "Run not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const promise = deleteRun(999, 10, 42);
+    await expect(promise).rejects.toThrow(ApiError);
+    await expect(promise).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("throws ApiError on network failure", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+      new Error("Connection refused"),
+    );
+
+    const promise = deleteRun(1, 10, 42);
+    await expect(promise).rejects.toThrow(ApiError);
+    await expect(promise).rejects.toMatchObject({ status: 0 });
+  });
+});
+
 describe("compareRuns", () => {
   const comparisonResponse: RunComparisonResponse = {
     runs: [
       {
         id: 1,
+        project_id: 10,
         experiment_id: 42,
         trainer_name: "random_forest",
         status: RunStatus.COMPLETED,
@@ -240,12 +287,12 @@ describe("compareRuns", () => {
       }),
     );
 
-    const result = await compareRuns(42, [1, 2]);
+    const result = await compareRuns(10, 42, [1, 2]);
     expect(result).toEqual(comparisonResponse);
     expect(result.metrics).toEqual(["accuracy"]);
   });
 
-  it("calls GET /runs/compare with experiment_id and repeated run_ids params", async () => {
+  it("calls GET /runs/compare with project_id, experiment_id, and repeated run_ids params", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify(comparisonResponse), {
         status: 200,
@@ -253,9 +300,9 @@ describe("compareRuns", () => {
       }),
     );
 
-    await compareRuns(42, [2, 3]);
+    await compareRuns(10, 42, [2, 3]);
     expect(fetchSpy).toHaveBeenCalledWith(
-      `${BASE_URL}/runs/compare?experiment_id=42&run_ids=2&run_ids=3`,
+      `${BASE_URL}/runs/compare?project_id=10&experiment_id=42&run_ids=2&run_ids=3`,
       expect.any(Object),
     );
   });
@@ -268,7 +315,7 @@ describe("compareRuns", () => {
       }),
     );
 
-    const promise = compareRuns(42, [1, 999]);
+    const promise = compareRuns(10, 42, [1, 999]);
     await expect(promise).rejects.toThrow(ApiError);
     await expect(promise).rejects.toMatchObject({
       status: 404,

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "../components/layout/Sidebar";
 import { Topbar } from "../components/layout/Topbar";
+import { Breadcrumbs } from "../components/layout/Breadcrumbs";
 
 interface LayoutProps {
   children?: ReactNode;
@@ -36,7 +37,10 @@ export function Layout({ children }: LayoutProps): React.ReactElement {
       <Sidebar />
       <div style={mainStyle}>
         <Topbar />
-        <main style={contentStyle}>{children ?? <Outlet />}</main>
+        <main style={contentStyle}>
+          <Breadcrumbs />
+          {children ?? <Outlet />}
+        </main>
       </div>
     </div>
   );

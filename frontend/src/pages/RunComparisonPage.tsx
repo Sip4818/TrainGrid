@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useRunComparison } from "../features/runs/hooks";
 import { Badge } from "../components/ui/Badge";
 import { Spinner } from "../components/ui/Spinner";
@@ -36,20 +36,27 @@ function formatValue(value: unknown): string {
 
 export function RunComparisonPage(): React.ReactElement {
   const navigate = useNavigate();
+  const { projectId, experimentId } = useParams<{
+    projectId: string;
+    experimentId: string;
+  }>();
+  const pid = Number(projectId);
+  const eid = Number(experimentId);
   const [searchParams] = useSearchParams();
 
-  const experimentIdParam = searchParams.get("experiment_id");
-  const experimentId = Number(experimentIdParam);
   const runIds = searchParams.getAll("run_ids").map(Number);
 
+  const experimentBack = `/projects/${pid}/experiments/${eid}`;
+
   const isValid =
-    experimentIdParam !== null &&
-    !Number.isNaN(experimentId) &&
+    !Number.isNaN(pid) &&
+    !Number.isNaN(eid) &&
     runIds.length >= 2 &&
     runIds.every((id) => !Number.isNaN(id));
 
   const { data, isLoading, isError, error } = useRunComparison(
-    experimentId,
+    pid,
+    eid,
     isValid ? runIds : [],
   );
 
@@ -58,11 +65,11 @@ export function RunComparisonPage(): React.ReactElement {
       title="Run Comparison"
       description={
         isValid
-          ? `Experiment #${experimentId}`
+          ? `Experiment #${eid}`
           : "Select at least two runs from the Runs page to compare"
       }
     >
-      <Button onClick={() => navigate("/runs")}>Back to Runs</Button>
+      <Button onClick={() => navigate(experimentBack)}>Back to Experiment</Button>
     </PageHeader>
   );
 

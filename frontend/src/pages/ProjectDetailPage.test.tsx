@@ -205,7 +205,7 @@ describe("ProjectDetailPage", () => {
 
     screen.getByText("Exp A").click();
 
-    expect(navigateMock).toHaveBeenCalledWith("/runs?experiment_id=11");
+    expect(navigateMock).toHaveBeenCalledWith("/projects/1/experiments/11");
   });
 
   it("navigates back to projects via the back button", async () => {

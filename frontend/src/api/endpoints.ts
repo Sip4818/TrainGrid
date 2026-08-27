@@ -9,26 +9,32 @@ export const endpoints = {
   },
   runs: {
     /**
-     * GET /runs/ — list all training runs.
-     * Optionally scope to a single experiment via ?experiment_id=.
+     * GET /runs/ — list all training runs scoped to an experiment within a project.
      */
-    list: (experimentId?: number) =>
-      experimentId !== undefined
-        ? (`/runs/?experiment_id=${experimentId}` as const)
-        : ("/runs/" as const),
+    list: (projectId: number, experimentId: number) =>
+      `/runs/?project_id=${projectId}&experiment_id=${experimentId}` as const,
 
-    /** GET /runs/{id} — get a single run by ID */
-    detail: (id: number) => `/runs/${id}` as const,
+    /**
+     * GET /runs/{id} — get a single run by ID, scoped to its project and experiment.
+     */
+    detail: (id: number, projectId: number, experimentId: number) =>
+      `/runs/${id}?project_id=${projectId}&experiment_id=${experimentId}` as const,
 
     /** POST /runs/ — create a new training run */
     create: () => "/runs/" as const,
 
     /**
+     * DELETE /runs/{id} — delete a run, scoped to its project and experiment.
+     */
+    delete: (id: number, projectId: number, experimentId: number) =>
+      `/runs/${id}?project_id=${projectId}&experiment_id=${experimentId}` as const,
+
+    /**
      * GET /runs/compare — compare runs side-by-side within an experiment.
      * run_ids are sent as repeated query params (e.g. run_ids=1&run_ids=2).
      */
-    compare: (experimentId: number, runIds: number[]) =>
-      `/runs/compare?experiment_id=${experimentId}&${runIds
+    compare: (projectId: number, experimentId: number, runIds: number[]) =>
+      `/runs/compare?project_id=${projectId}&experiment_id=${experimentId}&${runIds
         .map((id) => `run_ids=${id}`)
         .join("&")}` as const,
   },
@@ -47,22 +53,25 @@ export const endpoints = {
   },
   experiments: {
     /**
-     * GET /experiments/ — list all experiments.
-     * Optionally scope to a single project via ?project_id=.
+     * GET /experiments/ — list all experiments within a project.
      */
-    list: (projectId?: number) =>
-      projectId !== undefined
-        ? (`/experiments/?project_id=${projectId}` as const)
-        : ("/experiments/" as const),
+    list: (projectId: number) =>
+      `/experiments/?project_id=${projectId}` as const,
 
-    /** GET /experiments/{id} — get a single experiment */
-    detail: (id: number) => `/experiments/${id}` as const,
+    /**
+     * GET /experiments/{id} — get a single experiment, scoped to its project.
+     */
+    detail: (id: number, projectId: number) =>
+      `/experiments/${id}?project_id=${projectId}` as const,
 
     /** POST /experiments/ — create a new experiment within a project */
     create: () => "/experiments/" as const,
 
-    /** DELETE /experiments/{id} — delete an experiment (cascades to runs) */
-    delete: (id: number) => `/experiments/${id}` as const,
+    /**
+     * DELETE /experiments/{id} — delete an experiment, scoped to its project.
+     */
+    delete: (id: number, projectId: number) =>
+      `/experiments/${id}?project_id=${projectId}` as const,
   },
   datasets: {
     /** GET /datasets/ — list all uploaded datasets */

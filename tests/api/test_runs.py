@@ -11,10 +11,11 @@ from backend.shared.enums import RunStatus
 client = TestClient(app)
 
 
-def _create_completed_run(experiment_id: int) -> int:
+def _create_completed_run(experiment_id: int, project_id: int = 1) -> int:
     """Create a run via the API and mark it COMPLETED with sample metrics."""
     payload = {
         "experiment_id": experiment_id,
+        "project_id": project_id,
         "trainer_name": "random_forest",
         "config": {
             "dataset_path": "dummy.csv",
@@ -58,6 +59,7 @@ def _create_experiment(name: str) -> int:
 def test_create_run():
     payload = {
         "experiment_id": 1,
+        "project_id": 1,
         "trainer_name": "random_forest",
         "config": {
             "dataset_path": "dummy.csv",
@@ -75,6 +77,7 @@ def test_create_run():
         assert response.status_code == 200
         data = response.json()
         assert data["experiment_id"] == 1
+        assert data["project_id"] == 1
         # The trainer name is persisted inside the run config
         assert data["config"]["trainer_name"] == "random_forest"
         # The default status for a new run is "pending" (see RunModel default)
@@ -86,6 +89,7 @@ def test_create_run():
 def test_create_run_unknown_trainer():
     payload = {
         "experiment_id": 1,
+        "project_id": 1,
         "trainer_name": "unknown_model",
         "config": {
             "dataset_path": "dummy.csv",
@@ -101,30 +105,72 @@ def test_create_run_unknown_trainer():
 
 
 def test_get_runs():
-    response = client.get("/runs/")
+    response = client.get("/runs/", params={"project_id": 1, "experiment_id": 1})
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
 
 def test_get_runs_filtered_by_experiment():
-    response = client.get("/runs/", params={"experiment_id": 1})
+    response = client.get(
+        "/runs/",
+        params={"project_id": 1, "experiment_id": 1},
+    )
     assert response.status_code == 200
     runs = response.json()
     assert isinstance(runs, list)
     assert all(run["experiment_id"] == 1 for run in runs)
+    assert all(run["project_id"] == 1 for run in runs)
+
+
+def test_get_runs_missing_scope():
+    response = client.get("/runs/", params={"experiment_id": 1})
+    assert response.status_code == 422
+
+    response = client.get("/runs/", params={"project_id": 1})
+    assert response.status_code == 422
 
 
 def test_get_run_not_found():
-    response = client.get("/runs/999999")
+    response = client.get(
+        "/runs/999999",
+        params={"project_id": 1, "experiment_id": 1},
+    )
     assert response.status_code == 404
     data = response.json()
     assert data["detail"]["code"] == "NOT_FOUND"
     assert "not found" in data["detail"]["message"].lower()
 
 
+def test_get_run_not_in_experiment():
+    other_experiment_id = _create_experiment(name="Other")
+    run_id = _create_completed_run(experiment_id=1)
+
+    response = client.get(
+        f"/runs/{run_id}",
+        params={"project_id": 1, "experiment_id": other_experiment_id},
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data["detail"]["code"] == "RUN_NOT_IN_EXPERIMENT"
+
+
+def test_get_run_experiment_not_in_project():
+    other_project = client.post("/projects/", json={"name": "Other Project"}).json()
+    run_id = _create_completed_run(experiment_id=1)
+
+    response = client.get(
+        f"/runs/{run_id}",
+        params={"project_id": other_project["id"], "experiment_id": 1},
+    )
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
 def test_create_run_unknown_experiment():
     payload = {
         "experiment_id": 999999,
+        "project_id": 1,
         "trainer_name": "random_forest",
         "config": {
             "dataset_path": "dummy.csv",
@@ -139,13 +185,75 @@ def test_create_run_unknown_experiment():
     assert "experiment" in data["detail"]["message"].lower()
 
 
+def test_create_run_experiment_not_in_project():
+    other_project = client.post("/projects/", json={"name": "Other Project"}).json()
+    payload = {
+        "experiment_id": 1,
+        "project_id": other_project["id"],
+        "trainer_name": "random_forest",
+        "config": {
+            "dataset_path": "dummy.csv",
+            "target_column": "target",
+            "feature_columns": ["f1", "f2"],
+        },
+    }
+    response = client.post("/runs/", json=payload)
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+def test_delete_run():
+    run_id = _create_completed_run(experiment_id=1)
+
+    response = client.delete(
+        f"/runs/{run_id}",
+        params={"project_id": 1, "experiment_id": 1},
+    )
+    assert response.status_code == 200
+    assert response.json()["detail"] == f"Run with id '{run_id}' deleted"
+
+    assert (
+        client.get(
+            f"/runs/{run_id}",
+            params={"project_id": 1, "experiment_id": 1},
+        ).status_code
+        == 404
+    )
+
+
+def test_delete_run_not_found():
+    response = client.delete(
+        "/runs/999999",
+        params={"project_id": 1, "experiment_id": 1},
+    )
+    assert response.status_code == 404
+
+
+def test_delete_run_not_in_experiment():
+    other_experiment_id = _create_experiment(name="Other")
+    run_id = _create_completed_run(experiment_id=1)
+
+    response = client.delete(
+        f"/runs/{run_id}",
+        params={"project_id": 1, "experiment_id": other_experiment_id},
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data["detail"]["code"] == "RUN_NOT_IN_EXPERIMENT"
+
+
 def test_compare_runs():
     run_1 = _create_completed_run(experiment_id=1)
     run_2 = _create_completed_run(experiment_id=1)
 
     response = client.get(
         "/runs/compare",
-        params={"experiment_id": 1, "run_ids": [run_1, run_2]},
+        params={
+            "project_id": 1,
+            "experiment_id": 1,
+            "run_ids": [run_1, run_2],
+        },
     )
     assert response.status_code == 200
     data = response.json()
@@ -153,6 +261,7 @@ def test_compare_runs():
     assert data["metrics"] == ["accuracy"]
     for run in data["runs"]:
         assert run["experiment_id"] == 1
+        assert run["project_id"] == 1
         assert run["status"] == "completed"
         assert run["trainer_name"] == "random_forest"
         assert run["metrics"] == {"accuracy": 0.95}
@@ -165,7 +274,11 @@ def test_compare_runs_mixed_experiment():
 
     response = client.get(
         "/runs/compare",
-        params={"experiment_id": 1, "run_ids": [run_1, run_2]},
+        params={
+            "project_id": 1,
+            "experiment_id": 1,
+            "run_ids": [run_1, run_2],
+        },
     )
     assert response.status_code == 422
     data = response.json()
@@ -178,7 +291,11 @@ def test_compare_runs_not_found():
 
     response = client.get(
         "/runs/compare",
-        params={"experiment_id": 1, "run_ids": [run_id, 999999]},
+        params={
+            "project_id": 1,
+            "experiment_id": 1,
+            "run_ids": [run_id, 999999],
+        },
     )
     assert response.status_code == 404
     data = response.json()
@@ -190,7 +307,28 @@ def test_compare_runs_unknown_experiment():
 
     response = client.get(
         "/runs/compare",
-        params={"experiment_id": 999999, "run_ids": [run_id]},
+        params={
+            "project_id": 1,
+            "experiment_id": 999999,
+            "run_ids": [run_id],
+        },
+    )
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"]["code"] == "NOT_FOUND"
+
+
+def test_compare_runs_experiment_not_in_project():
+    other_project = client.post("/projects/", json={"name": "Other Project"}).json()
+    run_id = _create_completed_run(experiment_id=1)
+
+    response = client.get(
+        "/runs/compare",
+        params={
+            "project_id": other_project["id"],
+            "experiment_id": 1,
+            "run_ids": [run_id],
+        },
     )
     assert response.status_code == 404
     data = response.json()
@@ -198,11 +336,15 @@ def test_compare_runs_unknown_experiment():
 
 
 def test_compare_runs_invalid_ids():
-    response = client.get("/runs/compare", params={"experiment_id": 1, "run_ids": ""})
+    response = client.get(
+        "/runs/compare",
+        params={"project_id": 1, "experiment_id": 1, "run_ids": ""},
+    )
     assert response.status_code == 422
 
     response = client.get(
-        "/runs/compare", params={"experiment_id": 1, "run_ids": "abc"}
+        "/runs/compare",
+        params={"project_id": 1, "experiment_id": 1, "run_ids": "abc"},
     )
     assert response.status_code == 422
 

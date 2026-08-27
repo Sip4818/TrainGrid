@@ -127,7 +127,7 @@ jobs:
         run: |
           response=$(curl -sf -X POST http://localhost:8000/runs/ \
             -H "Content-Type: application/json" \
-            -d '{"experiment_id":1,"trainer_name":"random_forest","config":{"dataset_path":"backend/datasets/sample.csv","target_column":"target","feature_columns":["feature1","feature2"],"n_estimators":50}}')
+            -d '{"experiment_id":1,"project_id":1,"trainer_name":"random_forest","config":{"dataset_path":"backend/datasets/sample.csv","target_column":"target","feature_columns":["feature1","feature2"],"n_estimators":50}}')
           echo "$response"
           echo "$response" | grep -q '"id"' || { echo "Seed failed: no run was created"; exit 1; }
           echo "Seed run created."
@@ -135,7 +135,7 @@ jobs:
       - name: Seed completed runs so the comparison flow has data
         run: |
           docker compose exec -T api python -m backend.scripts.seed_compare_runs
-          response=$(curl -sf http://localhost:8000/runs/)
+          response=$(curl -sf "http://localhost:8000/runs/?project_id=1&experiment_id=1")
           echo "$response"
           completed=$(echo "$response" | grep -o '"completed"' | wc -l)
           if [ "$completed" -lt 2 ]; then

@@ -28,6 +28,7 @@ export interface RunConfig {
  * Mirrors the backend RunCreate schema.
  */
 export interface RunCreate {
+  project_id: number;
   experiment_id: number;
   trainer_name: string;
   config: RunConfig;
@@ -39,6 +40,7 @@ export interface RunCreate {
  */
 export interface Run {
   id: number;
+  project_id: number;
   experiment_id: number;
   config: RunConfig;
   status: RunStatus;
@@ -55,6 +57,7 @@ export interface Run {
  */
 export interface RunComparisonItem {
   id: number;
+  project_id: number;
   experiment_id: number;
   trainer_name: string;
   status: RunStatus;
