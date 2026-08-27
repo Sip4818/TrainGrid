@@ -427,16 +427,6 @@ describe("ExperimentPage comparison selection", () => {
 });
 
 describe("ExperimentPage dataset picker", () => {
-  const uploadedDatasets = [
-    {
-      id: 1,
-      name: "iris.csv",
-      size_bytes: 1024,
-      store_key: "datasets/1/dataset.csv",
-      created_at: "2026-08-01T00:00:00Z",
-    },
-  ];
-
   it("lists uploaded datasets in the create modal picker", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const method = (init?.method as string | undefined) ?? "GET";
@@ -448,10 +438,13 @@ describe("ExperimentPage dataset picker", () => {
         });
       }
       if (url.includes("/datasets/")) {
-        return new Response(JSON.stringify(uploadedDatasets), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify([{ store_key: "datasets/1/dataset.csv", name: "iris.csv" }]),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
       if (url.includes("/experiments/")) {
         return new Response(JSON.stringify(sampleExperiment), {
@@ -495,10 +488,13 @@ describe("ExperimentPage dataset picker", () => {
         });
       }
       if (url.includes("/datasets/")) {
-        return new Response(JSON.stringify([]), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify([{ store_key: "datasets/1/dataset.csv", name: "iris.csv" }]),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
       if (url.includes("/experiments/")) {
         return new Response(JSON.stringify(sampleExperiment), {
@@ -523,6 +519,15 @@ describe("ExperimentPage dataset picker", () => {
 
     fireEvent.change(screen.getByLabelText("Model"), {
       target: { value: "random_forest" },
+    });
+    await waitFor(() => screen.getByLabelText("Dataset Path"));
+    fireEvent.change(screen.getByLabelText("Dataset Path"), {
+      target: { value: "datasets/1/dataset.csv" },
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Create Run" }),
+      ).not.toBeDisabled();
     });
     fireEvent.click(screen.getByRole("button", { name: "Create Run" }));
 
