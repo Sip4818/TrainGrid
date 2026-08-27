@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from "vitest";
-import { useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import {
   ConfigForm,
@@ -177,27 +176,7 @@ describe("ConfigForm dataset widget", () => {
 
   const emptyValues = { dataset_path: "", target_column: "" };
 
-  function StatefulConfigForm({
-    initial,
-    datasets: opts = datasets,
-  }: {
-    initial: Record<string, unknown>;
-    datasets?: DatasetOption[];
-  }): React.ReactElement {
-    const [values, setValues] = useState(initial);
-    return (
-      <ConfigForm
-        schema={datasetSchema}
-        values={values}
-        onChange={(key, value) =>
-          setValues((prev) => ({ ...prev, [key]: value }))
-        }
-        datasets={opts}
-      />
-    );
-  }
-
-  it("renders a dataset picker with uploaded datasets and a custom path option", () => {
+  it("renders a dataset picker with uploaded datasets", () => {
     render(
       <ConfigForm
         schema={datasetSchema}
@@ -210,7 +189,6 @@ describe("ConfigForm dataset widget", () => {
     expect(select.tagName).toBe("SELECT");
     expect(screen.getByText("iris.csv")).toBeInTheDocument();
     expect(screen.getByText("titanic.csv")).toBeInTheDocument();
-    expect(screen.getByText("Custom path\u2026")).toBeInTheDocument();
   });
 
   it("calls onChange with the store key when an uploaded dataset is selected", () => {
@@ -229,51 +207,6 @@ describe("ConfigForm dataset widget", () => {
     expect(onChange).toHaveBeenCalledWith(
       "dataset_path",
       "datasets/2/dataset.csv",
-    );
-  });
-
-  it("shows the custom path input when the value is a literal path", () => {
-    render(
-      <ConfigForm
-        schema={datasetSchema}
-        values={{ dataset_path: "backend/datasets/sample.csv", target_column: "" }}
-        onChange={() => {}}
-        datasets={datasets}
-      />,
-    );
-    const customInput = screen.getByLabelText("Dataset Path custom path");
-    expect(customInput).toHaveValue("backend/datasets/sample.csv");
-  });
-
-  it("switches between an uploaded dataset and the custom path input", () => {
-    render(
-      <StatefulConfigForm
-        initial={{ dataset_path: "datasets/1/dataset.csv", target_column: "" }}
-      />,
-    );
-    expect(screen.queryByLabelText("Dataset Path custom path")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Dataset Path"), {
-      target: { value: "__custom__" },
-    });
-    expect(screen.getByLabelText("Dataset Path custom path")).toBeInTheDocument();
-  });
-
-  it("calls onChange with the literal path when typing in the custom input", () => {
-    const onChange = vi.fn();
-    render(
-      <ConfigForm
-        schema={datasetSchema}
-        values={{ dataset_path: "backend/datasets/sample.csv", target_column: "" }}
-        onChange={onChange}
-        datasets={datasets}
-      />,
-    );
-    fireEvent.change(screen.getByLabelText("Dataset Path custom path"), {
-      target: { value: "backend/datasets/other.csv" },
-    });
-    expect(onChange).toHaveBeenCalledWith(
-      "dataset_path",
-      "backend/datasets/other.csv",
     );
   });
 
@@ -309,7 +242,7 @@ describe("ConfigForm dataset widget", () => {
     expect(screen.getByRole("button", { name: "Uploading\u2026" })).toBeDisabled();
   });
 
-  it("shows a hint when no datasets exist and no custom path is set", () => {
+  it("shows a hint when no datasets exist", () => {
     render(
       <ConfigForm
         schema={datasetSchema}
