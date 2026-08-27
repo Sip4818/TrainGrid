@@ -27,7 +27,6 @@ interface RunRow extends Record<string, unknown> {
 }
 
 const DATA_SOURCE_DEFAULTS: Record<string, unknown> = {
-  dataset_path: "backend/datasets/sample.csv",
   target_column: "target",
   feature_columns: "feature1, feature2",
 };
