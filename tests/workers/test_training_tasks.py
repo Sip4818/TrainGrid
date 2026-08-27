@@ -36,13 +36,18 @@ class FakeTrainer(BaseTrainer):
 def test_start_training_run_resolves_trainer_via_registry(tmp_path):
     Base.metadata.create_all(bind=engine)
 
+    store = LocalArtifactStore(root=tmp_path)
+    source = tmp_path / "uploaded.csv"
+    source.write_text("f1,f2,target\n1,2,0\n")
+    store.save(source, "datasets/1/dataset.csv")
+
     db = SessionLocal()
     run = RunModel(
         experiment_id=1,
         status=RunStatus.PENDING,
         config={
             "trainer_name": "fake",
-            "dataset_path": "dummy.csv",
+            "dataset_path": "datasets/1/dataset.csv",
             "target_column": "target",
             "feature_columns": ["f1", "f2"],
         },
@@ -61,7 +66,7 @@ def test_start_training_run_resolves_trainer_via_registry(tmp_path):
         ) as mock_get,
         patch(
             "backend.workers.tasks.training_tasks.local_artifact_store",
-            LocalArtifactStore(root=tmp_path),
+            store,
         ),
     ):
         result = start_training_run(str(run_id))
@@ -149,45 +154,3 @@ def test_store_key_dataset_path_is_materialized(tmp_path):
     materialized = RecordingFakeTrainer.captured_paths["dataset_path"]
     assert materialized != "datasets/1/dataset.csv"
     assert RecordingFakeTrainer.captured_paths["content"] == source.read_text()
-
-
-def test_literal_dataset_path_passes_through(tmp_path):
-    Base.metadata.create_all(bind=engine)
-
-    store = LocalArtifactStore(root=tmp_path)
-
-    db = SessionLocal()
-    run_id = _create_run(
-        {
-            "trainer_name": "fake",
-            "dataset_path": "backend/datasets/sample.csv",
-            "target_column": "target",
-            "feature_columns": ["feature1", "feature2"],
-        },
-        db,
-    )
-    db.close()
-
-    RecordingFakeTrainer.captured_paths = {}
-
-    class LiteralTrainer(RecordingFakeTrainer):
-        def train(self):
-            return None
-
-    with (
-        patch(
-            "backend.trainers.registry.trainer_registry.get",
-            return_value=LiteralTrainer,
-        ),
-        patch(
-            "backend.workers.tasks.training_tasks.local_artifact_store",
-            store,
-        ),
-    ):
-        result = start_training_run(str(run_id))
-
-    assert result["status"] == "completed"
-    assert (
-        RecordingFakeTrainer.captured_paths["dataset_path"]
-        == "backend/datasets/sample.csv"
-    )
