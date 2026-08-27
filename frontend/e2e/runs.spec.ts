@@ -53,13 +53,15 @@ test.describe("Project-first navigation flow", () => {
     });
     await expect(completedRows.first()).toBeVisible({ timeout: 10000 });
 
-    // Select both completed runs for comparison
+    // Select exactly 2 completed runs for comparison (use last 2 to pick
+    // the deterministic seed_compare_runs entries, not the possibly-completed
+    // training run which may or may not exist)
     const compareCheckboxes = page.locator(
       'table tbody tr:has-text("completed") input[type="checkbox"]',
     );
-    for (let i = 0; i < (await compareCheckboxes.count()); i++) {
-      await compareCheckboxes.nth(i).check();
-    }
+    const count = await compareCheckboxes.count();
+    await compareCheckboxes.nth(count - 2).check();
+    await compareCheckboxes.nth(count - 1).check();
 
     // Click Compare button
     const compareButton = page.getByRole("button", {
