@@ -33,14 +33,13 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
     volumes:
-      - ./backend:/app/backend
       - artifacts_data:/app/artifacts
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn backend.api.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
 
   worker:
     image: ${DOCKERHUB_USERNAME:-sahil4818}/traingrid-worker:latest
@@ -52,7 +51,6 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
     volumes:
-      - ./backend:/app/backend
       - artifacts_data:/app/artifacts
     depends_on:
       postgres:
