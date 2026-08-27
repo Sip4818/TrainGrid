@@ -127,7 +127,7 @@ jobs:
         run: |
           response=$(curl -sf -X POST http://localhost:8000/runs/ \
             -H "Content-Type: application/json" \
-            -d '{"experiment_id":1,"project_id":1,"trainer_name":"random_forest","config":{"dataset_path":"backend/datasets/sample.csv","target_column":"target","feature_columns":["feature1","feature2"],"n_estimators":50}}')
+            -d '{"experiment_id":1,"project_id":1,"trainer_name":"random_forest","config":{"dataset_path":"datasets/1/dataset.csv","target_column":"target","feature_columns":["feature1","feature2"],"n_estimators":50}}')
           echo "$response"
           echo "$response" | grep -q '"id"' || { echo "Seed failed: no run was created"; exit 1; }
           echo "Seed run created."
