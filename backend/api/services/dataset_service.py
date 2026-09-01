@@ -1,3 +1,4 @@
+import hashlib
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -35,7 +36,8 @@ class DatasetService:
         logger.info("Creating dataset name=%s size=%d", name, len(content))
         self._validate_csv(original_filename)
 
-        dataset = DatasetModel(name=name, size_bytes=len(content))
+        dataset_hash = hashlib.sha256(content).hexdigest()
+        dataset = DatasetModel(name=name, size_bytes=len(content), hash=dataset_hash)
         self.db.add(dataset)
         self.db.commit()
         self.db.refresh(dataset)
