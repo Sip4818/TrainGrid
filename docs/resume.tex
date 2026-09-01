@@ -1,0 +1,166 @@
+%-------------------------
+% Resume in Latex
+% Author: Jake Gutierrez (Adapted for Sahil Patel)
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generated pdf is machine readable/ATS parsable
+\pdfgentounicode=1
+
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    \textbf{\Huge \scshape Sahil Patel} \\ \vspace{2pt}
+    \small +44 7900972524 $|$ \href{mailto:sip4818@gmail.com}{\underline{sip4818@gmail.com}} $|$ 
+    \href{https://linkedin.com/in/s-i-patel}{\underline{linkedin.com/in/s-i-patel}} $|$
+    \href{https://github.com/Sip4818}{\underline{github.com/Sip4818}} \\ \vspace{1pt}
+    \small \textbf{UK PSW Visa Eligible (2-Year Full-Time Work Authorization)}
+\end{center}
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {University of Hertfordshire}{Hertfordshire, UK}
+      {Master of Science in Data Science}{Jan. 2026 -- Jan. 2028 (Expected)}
+    \resumeSubheading
+      {Nirma University}{Gujarat, India}
+      {Bachelor of Technology in Chemical Engineering}{June 2020 -- June 2024}
+  \resumeSubHeadingListEnd
+
+%-----------OPEN SOURCE CONTRIBUTIONS-----------
+\section{Open Source Contributions}
+  \resumeSubHeadingListStart
+    \resumeProjectHeading
+      {\textbf{PyTorch} (\texttt{pytorch/pytorch}) $|$ \href{https://github.com/pytorch/pytorch}{GitHub} $|$ \emph{Active Contributor}}{2026}
+      \resumeItemListStart
+        \resumeItem{Investigated and contributed bug fixes and test cases to \textbf{PyTorch core and ecosystem submodules}, collaborating with core maintainers across code review and triage workflows.}
+        \resumeItem{Authored deterministic unit tests under \texttt{test/} ensuring regression prevention across multi-platform CI/CD test suites.}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+%-----------PROJECTS-----------
+\section{Projects}
+  \resumeSubHeadingListStart
+
+    \resumeProjectHeading
+      {\textbf{TrainGrid} $|$ Distributed ML Orchestration \& Real-Time Serving Platform $|$ \href{https://github.com/Sip4818/TrainGrid}{GitHub}}{2026}
+      \resumeItemListStart
+        \resumeItem{Architected an asynchronous ML platform in \textbf{FastAPI, Celery, and Redis} supporting end-to-end model training, experiment tracking, artifact versioning, and live serving with \textbf{100\% test coverage (260+ automated tests)}.}
+        \resumeItem{Engineered a dynamic \textbf{Trainer Registry with auto-discovery} and Pydantic schema generation, eliminating hardcoded model fields and automatically rendering typed UI forms in React/TypeScript.}
+        \resumeItem{Built asynchronous worker pipelines with \textbf{Celery and Redis} alongside a pluggable \textbf{Artifact Store} abstraction supporting local disk and S3-compatible cloud storage with store-relative keys.}
+        \resumeItem{Implemented relational multi-tenancy (\textbf{Projects $\rightarrow$ Experiments $\rightarrow$ Runs}) in \textbf{SQLAlchemy (PostgreSQL/SQLite)} with domain validation and side-by-side run metric comparisons.}
+        \resumeItem{Established production CI/CD automation via \textbf{GitHub Actions}, running Ruff formatting, Mypy strict type checks, Pytest, Vitest, and Playwright E2E suites across containerized Docker Compose services.}
+      \resumeItemListEnd
+      \small{\textbf{Tools}: Python, FastAPI, Celery, Redis, PostgreSQL, SQLAlchemy, PyTorch, Scikit-Learn, Docker, TypeScript, React}
+
+    \vspace{2pt}
+
+    \resumeProjectHeading
+      {\textbf{AiTextGuard} $|$ NLP Transformer Ensemble \& MLOps Pipeline $|$ \href{https://github.com/Sip4818/AICheatTextGuard}{GitHub} $|$ \href{https://huggingface.co/spaces/Sahil4818/ai-text-guard}{Hugging Face}}{June 2025 -- Present}
+      \resumeItemListStart
+        \resumeItem{Developed an end-to-end NLP classification pipeline using \textbf{Transformer embeddings} and a \textbf{stacked ensemble (Logistic Regression + XGBoost)}, achieving \textbf{>90\% accuracy and F1-score} for AI-generated text detection.}
+        \resumeItem{Engineered a reproducible \textbf{MLOps pipeline} using \textbf{DVC} integrated with \textbf{Google Cloud Storage (GCS)} for dataset versioning and model artifact management.}
+        \resumeItem{Automated hyperparameter optimization with \textbf{Optuna} and tracked experiment parameters, loss curves, and artifact metrics in \textbf{MLflow}.}
+        \resumeItem{Built a low-latency \textbf{FastAPI inference service} and optimized prediction throughput by implementing \textbf{Redis in-memory caching} for frequent queries, containerized via \textbf{Docker}.}
+      \resumeItemListEnd
+      \small{\textbf{Tools}: Python, FastAPI, Transformers, XGBoost, DVC, MLflow, Optuna, Redis, Docker, GCS, GitHub Actions}
+
+  \resumeSubHeadingListEnd
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Graduate Engineer}{August 2024 -- August 2025}
+      {Suzuki Motors Gujarat}{Gujarat, India}
+      \resumeItemListStart
+        \resumeItem{Engineered automated \textbf{Python and SQL analytics pipelines} to process production and quality telemetry data across manufacturing batches, ensuring strict quality compliance.}
+        \resumeItem{Conducted data-driven root cause analysis on paint finish and surface consistency defects using \textbf{Pandas and NumPy}, reducing defect recurrence across production runs.}
+        \resumeItem{Built real-time \textbf{Power BI dashboards} and statistical reports tracking process parameter deviations and production KPIs for engineering leadership.}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+%-----------TECHNICAL SKILLS-----------
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}{: Python, SQL (PostgreSQL, SQLite), C++, TypeScript, Bash} \\
+     \textbf{Distributed Systems \& Backend}{: FastAPI, Celery, Redis (Pub/Sub, Caching), SQLAlchemy, REST APIs, WebSockets, gRPC} \\
+     \textbf{ML \& Deep Learning}{: PyTorch, Scikit-Learn, XGBoost, Hugging Face Transformers, LoRA/PEFT, Optuna} \\
+     \textbf{MLOps \& Cloud Infrastructure}{: Docker, Docker Compose, Kubernetes, GitHub Actions CI/CD, AWS (S3, EC2), DVC, MLflow, MinIO, Prometheus} \\
+     \textbf{Testing \& Tools}{: Pytest, Mypy, Ruff, Vitest, Git, Linux, Pandas, NumPy}
+    }}
+ \end{itemize}
+
+\end{document}
