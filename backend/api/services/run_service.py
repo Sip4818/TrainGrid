@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from backend.api.core.logging import get_logger
 from backend.api.schemas.run import RunComparisonItem, RunComparisonResponse, RunCreate
 from backend.infrastructure.database.models import (
+    DatasetModel,
     ExperimentModel,
     ProjectModel,
     RunModel,
@@ -42,12 +43,16 @@ class RunService:
         self._validate_scope(payload.experiment_id, payload.project_id)
         trainer_registry.get(payload.trainer_name)
         config = {**payload.config, "trainer_name": payload.trainer_name}
+
+        dataset_hash = self._resolve_dataset_hash(config)
+
         run = RunModel(
             experiment_id=payload.experiment_id,
             status=RunStatus.PENDING,
             config=config,
             metrics={},
             artifact_path=None,
+            dataset_hash=dataset_hash,
         )
 
         self.db.add(run)
@@ -87,6 +92,20 @@ class RunService:
             )
             raise ExperimentNotInProjectError(experiment_id, project_id)
         return experiment
+
+    def _resolve_dataset_hash(self, config: dict[str, Any]) -> str | None:
+        """Extract dataset_id from config and return its SHA-256 hash."""
+        dataset_path = config.get("dataset_path")
+        if not dataset_path:
+            return None
+        try:
+            dataset_id = int(dataset_path.split("/")[1])
+        except (IndexError, ValueError):
+            return None
+        dataset = self.db.get(DatasetModel, dataset_id)
+        if dataset is None:
+            return None
+        return cast(str | None, dataset.hash)
 
     def get_run(self, run_id: int, experiment_id: int, project_id: int) -> RunModel:
         logger.info(
