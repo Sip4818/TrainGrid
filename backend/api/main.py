@@ -7,6 +7,7 @@ from backend.api.routers import (
     datasets,
     experiments,
     health,
+    model_registry,
     models,
     projects,
     runs,
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(runs.router)
     app.include_router(models.router)
+    app.include_router(model_registry.router)
     app.include_router(projects.router)
     app.include_router(experiments.router)
     app.include_router(datasets.router)
