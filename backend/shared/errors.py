@@ -63,3 +63,42 @@ class RunNotInExperimentError(TrainGridError):
 
 class DatasetUploadError(TrainGridError):
     """Raised when an uploaded file is not a valid CSV dataset."""
+
+
+class ModelNotFoundError(NotFoundError):
+    """Raised when a registered model name does not exist."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        super().__init__(f"Registered model '{name}' not found")
+
+
+class ModelVersionNotFoundError(NotFoundError):
+    """Raised when a specific model version does not exist."""
+
+    def __init__(self, name: str, version: str) -> None:
+        self.name = name
+        self.version = version
+        super().__init__(f"Model '{name}' version '{version}' not found")
+
+
+class ModelVersionExistsError(TrainGridError):
+    """Raised when attempting to register a duplicate model name+version."""
+
+    def __init__(self, name: str, version: str) -> None:
+        self.name = name
+        self.version = version
+        super().__init__(f"Model '{name}' version '{version}' already exists")
+
+
+class RunNotInScopeError(TrainGridError):
+    """Raised when a run does not belong to the specified project/experiment."""
+
+    def __init__(self, run_id: int, project_id: int, experiment_id: int) -> None:
+        self.run_id = run_id
+        self.project_id = project_id
+        self.experiment_id = experiment_id
+        super().__init__(
+            f"Run '{run_id}' does not belong to project '{project_id}', "
+            f"experiment '{experiment_id}'"
+        )
