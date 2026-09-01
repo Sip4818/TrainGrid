@@ -1,11 +1,19 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
 from backend.infrastructure.database.session import Base
-from backend.shared.enums import RunStatus
+from backend.shared.enums import ModelStage, RunStatus
 
 
 class ProjectModel(Base):
@@ -96,6 +104,9 @@ class RunModel(Base):
     # String path to where the trained model file (.joblib) is saved on disk
     artifact_path: Column = Column(String, nullable=True)
 
+    # SHA-256 hash of the dataset CSV, copied from DatasetModel.hash at run creation
+    dataset_hash: Column = Column(String, nullable=True)
+
     # Automatically set when the row is created
     created_at: Column = Column(DateTime, default=datetime.utcnow)
 
@@ -133,5 +144,71 @@ class DatasetModel(Base):
     # Size of the uploaded file in bytes
     size_bytes: Column = Column(Integer, nullable=False)
 
+    # SHA-256 hash of the CSV content, computed at upload time
+    hash: Column = Column(String, nullable=True)
+
     # Automatically set when the row is created
     created_at: Column = Column(DateTime, default=datetime.utcnow)
+
+
+class RegisteredModel(Base):
+    """
+    SQLAlchemy model for the 'registered_models' table.
+    A registered model is a versioned ML artifact promoted from a training run
+    into the governed model store. Each row represents one version of a model.
+    """
+
+    __tablename__ = "registered_models"
+
+    id: Column = Column(Integer, primary_key=True, index=True)
+
+    # Model name (e.g. "fraud-detector") — many versions share the same name
+    name: Column = Column(String, nullable=False, index=True)
+
+    # Semver version string (e.g. "v1.0.0")
+    version: Column = Column(String, nullable=False)
+
+    # Which training run produced this model
+    run_id: Column = Column(Integer, ForeignKey("runs.id"), nullable=False)
+
+    # Direct FKs for project/experiment scoping (avoids 3-JOIN through
+    # run → experiment → project)
+    project_id: Column = Column(
+        Integer, ForeignKey("projects.id"), nullable=False, index=True
+    )
+    experiment_id: Column = Column(
+        Integer, ForeignKey("experiments.id"), nullable=False
+    )
+
+    # Lifecycle stage
+    stage: Column = Column(SQLEnum(ModelStage), default=ModelStage.NONE)
+
+    # Optional user-provided description
+    description: Column = Column(String, nullable=True)
+
+    # Store-relative key for the .joblib artifact (copied from run)
+    artifact_path: Column = Column(String, nullable=False)
+
+    # SHA-256 of the .joblib file (computed at registration time)
+    artifact_checksum: Column = Column(String, nullable=True)
+
+    # Dataset lineage (copied from RunModel.dataset_hash)
+    dataset_hash: Column = Column(String, nullable=True)
+
+    # Config and metrics copied from the run at registration time
+    config: Column = Column(JSON, nullable=False)
+    metrics: Column = Column(JSON, default={})
+
+    created_at: Column = Column(DateTime, default=datetime.utcnow)
+    updated_at: Column = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    # Relationships
+    run = relationship("RunModel")
+    project = relationship("ProjectModel")
+    experiment = relationship("ExperimentModel")
+
+    __table_args__ = (
+        UniqueConstraint("name", "version", name="uq_model_name_version"),
+    )

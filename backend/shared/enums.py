@@ -9,6 +9,13 @@ class RunStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class ModelStage(str, Enum):
+    NONE = "none"
+    STAGING = "staging"
+    PRODUCTION = "production"
+    ARCHIVED = "archived"
+
+
 class DeploymentStatus(str, Enum):
     PENDING = "pending"
     ACTIVE = "active"
