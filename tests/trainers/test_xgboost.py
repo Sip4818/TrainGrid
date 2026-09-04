@@ -91,3 +91,20 @@ def test_save_persists_model(tmp_path):
         trainer.save(output_path)
 
     mock_dump.assert_called_once_with(trainer.model, output_path)
+
+
+def test_predict_returns_prediction_and_confidence():
+    import numpy as np
+
+    trainer = _make_trainer()
+    trainer.model = MagicMock()
+    trainer.model.predict.return_value = np.array([1])
+    trainer.model.predict_proba.return_value = np.array([[0.2, 0.8]])
+    input_data = {"feature1": 0.5, "feature2": 1.5}
+
+    result = trainer.predict(input_data)
+
+    assert result["prediction"] == 1
+    assert result["confidence"] == 0.8
+    trainer.model.predict.assert_called_once()
+    trainer.model.predict_proba.assert_called_once()

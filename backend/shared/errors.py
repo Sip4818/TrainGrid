@@ -102,3 +102,47 @@ class RunNotInScopeError(TrainGridError):
             f"Run '{run_id}' does not belong to project '{project_id}', "
             f"experiment '{experiment_id}'"
         )
+
+
+class DeploymentNotFoundError(NotFoundError):
+    """Raised when a deployment ID doesn't exist."""
+
+    def __init__(self, deployment_id: int) -> None:
+        self.deployment_id = deployment_id
+        super().__init__(f"Deployment with id '{deployment_id}' not found")
+
+
+class ModelNotDeployableError(NotFoundError):
+    """Raised when trying to deploy a model that doesn't exist in the registry."""
+
+    def __init__(self, name: str, version: str) -> None:
+        self.name = name
+        self.version = version
+        super().__init__(f"Model '{name}' version '{version}' not found in registry")
+
+
+class DeploymentAlreadyExistsError(TrainGridError):
+    """Raised when a model version is already deployed."""
+
+    def __init__(self, name: str, version: str) -> None:
+        self.name = name
+        self.version = version
+        super().__init__(f"Model '{name}' version '{version}' is already deployed")
+
+
+class PredictionError(TrainGridError):
+    """Raised when prediction fails (bad features, load error, etc.)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class DeploymentNotInProjectError(TrainGridError):
+    """Raised when a deployment does not belong to the requested project."""
+
+    def __init__(self, deployment_id: int | str, project_id: int) -> None:
+        self.deployment_id = deployment_id
+        self.project_id = project_id
+        super().__init__(
+            f"Deployment '{deployment_id}' does not belong to project '{project_id}'"
+        )
