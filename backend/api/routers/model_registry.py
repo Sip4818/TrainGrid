@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from backend.api.core.logging import get_logger
+from backend.api.schemas.deployment import PredictRequest, PredictResponse
 from backend.api.schemas.model import (
     ModelRegisterRequest,
     ModelStageUpdate,
     RegisteredModelResponse,
     RegisteredModelSummary,
 )
+from backend.api.services.deployment_service import DeploymentService
 from backend.api.services.model_service import ModelService
 from backend.infrastructure.database.session import get_db
 
@@ -93,3 +95,17 @@ def promote_model(
         payload.stage.value,
     )
     return ModelService(db).promote_model(name, version, payload.stage, project_id)
+
+
+@router.post("/{name}/predict", response_model=PredictResponse)
+def predict_by_model_name(
+    name: str,
+    payload: PredictRequest,
+    project_id: int = Query(..., description="Project owning the model"),
+    db: Session = Depends(get_db),  # noqa: B008
+) -> PredictResponse:
+    """Predict using the latest deployment of a model (version-agnostic)."""
+    logger.info("Predicting by model_name=%s project_id=%d", name, project_id)
+    return DeploymentService(db).predict_by_model_name(
+        name, payload.features, project_id
+    )

@@ -5,6 +5,7 @@ from backend.api.core.exceptions import register_exception_handlers
 from backend.api.core.logging import configure_logging
 from backend.api.routers import (
     datasets,
+    deployments,
     experiments,
     health,
     model_registry,
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     app.include_router(runs.router)
     app.include_router(models.router)
     app.include_router(model_registry.router)
+    app.include_router(deployments.router)
     app.include_router(projects.router)
     app.include_router(experiments.router)
     app.include_router(datasets.router)

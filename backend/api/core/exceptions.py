@@ -3,10 +3,15 @@ from fastapi.responses import JSONResponse
 
 from backend.shared.errors import (
     DatasetUploadError,
+    DeploymentAlreadyExistsError,
+    DeploymentNotFoundError,
+    DeploymentNotInProjectError,
+    ModelNotDeployableError,
     ModelNotFoundError,
     ModelVersionExistsError,
     ModelVersionNotFoundError,
     NotFoundError,
+    PredictionError,
     RunNotInExperimentError,
     RunNotInScopeError,
     TrainerNotFoundError,
@@ -103,6 +108,50 @@ async def handle_run_not_in_scope(request: Request, exc: Exception) -> JSONRespo
     )
 
 
+async def handle_deployment_not_found(request: Request, exc: Exception) -> JSONResponse:
+    """Catch DeploymentNotFoundError and return a 404."""
+    return JSONResponse(
+        status_code=404,
+        content={"detail": {"code": "DEPLOYMENT_NOT_FOUND", "message": str(exc)}},
+    )
+
+
+async def handle_model_not_deployable(request: Request, exc: Exception) -> JSONResponse:
+    """Catch ModelNotDeployableError and return a 404."""
+    return JSONResponse(
+        status_code=404,
+        content={"detail": {"code": "MODEL_NOT_DEPLOYABLE", "message": str(exc)}},
+    )
+
+
+async def handle_deployment_already_exists(
+    request: Request, exc: Exception
+) -> JSONResponse:
+    """Catch DeploymentAlreadyExistsError and return a 409."""
+    return JSONResponse(
+        status_code=409,
+        content={"detail": {"code": "DEPLOYMENT_ALREADY_EXISTS", "message": str(exc)}},
+    )
+
+
+async def handle_prediction_error(request: Request, exc: Exception) -> JSONResponse:
+    """Catch PredictionError and return a 500."""
+    return JSONResponse(
+        status_code=500,
+        content={"detail": {"code": "PREDICTION_ERROR", "message": str(exc)}},
+    )
+
+
+async def handle_deployment_not_in_project(
+    request: Request, exc: Exception
+) -> JSONResponse:
+    """Catch DeploymentNotInProjectError and return a 404."""
+    return JSONResponse(
+        status_code=404,
+        content={"detail": {"code": "DEPLOYMENT_NOT_IN_PROJECT", "message": str(exc)}},
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register all custom exception handlers on the FastAPI app."""
     app.add_exception_handler(TrainGridError, handle_traingrid_error)
@@ -114,4 +163,13 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ModelVersionNotFoundError, handle_model_version_not_found)
     app.add_exception_handler(ModelVersionExistsError, handle_model_version_exists)
     app.add_exception_handler(RunNotInScopeError, handle_run_not_in_scope)
+    app.add_exception_handler(DeploymentNotFoundError, handle_deployment_not_found)
+    app.add_exception_handler(ModelNotDeployableError, handle_model_not_deployable)
+    app.add_exception_handler(
+        DeploymentAlreadyExistsError, handle_deployment_already_exists
+    )
+    app.add_exception_handler(PredictionError, handle_prediction_error)
+    app.add_exception_handler(
+        DeploymentNotInProjectError, handle_deployment_not_in_project
+    )
     app.add_exception_handler(Exception, handle_generic_error)

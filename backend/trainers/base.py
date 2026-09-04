@@ -17,3 +17,7 @@ class BaseTrainer(ABC):
     @abstractmethod
     def save(self, output_path: str) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def predict(self, input_data: Any) -> Any:
+        raise NotImplementedError

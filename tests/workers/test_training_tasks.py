@@ -32,6 +32,9 @@ class FakeTrainer(BaseTrainer):
     def save(self, output_path: str) -> None:
         Path(output_path).write_bytes(b"model-bytes")
 
+    def predict(self, input_data):
+        return {"prediction": 0, "confidence": 0.95}
+
 
 def test_start_training_run_resolves_trainer_via_registry(tmp_path):
     Base.metadata.create_all(bind=engine)

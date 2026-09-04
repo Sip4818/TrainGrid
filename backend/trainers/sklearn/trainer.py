@@ -67,6 +67,14 @@ class RandomForestClassifierTrainer(BaseTrainer):
         accuracy = accuracy_score(self.y_test, predictions)
         return {"accuracy": float(accuracy)}
 
+    def predict(self, input_data: dict) -> dict:
+        assert self.model is not None, "Model must be trained before prediction"
+        input_df = pd.DataFrame([input_data])
+        return {
+            "prediction": self.model.predict(input_df)[0],
+            "confidence": self.model.predict_proba(input_df).max(),
+        }
+
     def save(self, output_path: str) -> None:
         if self.model is not None:
             joblib.dump(self.model, output_path)

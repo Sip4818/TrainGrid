@@ -13,7 +13,7 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
 from backend.infrastructure.database.session import Base
-from backend.shared.enums import ModelStage, RunStatus
+from backend.shared.enums import DeploymentStatus, ModelStage, RunStatus
 
 
 class ProjectModel(Base):
@@ -212,3 +212,41 @@ class RegisteredModel(Base):
     __table_args__ = (
         UniqueConstraint("name", "version", name="uq_model_name_version"),
     )
+
+
+class DeploymentModel(Base):
+    """
+    SQLAlchemy model for the 'deployments' table.
+    A deployment loads a registered model artifact into the in-memory serving
+    pool so it can receive prediction requests over HTTP.
+
+    Project scope is traced through registered_model_id → RegisteredModel.project_id,
+    not stored directly on this table.
+    """
+
+    __tablename__ = "deployments"
+
+    id: Column = Column(Integer, primary_key=True, index=True)
+
+    # The registered model being deployed
+    model_name: Column = Column(String, nullable=False, index=True)
+    model_version: Column = Column(String, nullable=False)
+    registered_model_id: Column = Column(
+        Integer, ForeignKey("registered_models.id"), nullable=False
+    )
+
+    # Deployment lifecycle status
+    status: Column = Column(SQLEnum(DeploymentStatus), default=DeploymentStatus.PENDING)
+
+    # Timestamps
+    created_at: Column = Column(DateTime, default=datetime.utcnow)
+    started_at: Column = Column(DateTime, nullable=True)
+    stopped_at: Column = Column(DateTime, nullable=True)
+
+    # Relationship to the registered model
+    registered_model = relationship("RegisteredModel")
+
+    @property
+    def project_id(self) -> int:
+        """Project owning this deployment, derived from the registered model."""
+        return self.registered_model.project_id  # type: ignore[return-value]
