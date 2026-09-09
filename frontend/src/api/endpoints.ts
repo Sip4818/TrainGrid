@@ -80,5 +80,49 @@ export const endpoints = {
     /** POST /datasets/ — upload a CSV dataset (multipart/form-data) */
     upload: () => "/datasets/" as const,
   },
+  models: {
+    /** GET /models/ — list all registered models for a project */
+    list: (projectId: number) =>
+      `/models/?project_id=${projectId}` as const,
+
+    /** GET /models/{name} — get latest version of a model by name */
+    detail: (name: string, projectId: number) =>
+      `/models/${name}?project_id=${projectId}` as const,
+
+    /** GET /models/{name}/versions — list all versions of a model */
+    versions: (name: string, projectId: number) =>
+      `/models/${name}/versions?project_id=${projectId}` as const,
+
+    /** POST /models/ — register a new model version */
+    register: () => "/models/" as const,
+
+    /** POST /models/{name}/versions/{version}/promote — change stage */
+    promote: (name: string, version: string) =>
+      `/models/${name}/versions/${version}/promote` as const,
+  },
+  deployments: {
+    /** GET /deployments/ — list all deployments for a project */
+    list: (projectId: number) =>
+      `/deployments/?project_id=${projectId}` as const,
+
+    /** GET /deployments/{id} — get a single deployment scoped to a project */
+    detail: (id: number, projectId: number) =>
+      `/deployments/${id}?project_id=${projectId}` as const,
+
+    /** POST /deployments/ — deploy a registered model */
+    create: () => "/deployments/" as const,
+
+    /** DELETE /deployments/{id} — undeploy a model scoped to a project */
+    delete: (id: number, projectId: number) =>
+      `/deployments/${id}?project_id=${projectId}` as const,
+
+    /** POST /deployments/{id}/predict — predict using a specific deployment */
+    predict: (id: number, projectId: number) =>
+      `/deployments/${id}/predict?project_id=${projectId}` as const,
+
+    /** POST /models/{name}/predict — predict using latest deployment of a model */
+    predictByName: (name: string, projectId: number) =>
+      `/models/${name}/predict?project_id=${projectId}` as const,
+  },
 } as const;
 

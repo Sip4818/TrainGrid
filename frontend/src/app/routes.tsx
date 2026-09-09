@@ -6,6 +6,8 @@ import { ProjectDetailPage } from "../pages/ProjectDetailPage";
 import { ExperimentPage } from "../pages/ExperimentPage";
 import { RunDetailPage } from "../pages/RunDetailPage";
 import { RunComparisonPage } from "../pages/RunComparisonPage";
+import { DeploymentsPage } from "../pages/DeploymentsPage";
+import { ModelsPage } from "../pages/ModelsPage";
 
 export const routes: RouteObject[] = [
   {
@@ -16,6 +18,14 @@ export const routes: RouteObject[] = [
       {
         path: "projects",
         element: <ProjectsPage />,
+      },
+      {
+        path: "projects/:projectId/models",
+        element: <ModelsPage />,
+      },
+      {
+        path: "projects/:projectId/deployments",
+        element: <DeploymentsPage />,
       },
       {
         path: "projects/:projectId",

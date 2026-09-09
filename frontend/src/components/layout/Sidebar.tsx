@@ -58,6 +58,19 @@ export function Sidebar(): React.ReactElement {
     color: "#ffffff",
   };
 
+  const deploymentsLinkStyle: React.CSSProperties = {
+    display: "block",
+    padding: "6px 8px",
+    borderRadius: "4px",
+    color: "#e5e7eb",
+    textDecoration: "none",
+    fontSize: "14px",
+    fontWeight: 500,
+    marginTop: "16px",
+    borderTop: "1px solid #1f2937",
+    paddingTop: "12px",
+  };
+
   const experimentLinkStyle: React.CSSProperties = {
     display: "block",
     padding: "4px 8px 4px 24px",
@@ -88,6 +101,7 @@ export function Sidebar(): React.ReactElement {
       <div style={{ flex: 1 }}>
         <div style={sectionHeaderStyle}>Projects</div>
         <nav>
+
           {projects.map((project) => {
             const isActive = projectId !== undefined && Number(projectId) === project.id;
             return (
@@ -121,6 +135,34 @@ export function Sidebar(): React.ReactElement {
             );
           })}
         </nav>
+
+        {projectId && (
+          <>
+            <NavLink
+              to={`/projects/${projectId}/models`}
+              style={({ isActive: linkActive }) => ({
+                ...deploymentsLinkStyle,
+                color: linkActive ? "#ffffff" : "#9ca3af",
+                fontWeight: linkActive ? 600 : 500,
+                borderTop: "none",
+                marginTop: "8px",
+                paddingTop: "0",
+              })}
+            >
+              Models
+            </NavLink>
+            <NavLink
+              to={`/projects/${projectId}/deployments`}
+              style={({ isActive: linkActive }) => ({
+                ...deploymentsLinkStyle,
+                color: linkActive ? "#ffffff" : "#9ca3af",
+                fontWeight: linkActive ? 600 : 500,
+              })}
+            >
+              Deployments
+            </NavLink>
+          </>
+        )}
       </div>
     </aside>
   );
