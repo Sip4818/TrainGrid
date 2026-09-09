@@ -30,6 +30,8 @@ services:
       DATABASE_URL: postgresql://traingrid:traingrid@postgres:5432/traingrid
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - artifacts:/app/artifacts
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,6 +48,8 @@ services:
       DATABASE_URL: postgresql://traingrid:traingrid@postgres:5432/traingrid
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - artifacts:/app/artifacts
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,3 +68,6 @@ services:
       - "3000:80"
     depends_on:
       - api
+
+volumes:
+  artifacts:
