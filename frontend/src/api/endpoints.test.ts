@@ -69,3 +69,31 @@ describe("endpoints.datasets", () => {
     expect(endpoints.datasets.upload()).toBe("/datasets/");
   });
 });
+
+describe("endpoints.models", () => {
+  it("list(projectId) returns scoped URL", () => {
+    expect(endpoints.models.list(1)).toBe("/models/?project_id=1");
+  });
+
+  it("detail(name, projectId) returns scoped URL", () => {
+    expect(endpoints.models.detail("fraud-detector", 1)).toBe(
+      "/models/fraud-detector?project_id=1",
+    );
+  });
+
+  it("versions(name, projectId) returns scoped URL", () => {
+    expect(endpoints.models.versions("fraud-detector", 1)).toBe(
+      "/models/fraud-detector/versions?project_id=1",
+    );
+  });
+
+  it("register() returns /models/", () => {
+    expect(endpoints.models.register()).toBe("/models/");
+  });
+
+  it("promote(name, version) returns promote URL", () => {
+    expect(endpoints.models.promote("fraud-detector", "v1.0.0")).toBe(
+      "/models/fraud-detector/versions/v1.0.0/promote",
+    );
+  });
+});
