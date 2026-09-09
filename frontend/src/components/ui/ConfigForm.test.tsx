@@ -187,6 +187,8 @@ describe("ConfigForm dataset widget", () => {
     );
     const select = screen.getByLabelText("Dataset Path");
     expect(select.tagName).toBe("SELECT");
+    expect(select).toHaveValue("");
+    expect(screen.getByText("Select a dataset…")).toBeInTheDocument();
     expect(screen.getByText("iris.csv")).toBeInTheDocument();
     expect(screen.getByText("titanic.csv")).toBeInTheDocument();
   });

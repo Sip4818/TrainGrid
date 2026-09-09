@@ -184,10 +184,13 @@ export function ConfigForm({
                 required={isRequired}
                 value={currentValue}
                 onChange={(e) => onChange(name, e.target.value)}
-                options={datasets.map((d) => ({
-                  value: d.store_key,
-                  label: d.name,
-                }))}
+                options={[
+                  { value: "", label: "Select a dataset…" },
+                  ...datasets.map((d) => ({
+                    value: d.store_key,
+                    label: d.name,
+                  })),
+                ]}
               />
               <div
                 style={{
