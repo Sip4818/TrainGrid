@@ -24,7 +24,7 @@ export function DeploymentsPage(): React.ReactElement {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = Number(projectId);
   const deploymentsQuery = useDeployments(pid);
-  const modelsQuery = useModels(pid);
+  const modelsQuery = useModels();
   const deployMutation = useDeployModel();
   const undeployMutation = useUndeployModel();
   const predictMutation = usePredict();
