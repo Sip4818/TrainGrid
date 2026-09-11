@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.api.core.logging import get_logger
@@ -91,11 +91,8 @@ def promote_model(
 def predict_by_model_name(
     name: str,
     payload: PredictRequest,
-    project_id: int = Query(..., description="Project owning the model"),
     db: Session = Depends(get_db),  # noqa: B008
 ) -> PredictResponse:
     """Predict using the latest deployment of a model (version-agnostic)."""
-    logger.info("Predicting by model_name=%s project_id=%d", name, project_id)
-    return DeploymentService(db).predict_by_model_name(
-        name, payload.features, project_id
-    )
+    logger.info("Predicting by model_name=%s", name)
+    return DeploymentService(db).predict_by_model_name(name, payload.features)
