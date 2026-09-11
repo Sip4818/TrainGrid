@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import cast
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.api.core.logging import get_logger
@@ -13,19 +14,15 @@ from backend.api.schemas.model import (
     TrainerInfo,
 )
 from backend.infrastructure.database.models import (
-    ExperimentModel,
-    ProjectModel,
     RegisteredModel,
     RunModel,
 )
 from backend.infrastructure.storage.local_store import local_artifact_store
 from backend.shared.enums import ModelStage, RunStatus
 from backend.shared.errors import (
-    ExperimentNotFoundError,
     ModelNotFoundError,
     ModelVersionExistsError,
     ModelVersionNotFoundError,
-    ProjectNotFoundError,
     RunNotInScopeError,
     TrainingRunNotFoundError,
 )
@@ -78,27 +75,11 @@ class ModelService:
         if run is None:
             raise TrainingRunNotFoundError(payload.run_id)
 
-        # Validate run belongs to the specified project/experiment
-        if cast(int, run.experiment_id) != payload.experiment_id:
-            raise RunNotInScopeError(
-                payload.run_id, payload.project_id, payload.experiment_id
-            )
-        if cast(int, run.experiment.project_id) != payload.project_id:
-            raise RunNotInScopeError(
-                payload.run_id, payload.project_id, payload.experiment_id
-            )
-
         # Validate run is completed
         if run.status != RunStatus.COMPLETED:
             raise RunNotInScopeError(
-                payload.run_id, payload.project_id, payload.experiment_id
+                payload.run_id, cast(int, run.project_id), cast(int, run.experiment_id)
             )
-
-        # Validate experiment and project exist
-        if self.db.get(ExperimentModel, payload.experiment_id) is None:
-            raise ExperimentNotFoundError(payload.experiment_id)
-        if self.db.get(ProjectModel, payload.project_id) is None:
-            raise ProjectNotFoundError(payload.project_id)
 
         # Check for duplicate name+version
         existing = (
@@ -122,8 +103,6 @@ class ModelService:
             name=payload.name,
             version=payload.version,
             run_id=payload.run_id,
-            project_id=payload.project_id,
-            experiment_id=payload.experiment_id,
             stage=ModelStage.NONE,
             description=payload.description,
             artifact_path=cast(str, run.artifact_path),
@@ -144,21 +123,19 @@ class ModelService:
         )
         return RegisteredModelResponse.model_validate(registered)
 
-    def list_models(self, project_id: int) -> list[RegisteredModelSummary]:
-        """List all registered models for a project (latest version per name)."""
-        logger.info("Listing models for project_id=%d", project_id)
-        # Get the latest version per model name
+    def list_models(self) -> list[RegisteredModelSummary]:
+        """List all registered models globally (latest version per name)."""
+        logger.info("Listing all models")
+        # Get the latest version per model name using func.max for correct grouping
         subq = (
             self.db.query(
                 RegisteredModel.name,
-                RegisteredModel.project_id,
-                RegisteredModel.id,
+                func.max(RegisteredModel.id).label("max_id"),
             )
-            .filter(RegisteredModel.project_id == project_id)
-            .order_by(RegisteredModel.name, RegisteredModel.id.desc())
+            .group_by(RegisteredModel.name)
             .subquery()
         )
-        latest_ids = self.db.query(subq.c.id).group_by(subq.c.name).all()
+        latest_ids = self.db.query(subq.c.max_id).all()
         id_list = [row[0] for row in latest_ids]
         if not id_list:
             return []
@@ -181,14 +158,12 @@ class ModelService:
             for m in models
         ]
 
-    def get_model(self, name: str, project_id: int) -> RegisteredModelResponse:
+    def get_model(self, name: str) -> RegisteredModelResponse:
         """Get the latest version of a model by name."""
-        logger.info("Getting model name=%s project_id=%d", name, project_id)
+        logger.info("Getting model name=%s", name)
         model = (
             self.db.query(RegisteredModel)
-            .filter(
-                RegisteredModel.name == name, RegisteredModel.project_id == project_id
-            )
+            .filter(RegisteredModel.name == name)
             .order_by(RegisteredModel.id.desc())
             .first()
         )
@@ -196,18 +171,12 @@ class ModelService:
             raise ModelNotFoundError(name)
         return RegisteredModelResponse.model_validate(model)
 
-    def list_model_versions(
-        self, name: str, project_id: int
-    ) -> list[RegisteredModelResponse]:
+    def list_model_versions(self, name: str) -> list[RegisteredModelResponse]:
         """List all versions of a model."""
-        logger.info(
-            "Listing versions for model name=%s project_id=%d", name, project_id
-        )
+        logger.info("Listing versions for model name=%s", name)
         models = (
             self.db.query(RegisteredModel)
-            .filter(
-                RegisteredModel.name == name, RegisteredModel.project_id == project_id
-            )
+            .filter(RegisteredModel.name == name)
             .order_by(RegisteredModel.id.desc())
             .all()
         )
@@ -215,22 +184,14 @@ class ModelService:
             raise ModelNotFoundError(name)
         return [RegisteredModelResponse.model_validate(m) for m in models]
 
-    def get_model_version(
-        self, name: str, version: str, project_id: int
-    ) -> RegisteredModelResponse:
+    def get_model_version(self, name: str, version: str) -> RegisteredModelResponse:
         """Get a specific version of a model."""
-        logger.info(
-            "Getting model version name=%s version=%s project_id=%d",
-            name,
-            version,
-            project_id,
-        )
+        logger.info("Getting model version name=%s version=%s", name, version)
         model = (
             self.db.query(RegisteredModel)
             .filter(
                 RegisteredModel.name == name,
                 RegisteredModel.version == version,
-                RegisteredModel.project_id == project_id,
             )
             .first()
         )
@@ -239,22 +200,20 @@ class ModelService:
         return RegisteredModelResponse.model_validate(model)
 
     def promote_model(
-        self, name: str, version: str, stage: ModelStage, project_id: int
+        self, name: str, version: str, stage: ModelStage
     ) -> RegisteredModelResponse:
         """Promote or demote a model version to a new stage."""
         logger.info(
-            "Promoting model name=%s version=%s to stage=%s project_id=%d",
+            "Promoting model name=%s version=%s to stage=%s",
             name,
             version,
             stage.value,
-            project_id,
         )
         model = (
             self.db.query(RegisteredModel)
             .filter(
                 RegisteredModel.name == name,
                 RegisteredModel.version == version,
-                RegisteredModel.project_id == project_id,
             )
             .first()
         )
@@ -265,7 +224,9 @@ class ModelService:
         allowed = STAGE_TRANSITIONS.get(current_stage, [])
         if stage not in allowed:
             raise RunNotInScopeError(
-                cast(int, model.id), project_id, cast(int, model.experiment_id)
+                cast(int, model.id),
+                cast(int, model.project_id),
+                cast(int, model.experiment_id),
             )
 
         model.stage = stage  # type: ignore[assignment]
