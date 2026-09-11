@@ -15,22 +15,22 @@ import type {
 } from "./types";
 
 /**
- * Fetch all deployments for a project.
+ * Fetch all deployments.
  */
-export function useDeployments(projectId: number) {
+export function useDeployments() {
   return useQuery<Deployment[]>({
-    queryKey: ["deployments", projectId],
-    queryFn: () => getDeployments(projectId),
+    queryKey: ["deployments"],
+    queryFn: () => getDeployments(),
   });
 }
 
 /**
- * Fetch a single deployment by ID, scoped to a project.
+ * Fetch a single deployment by ID.
  */
-export function useDeployment(id: number, projectId: number) {
+export function useDeployment(id: number) {
   return useQuery<Deployment>({
-    queryKey: ["deployment", id, projectId],
-    queryFn: () => getDeployment(id, projectId),
+    queryKey: ["deployment", id],
+    queryFn: () => getDeployment(id),
   });
 }
 
@@ -52,8 +52,8 @@ export function useDeployModel() {
  */
 export function useUndeployModel() {
   const queryClient = useQueryClient();
-  return useMutation<Deployment, Error, { id: number; projectId: number }>({
-    mutationFn: ({ id, projectId }) => undeployModel(id, projectId),
+  return useMutation<Deployment, Error, { id: number }>({
+    mutationFn: ({ id }) => undeployModel(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["deployments"] });
     },
@@ -61,29 +61,27 @@ export function useUndeployModel() {
 }
 
 /**
- * Run prediction on a specific deployment, scoped to a project.
+ * Run prediction on a specific deployment.
  */
 export function usePredict() {
   return useMutation<
     PredictResponse,
     Error,
-    { deploymentId: number; data: PredictRequest; projectId: number }
+    { deploymentId: number; data: PredictRequest }
   >({
-    mutationFn: ({ deploymentId, data, projectId }) =>
-      predict(deploymentId, data, projectId),
+    mutationFn: ({ deploymentId, data }) => predict(deploymentId, data),
   });
 }
 
 /**
- * Run prediction using the latest deployment of a model, scoped to a project.
+ * Run prediction using the latest deployment of a model.
  */
 export function usePredictByModelName() {
   return useMutation<
     PredictResponse,
     Error,
-    { modelName: string; data: PredictRequest; projectId: number }
+    { modelName: string; data: PredictRequest }
   >({
-    mutationFn: ({ modelName, data, projectId }) =>
-      predictByModelName(modelName, data, projectId),
+    mutationFn: ({ modelName, data }) => predictByModelName(modelName, data),
   });
 }

@@ -15,7 +15,6 @@ class DeploymentCreate(BaseModel):
     model_version: str = Field(
         ..., description="Model version to deploy (e.g. 'v1.0.0')"
     )
-    project_id: int = Field(..., description="Project that owns this deployment")
 
 
 class DeploymentResponse(BaseModel):
@@ -25,7 +24,6 @@ class DeploymentResponse(BaseModel):
     model_name: str
     model_version: str
     registered_model_id: int
-    project_id: int
     status: DeploymentStatus
     created_at: datetime
     started_at: datetime | None = None

@@ -218,10 +218,6 @@ class DeploymentModel(Base):
     SQLAlchemy model for the 'deployments' table.
     A deployment loads a registered model artifact into the in-memory serving
     pool so it can receive prediction requests over HTTP.
-
-    Project scope is traced through registered_model_id → RegisteredModel.project_id
-    (a @property that traverses run → experiment → project), not stored directly on
-    this table.
     """
 
     __tablename__ = "deployments"
@@ -245,8 +241,3 @@ class DeploymentModel(Base):
 
     # Relationship to the registered model
     registered_model = relationship("RegisteredModel")
-
-    @property
-    def project_id(self) -> int:
-        """Project owning this deployment, derived from the registered model."""
-        return self.registered_model.project_id  # type: ignore[return-value]

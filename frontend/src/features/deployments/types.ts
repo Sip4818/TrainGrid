@@ -17,7 +17,6 @@ export interface Deployment {
   model_name: string;
   model_version: string;
   registered_model_id: number;
-  project_id: number;
   status: DeploymentStatus;
   created_at: string;
   started_at: string | null;
@@ -30,7 +29,6 @@ export interface Deployment {
 export interface DeploymentCreate {
   model_name: string;
   model_version: string;
-  project_id: number;
 }
 
 /**

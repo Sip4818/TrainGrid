@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
 import { useDeployments, useDeployModel, useUndeployModel, usePredict } from "../features/deployments/hooks";
 import { useModels } from "../features/models/hooks";
 import { DeploymentStatus } from "../features/deployments/types";
@@ -21,9 +20,7 @@ interface DeploymentRow extends Record<string, unknown> {
 }
 
 export function DeploymentsPage(): React.ReactElement {
-  const { projectId } = useParams<{ projectId: string }>();
-  const pid = Number(projectId);
-  const deploymentsQuery = useDeployments(pid);
+  const deploymentsQuery = useDeployments();
   const modelsQuery = useModels();
   const deployMutation = useDeployModel();
   const undeployMutation = useUndeployModel();
@@ -47,7 +44,6 @@ export function DeploymentsPage(): React.ReactElement {
     await deployMutation.mutateAsync({
       model_name: selectedModel,
       model_version: selectedVersion,
-      project_id: pid,
     });
     setIsDeployModalOpen(false);
     setSelectedModel("");
@@ -55,7 +51,7 @@ export function DeploymentsPage(): React.ReactElement {
   };
 
   const handleUndeploy = async (id: number) => {
-    await undeployMutation.mutateAsync({ id, projectId: pid });
+    await undeployMutation.mutateAsync({ id });
   };
 
   const handlePredict = async () => {
@@ -65,7 +61,6 @@ export function DeploymentsPage(): React.ReactElement {
       await predictMutation.mutateAsync({
         deploymentId: predictDeploymentId,
         data: { features },
-        projectId: pid,
       });
     } catch {
       // JSON parse error or API error
