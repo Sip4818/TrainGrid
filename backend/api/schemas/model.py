@@ -23,8 +23,6 @@ class ModelRegisterRequest(BaseModel):
     name: str = Field(..., description="Model name (e.g. 'fraud-detector')")
     version: str = Field(..., description="Semver version (e.g. 'v1.0.0')")
     run_id: int = Field(..., description="ID of the completed training run")
-    project_id: int = Field(..., description="Project that owns this model")
-    experiment_id: int = Field(..., description="Experiment that produced the run")
     description: str | None = Field(None, description="Optional description")
 
 
