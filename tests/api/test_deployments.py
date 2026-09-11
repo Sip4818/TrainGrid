@@ -56,7 +56,7 @@ def _create_experiment(name: str = "test-experiment") -> int:
         db.close()
 
 
-def _create_completed_run(experiment_id: int, project_id: int = 1) -> int:
+def _create_completed_run(experiment_id: int) -> int:
     db = SessionLocal()
     try:
         run = RunModel(
@@ -79,7 +79,7 @@ def _create_completed_run(experiment_id: int, project_id: int = 1) -> int:
         db.close()
 
 
-def _register_model(name: str, version: str = "v1.0.0", project_id: int = 1) -> dict:
+def _register_model(name: str, version: str = "v1.0.0") -> dict:
     run_id = _create_completed_run(1)
     response = client.post(
         "/models/",
@@ -87,8 +87,6 @@ def _register_model(name: str, version: str = "v1.0.0", project_id: int = 1) -> 
             "name": name,
             "version": version,
             "run_id": run_id,
-            "project_id": project_id,
-            "experiment_id": 1,
         },
     )
     assert response.status_code == 201
