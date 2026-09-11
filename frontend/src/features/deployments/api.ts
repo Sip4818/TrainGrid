@@ -8,22 +8,19 @@ import type {
 } from "./types";
 
 /**
- * Fetch all deployments for a project.
- * GET /deployments/?project_id={projectId}
+ * Fetch all deployments.
+ * GET /deployments/
  */
-export function getDeployments(projectId: number): Promise<Deployment[]> {
-  return apiClient.get<Deployment[]>(endpoints.deployments.list(projectId));
+export function getDeployments(): Promise<Deployment[]> {
+  return apiClient.get<Deployment[]>(endpoints.deployments.list());
 }
 
 /**
- * Fetch a single deployment by ID, scoped to a project.
- * GET /deployments/{id}?project_id={projectId}
+ * Fetch a single deployment by ID.
+ * GET /deployments/{id}
  */
-export function getDeployment(
-  id: number,
-  projectId: number,
-): Promise<Deployment> {
-  return apiClient.get<Deployment>(endpoints.deployments.detail(id, projectId));
+export function getDeployment(id: number): Promise<Deployment> {
+  return apiClient.get<Deployment>(endpoints.deployments.detail(id));
 }
 
 /**
@@ -35,42 +32,37 @@ export function deployModel(data: DeploymentCreate): Promise<Deployment> {
 }
 
 /**
- * Undeploy (stop) a deployment, scoped to a project.
- * DELETE /deployments/{id}?project_id={projectId}
+ * Undeploy (stop) a deployment.
+ * DELETE /deployments/{id}
  */
-export function undeployModel(
-  id: number,
-  projectId: number,
-): Promise<Deployment> {
-  return apiClient.del<Deployment>(endpoints.deployments.delete(id, projectId));
+export function undeployModel(id: number): Promise<Deployment> {
+  return apiClient.del<Deployment>(endpoints.deployments.delete(id));
 }
 
 /**
- * Run prediction on a specific deployment, scoped to a project.
- * POST /deployments/{id}/predict?project_id={projectId}
+ * Run prediction on a specific deployment.
+ * POST /deployments/{id}/predict
  */
 export function predict(
   deploymentId: number,
   data: PredictRequest,
-  projectId: number,
 ): Promise<PredictResponse> {
   return apiClient.post<PredictResponse>(
-    endpoints.deployments.predict(deploymentId, projectId),
+    endpoints.deployments.predict(deploymentId),
     data,
   );
 }
 
 /**
- * Run prediction using the latest deployment of a model (version-agnostic), scoped to a project.
- * POST /models/{name}/predict?project_id={projectId}
+ * Run prediction using the latest deployment of a model (version-agnostic).
+ * POST /models/{name}/predict
  */
 export function predictByModelName(
   modelName: string,
   data: PredictRequest,
-  projectId: number,
 ): Promise<PredictResponse> {
   return apiClient.post<PredictResponse>(
-    endpoints.deployments.predictByName(modelName, projectId),
+    endpoints.deployments.predictByName(modelName),
     data,
   );
 }
