@@ -60,8 +60,6 @@ export interface ModelRegisterRequest {
   name: string;
   version: string;
   run_id: number;
-  project_id: number;
-  experiment_id: number;
   description?: string;
 }
 
