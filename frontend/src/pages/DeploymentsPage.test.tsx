@@ -12,7 +12,6 @@ const sampleDeployment = {
   model_name: "fraud-detector",
   model_version: "v1.0.0",
   registered_model_id: 1,
-  project_id: 1,
   status: DeploymentStatus.ACTIVE,
   created_at: "2026-09-06T00:00:00Z",
   started_at: "2026-09-06T00:01:00Z",
@@ -95,19 +94,11 @@ function renderWithProviders(
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter
-        initialEntries={options.initialEntries ?? [
-          "/projects/1/deployments",
-        ]}
+        initialEntries={options.initialEntries ?? ["/deployments"]}
       >
         <Routes>
-          <Route
-            path="/projects/:projectId/deployments"
-            element={ui}
-          />
-          <Route
-            path="/projects/:projectId/models"
-            element={<div>models page</div>}
-          />
+          <Route path="/deployments" element={ui} />
+          <Route path="/models" element={<div>models page</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -263,7 +254,6 @@ describe("DeploymentsPage", () => {
       expect(payload).toEqual({
         model_name: "fraud-detector",
         model_version: "v1.0.0",
-        project_id: 1,
       });
     });
   });
