@@ -47,12 +47,12 @@ describe("listModels", () => {
       }),
     );
 
-    const result = await listModels(1);
+    const result = await listModels();
     expect(result).toEqual([sampleSummary]);
     expect(result).toHaveLength(1);
   });
 
-  it("calls GET /models/?project_id={projectId}", async () => {
+  it("calls GET /models/", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify([]), {
         status: 200,
@@ -60,9 +60,9 @@ describe("listModels", () => {
       }),
     );
 
-    await listModels(42);
+    await listModels();
     expect(fetchSpy).toHaveBeenCalledWith(
-      `${BASE_URL}/models/?project_id=42`,
+      `${BASE_URL}/models/`,
       expect.any(Object),
     );
   });
@@ -75,7 +75,7 @@ describe("listModels", () => {
       }),
     );
 
-    const promise = listModels(1);
+    const promise = listModels();
     await expect(promise).rejects.toThrow(ApiError);
     await expect(promise).rejects.toMatchObject({ status: 500 });
   });
@@ -90,12 +90,12 @@ describe("getModel", () => {
       }),
     );
 
-    const result = await getModel("fraud-detector", 1);
+    const result = await getModel("fraud-detector");
     expect(result).toEqual(sampleModel);
     expect(result.name).toBe("fraud-detector");
   });
 
-  it("calls GET /models/{name}?project_id={projectId}", async () => {
+  it("calls GET /models/{name}", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify(sampleModel), {
         status: 200,
@@ -103,9 +103,9 @@ describe("getModel", () => {
       }),
     );
 
-    await getModel("fraud-detector", 1);
+    await getModel("fraud-detector");
     expect(fetchSpy).toHaveBeenCalledWith(
-      `${BASE_URL}/models/fraud-detector?project_id=1`,
+      `${BASE_URL}/models/fraud-detector`,
       expect.any(Object),
     );
   });
@@ -118,7 +118,7 @@ describe("getModel", () => {
       }),
     );
 
-    const promise = getModel("unknown", 1);
+    const promise = getModel("unknown");
     await expect(promise).rejects.toThrow(ApiError);
     await expect(promise).rejects.toMatchObject({ status: 404 });
   });
@@ -137,11 +137,11 @@ describe("listModelVersions", () => {
       }),
     );
 
-    const result = await listModelVersions("fraud-detector", 1);
+    const result = await listModelVersions("fraud-detector");
     expect(result).toHaveLength(2);
   });
 
-  it("calls GET /models/{name}/versions?project_id={projectId}", async () => {
+  it("calls GET /models/{name}/versions", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify([]), {
         status: 200,
@@ -149,9 +149,9 @@ describe("listModelVersions", () => {
       }),
     );
 
-    await listModelVersions("fraud-detector", 1);
+    await listModelVersions("fraud-detector");
     expect(fetchSpy).toHaveBeenCalledWith(
-      `${BASE_URL}/models/fraud-detector/versions?project_id=1`,
+      `${BASE_URL}/models/fraud-detector/versions`,
       expect.any(Object),
     );
   });
@@ -170,8 +170,6 @@ describe("registerModel", () => {
       name: "fraud-detector",
       version: "v1.0.0",
       run_id: 5,
-      project_id: 1,
-      experiment_id: 10,
     });
     expect(result).toEqual(sampleModel);
   });
@@ -188,8 +186,6 @@ describe("registerModel", () => {
       name: "fraud-detector",
       version: "v1.0.0",
       run_id: 5,
-      project_id: 1,
-      experiment_id: 10,
     };
     await registerModel(payload);
 
@@ -217,8 +213,6 @@ describe("registerModel", () => {
       name: "fraud-detector",
       version: "v1.0.0",
       run_id: 5,
-      project_id: 1,
-      experiment_id: 10,
     });
     await expect(promise).rejects.toThrow(ApiError);
     await expect(promise).rejects.toMatchObject({ status: 409 });

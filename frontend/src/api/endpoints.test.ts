@@ -71,19 +71,19 @@ describe("endpoints.datasets", () => {
 });
 
 describe("endpoints.models", () => {
-  it("list(projectId) returns scoped URL", () => {
-    expect(endpoints.models.list(1)).toBe("/models/?project_id=1");
+  it("list() returns /models/", () => {
+    expect(endpoints.models.list()).toBe("/models/");
   });
 
-  it("detail(name, projectId) returns scoped URL", () => {
-    expect(endpoints.models.detail("fraud-detector", 1)).toBe(
-      "/models/fraud-detector?project_id=1",
+  it("detail(name) returns model URL", () => {
+    expect(endpoints.models.detail("fraud-detector")).toBe(
+      "/models/fraud-detector",
     );
   });
 
-  it("versions(name, projectId) returns scoped URL", () => {
-    expect(endpoints.models.versions("fraud-detector", 1)).toBe(
-      "/models/fraud-detector/versions?project_id=1",
+  it("versions(name) returns versions URL", () => {
+    expect(endpoints.models.versions("fraud-detector")).toBe(
+      "/models/fraud-detector/versions",
     );
   });
 

@@ -51,12 +51,12 @@ describe("models API functions", () => {
         }),
       );
 
-      const result = await listModels(1);
+      const result = await listModels();
       expect(result).toHaveLength(1);
       expect(result[0]!.name).toBe("fraud-detector");
     });
 
-    it("constructs URL with project_id param", async () => {
+    it("constructs URL without project_id param", async () => {
       const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
         new Response(JSON.stringify([]), {
           status: 200,
@@ -64,16 +64,16 @@ describe("models API functions", () => {
         }),
       );
 
-      await listModels(42);
+      await listModels();
       expect(fetchSpy).toHaveBeenCalledWith(
-        `${BASE_URL}/models/?project_id=42`,
+        `${BASE_URL}/models/`,
         expect.any(Object),
       );
     });
   });
 
   describe("getModel", () => {
-    it("fetches a single model by name and project", async () => {
+    it("fetches a single model by name", async () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
         new Response(JSON.stringify(sampleModel), {
           status: 200,
@@ -81,12 +81,12 @@ describe("models API functions", () => {
         }),
       );
 
-      const result = await getModel("fraud-detector", 1);
+      const result = await getModel("fraud-detector");
       expect(result.name).toBe("fraud-detector");
       expect(result.version).toBe("v1.0.0");
     });
 
-    it("constructs URL with name and project_id", async () => {
+    it("constructs URL with name only", async () => {
       const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
         new Response(JSON.stringify(sampleModel), {
           status: 200,
@@ -94,9 +94,9 @@ describe("models API functions", () => {
         }),
       );
 
-      await getModel("credit-scorer", 5);
+      await getModel("credit-scorer");
       expect(fetchSpy).toHaveBeenCalledWith(
-        `${BASE_URL}/models/credit-scorer?project_id=5`,
+        `${BASE_URL}/models/credit-scorer`,
         expect.any(Object),
       );
     });
@@ -115,12 +115,12 @@ describe("models API functions", () => {
         }),
       );
 
-      const result = await listModelVersions("fraud-detector", 1);
+      const result = await listModelVersions("fraud-detector");
       expect(result).toHaveLength(2);
       expect(result[0]!.version).toBe("v2.0.0");
     });
 
-    it("constructs URL with name and project_id", async () => {
+    it("constructs URL with name only", async () => {
       const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
         new Response(JSON.stringify([]), {
           status: 200,
@@ -128,9 +128,9 @@ describe("models API functions", () => {
         }),
       );
 
-      await listModelVersions("fraud-detector", 3);
+      await listModelVersions("fraud-detector");
       expect(fetchSpy).toHaveBeenCalledWith(
-        `${BASE_URL}/models/fraud-detector/versions?project_id=3`,
+        `${BASE_URL}/models/fraud-detector/versions`,
         expect.any(Object),
       );
     });
@@ -149,8 +149,6 @@ describe("models API functions", () => {
         name: "fraud-detector",
         version: "v1.0.0",
         run_id: 5,
-        project_id: 1,
-        experiment_id: 10,
       };
       await registerModel(payload);
 
@@ -175,8 +173,6 @@ describe("models API functions", () => {
         name: "fraud-detector",
         version: "v1.0.0",
         run_id: 5,
-        project_id: 1,
-        experiment_id: 10,
       });
       expect(result.id).toBe(1);
       expect(result.stage).toBe(ModelStage.PRODUCTION);

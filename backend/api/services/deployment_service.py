@@ -12,7 +12,12 @@ from backend.api.schemas.deployment import (
     PredictionItem,
     PredictResponse,
 )
-from backend.infrastructure.database.models import DeploymentModel, RegisteredModel
+from backend.infrastructure.database.models import (
+    DeploymentModel,
+    ExperimentModel,
+    RegisteredModel,
+    RunModel,
+)
 from backend.infrastructure.storage.local_store import local_artifact_store
 from backend.shared.enums import DeploymentStatus
 from backend.shared.errors import (
@@ -205,10 +210,12 @@ class DeploymentService:
                 RegisteredModel,
                 DeploymentModel.registered_model_id == RegisteredModel.id,
             )
+            .join(RunModel, RegisteredModel.run_id == RunModel.id)
+            .join(ExperimentModel, RunModel.experiment_id == ExperimentModel.id)
             .filter(
                 DeploymentModel.model_name == model_name,
                 DeploymentModel.status == DeploymentStatus.ACTIVE,
-                RegisteredModel.project_id == project_id,
+                ExperimentModel.project_id == project_id,
             )
             .order_by(DeploymentModel.id.desc())
             .first()
@@ -226,7 +233,9 @@ class DeploymentService:
                 RegisteredModel,
                 DeploymentModel.registered_model_id == RegisteredModel.id,
             )
-            .filter(RegisteredModel.project_id == project_id)
+            .join(RunModel, RegisteredModel.run_id == RunModel.id)
+            .join(ExperimentModel, RunModel.experiment_id == ExperimentModel.id)
+            .filter(ExperimentModel.project_id == project_id)
             .order_by(DeploymentModel.id.desc())
             .all()
         )

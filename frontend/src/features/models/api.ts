@@ -17,35 +17,27 @@ export function getTrainers(): Promise<TrainerInfo[]> {
 }
 
 /**
- * Fetch all registered models for a project (latest version of each).
- * GET /models/?project_id={projectId}
+ * Fetch all registered models globally (latest version of each).
+ * GET /models/
  */
-export function listModels(projectId: number): Promise<RegisteredModelSummary[]> {
-  return apiClient.get<RegisteredModelSummary[]>(endpoints.models.list(projectId));
+export function listModels(): Promise<RegisteredModelSummary[]> {
+  return apiClient.get<RegisteredModelSummary[]>(endpoints.models.list());
 }
 
 /**
- * Fetch the latest version of a model by name, scoped to a project.
- * GET /models/{name}?project_id={projectId}
+ * Fetch the latest version of a model by name.
+ * GET /models/{name}
  */
-export function getModel(
-  name: string,
-  projectId: number,
-): Promise<RegisteredModel> {
-  return apiClient.get<RegisteredModel>(endpoints.models.detail(name, projectId));
+export function getModel(name: string): Promise<RegisteredModel> {
+  return apiClient.get<RegisteredModel>(endpoints.models.detail(name));
 }
 
 /**
- * Fetch all versions of a model, scoped to a project.
- * GET /models/{name}/versions?project_id={projectId}
+ * Fetch all versions of a model.
+ * GET /models/{name}/versions
  */
-export function listModelVersions(
-  name: string,
-  projectId: number,
-): Promise<RegisteredModel[]> {
-  return apiClient.get<RegisteredModel[]>(
-    endpoints.models.versions(name, projectId),
-  );
+export function listModelVersions(name: string): Promise<RegisteredModel[]> {
+  return apiClient.get<RegisteredModel[]>(endpoints.models.versions(name));
 }
 
 /**

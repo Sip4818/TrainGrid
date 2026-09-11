@@ -30,51 +30,42 @@ def register_model(
 
 @router.get("/", response_model=list[RegisteredModelSummary])
 def list_models(
-    project_id: int = Query(..., description="Project ID to scope results"),
     db: Session = Depends(get_db),
 ) -> list[RegisteredModelSummary]:
-    """List all registered models for a project (latest version per name)."""
-    logger.info("Listing models for project_id=%d", project_id)
-    return ModelService(db).list_models(project_id)
+    """List all registered models globally (latest version per name)."""
+    logger.info("Listing all models")
+    return ModelService(db).list_models()
 
 
 @router.get("/{name}", response_model=RegisteredModelResponse)
 def get_model(
     name: str,
-    project_id: int = Query(..., description="Project ID to scope results"),
     db: Session = Depends(get_db),
 ) -> RegisteredModelResponse:
     """Get the latest version of a model by name."""
-    logger.info("Getting model name=%s project_id=%d", name, project_id)
-    return ModelService(db).get_model(name, project_id)
+    logger.info("Getting model name=%s", name)
+    return ModelService(db).get_model(name)
 
 
 @router.get("/{name}/versions", response_model=list[RegisteredModelResponse])
 def list_model_versions(
     name: str,
-    project_id: int = Query(..., description="Project ID to scope results"),
     db: Session = Depends(get_db),
 ) -> list[RegisteredModelResponse]:
     """List all versions of a model."""
-    logger.info("Listing versions for model name=%s project_id=%d", name, project_id)
-    return ModelService(db).list_model_versions(name, project_id)
+    logger.info("Listing versions for model name=%s", name)
+    return ModelService(db).list_model_versions(name)
 
 
 @router.get("/{name}/versions/{version}", response_model=RegisteredModelResponse)
 def get_model_version(
     name: str,
     version: str,
-    project_id: int = Query(..., description="Project ID to scope results"),
     db: Session = Depends(get_db),
 ) -> RegisteredModelResponse:
     """Get a specific version of a model."""
-    logger.info(
-        "Getting model version name=%s version=%s project_id=%d",
-        name,
-        version,
-        project_id,
-    )
-    return ModelService(db).get_model_version(name, version, project_id)
+    logger.info("Getting model version name=%s version=%s", name, version)
+    return ModelService(db).get_model_version(name, version)
 
 
 @router.post(
@@ -84,7 +75,6 @@ def promote_model(
     name: str,
     version: str,
     payload: ModelStageUpdate,
-    project_id: int = Query(..., description="Project ID to scope results"),
     db: Session = Depends(get_db),
 ) -> RegisteredModelResponse:
     """Promote or demote a model version to a new stage."""
@@ -94,7 +84,7 @@ def promote_model(
         version,
         payload.stage.value,
     )
-    return ModelService(db).promote_model(name, version, payload.stage, project_id)
+    return ModelService(db).promote_model(name, version, payload.stage)
 
 
 @router.post("/{name}/predict", response_model=PredictResponse)

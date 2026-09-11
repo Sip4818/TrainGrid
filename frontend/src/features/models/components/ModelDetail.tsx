@@ -1,4 +1,3 @@
-import { useParams } from "react-router-dom";
 import { useModelVersions, usePromoteModel } from "../hooks";
 import { ModelStage } from "../types";
 import { Badge } from "../../../components/ui/Badge";
@@ -43,9 +42,7 @@ export function ModelDetail({
   modelName,
   onBack,
 }: ModelDetailProps): React.ReactElement {
-  const { projectId } = useParams<{ projectId: string }>();
-  const pid = Number(projectId);
-  const versionsQuery = useModelVersions(modelName, pid);
+  const versionsQuery = useModelVersions(modelName);
   const promoteMutation = usePromoteModel();
 
   const versions = versionsQuery.data ?? [];
