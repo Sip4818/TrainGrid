@@ -178,7 +178,7 @@ describe("ModelsPage", () => {
       expect(screen.getByText("fraud-detector")).toBeDefined();
     });
 
-    const filterSelect = screen.getByLabelText("Filter by stage");
+    const filterSelect = screen.getByRole("combobox");
     fireEvent.change(filterSelect, { target: { value: ModelStage.PRODUCTION } });
 
     expect(screen.getByText("fraud-detector")).toBeDefined();
@@ -195,7 +195,7 @@ describe("ModelsPage", () => {
       expect(screen.getByText("fraud-detector")).toBeDefined();
     });
 
-    const filterSelect = screen.getByLabelText("Filter by stage");
+    const filterSelect = screen.getByRole("combobox");
     fireEvent.change(filterSelect, { target: { value: ModelStage.PRODUCTION } });
     expect(screen.queryByText("credit-scorer")).toBeNull();
 
@@ -213,7 +213,7 @@ describe("ModelsPage", () => {
       expect(screen.getByText("fraud-detector")).toBeDefined();
     });
 
-    const filterSelect = screen.getByLabelText("Filter by stage");
+    const filterSelect = screen.getByRole("combobox");
     fireEvent.change(filterSelect, { target: { value: ModelStage.ARCHIVED } });
 
     expect(
@@ -245,8 +245,6 @@ describe("ModelsPage", () => {
         version: "v1.0.1",
         stage: ModelStage.PRODUCTION,
         run_id: 5,
-        project_id: 1,
-        experiment_id: 10,
         description: "Latest version",
         artifact_path: "runs/5/model.joblib",
         artifact_checksum: "abc",
@@ -262,8 +260,6 @@ describe("ModelsPage", () => {
         version: "v1.0.0",
         stage: ModelStage.ARCHIVED,
         run_id: 3,
-        project_id: 1,
-        experiment_id: 10,
         description: null,
         artifact_path: "runs/3/model.joblib",
         artifact_checksum: null,
