@@ -135,14 +135,3 @@ class PredictionError(TrainGridError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
-
-
-class DeploymentNotInProjectError(TrainGridError):
-    """Raised when a deployment does not belong to the requested project."""
-
-    def __init__(self, deployment_id: int | str, project_id: int) -> None:
-        self.deployment_id = deployment_id
-        self.project_id = project_id
-        super().__init__(
-            f"Deployment '{deployment_id}' does not belong to project '{project_id}'"
-        )
