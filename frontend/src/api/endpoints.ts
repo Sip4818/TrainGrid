@@ -81,17 +81,14 @@ export const endpoints = {
     upload: () => "/datasets/" as const,
   },
   models: {
-    /** GET /models/ — list all registered models for a project */
-    list: (projectId: number) =>
-      `/models/?project_id=${projectId}` as const,
+    /** GET /models/ — list all registered models globally */
+    list: () => "/models/" as const,
 
     /** GET /models/{name} — get latest version of a model by name */
-    detail: (name: string, projectId: number) =>
-      `/models/${name}?project_id=${projectId}` as const,
+    detail: (name: string) => `/models/${name}` as const,
 
     /** GET /models/{name}/versions — list all versions of a model */
-    versions: (name: string, projectId: number) =>
-      `/models/${name}/versions?project_id=${projectId}` as const,
+    versions: (name: string) => `/models/${name}/versions` as const,
 
     /** POST /models/ — register a new model version */
     register: () => "/models/" as const,
