@@ -103,9 +103,6 @@ def _mock_model(feature_names=None):
     return mock_model
 
 
-PID = 1  # Default project ID used in all tests
-
-
 # --- Deploy tests ---
 
 
@@ -121,7 +118,7 @@ def test_deploy_model(mock_store, mock_joblib):
 
     response = client.post(
         "/deployments/",
-        json={"model_name": name, "model_version": "v1.0.0", "project_id": PID},
+        json={"model_name": name, "model_version": "v1.0.0"},
     )
     assert response.status_code == 201
     data = response.json()
@@ -135,7 +132,6 @@ def test_deploy_model_not_in_registry():
         json={
             "model_name": "nonexistent-xyz",
             "model_version": "v1.0.0",
-            "project_id": PID,
         },
     )
     assert response.status_code == 404
@@ -153,13 +149,13 @@ def test_deploy_model_already_deployed(mock_store, mock_joblib):
 
     r1 = client.post(
         "/deployments/",
-        json={"model_name": name, "model_version": "v1.0.0", "project_id": PID},
+        json={"model_name": name, "model_version": "v1.0.0"},
     )
     assert r1.status_code == 201
 
     r2 = client.post(
         "/deployments/",
-        json={"model_name": name, "model_version": "v1.0.0", "project_id": PID},
+        json={"model_name": name, "model_version": "v1.0.0"},
     )
     assert r2.status_code == 409
 
@@ -178,10 +174,10 @@ def test_list_deployments(mock_store, mock_joblib):
     _register_model(name, "v1.0.0")
     client.post(
         "/deployments/",
-        json={"model_name": name, "model_version": "v1.0.0", "project_id": PID},
+        json={"model_name": name, "model_version": "v1.0.0"},
     )
 
-    response = client.get(f"/deployments/?project_id={PID}")
+    response = client.get("/deployments/")
     assert response.status_code == 200
     data = response.json()
     assert any(d["model_name"] == name for d in data)
@@ -198,17 +194,17 @@ def test_get_deployment(mock_store, mock_joblib):
     _register_model(name, "v1.0.0")
     deploy_resp = client.post(
         "/deployments/",
-        json={"model_name": name, "model_version": "v1.0.0", "project_id": PID},
+        json={"model_name": name, "model_version": "v1.0.0"},
     )
     deployment_id = deploy_resp.json()["id"]
 
-    response = client.get(f"/deployments/{deployment_id}?project_id={PID}")
+    response = client.get(f"/deployments/{deployment_id}")
     assert response.status_code == 200
     assert response.json()["model_name"] == name
 
 
 def test_get_deployment_not_found():
-    response = client.get(f"/deployments/99999?project_id={PID}")
+    response = client.get("/deployments/99999")
     assert response.status_code == 404
 
 
@@ -226,17 +222,17 @@ def test_undeploy_model(mock_store, mock_joblib):
     _register_model(name, "v1.0.0")
     deploy_resp = client.post(
         "/deployments/",
-        json={"model_name": name, "model_version": "v1.0.0", "project_id": PID},
+        json={"model_name": name, "model_version": "v1.0.0"},
     )
     deployment_id = deploy_resp.json()["id"]
 
-    response = client.delete(f"/deployments/{deployment_id}?project_id={PID}")
+    response = client.delete(f"/deployments/{deployment_id}")
     assert response.status_code == 200
     assert response.json()["status"] == "stopped"
 
 
 def test_undeploy_deployment_not_found():
-    response = client.delete(f"/deployments/99999?project_id={PID}")
+    response = client.delete("/deployments/99999")
     assert response.status_code == 404
 
 
@@ -254,12 +250,12 @@ def test_predict_single(mock_store, mock_joblib):
     _register_model(name, "v1.0.0")
     deploy_resp = client.post(
         "/deployments/",
-        json={"model_name": name, "model_version": "v1.0.0", "project_id": PID},
+        json={"model_name": name, "model_version": "v1.0.0"},
     )
     deployment_id = deploy_resp.json()["id"]
 
     response = client.post(
-        f"/deployments/{deployment_id}/predict?project_id={PID}",
+        f"/deployments/{deployment_id}/predict",
         json={"features": {"f1": 1.0, "f2": 2.0}},
     )
     assert response.status_code == 200
@@ -284,12 +280,12 @@ def test_predict_batch(mock_store, mock_joblib):
     _register_model(name, "v1.0.0")
     deploy_resp = client.post(
         "/deployments/",
-        json={"model_name": name, "model_version": "v1.0.0", "project_id": PID},
+        json={"model_name": name, "model_version": "v1.0.0"},
     )
     deployment_id = deploy_resp.json()["id"]
 
     response = client.post(
-        f"/deployments/{deployment_id}/predict?project_id={PID}",
+        f"/deployments/{deployment_id}/predict",
         json={"features": [{"f1": 1.0, "f2": 2.0}, {"f1": 3.0, "f2": 4.0}]},
     )
     assert response.status_code == 200
@@ -298,7 +294,7 @@ def test_predict_batch(mock_store, mock_joblib):
 
 def test_predict_deployment_not_found():
     response = client.post(
-        f"/deployments/99999/predict?project_id={PID}",
+        "/deployments/99999/predict",
         json={"features": {"f1": 1.0}},
     )
     assert response.status_code == 404
@@ -315,12 +311,12 @@ def test_predict_feature_validation_error(mock_store, mock_joblib):
     _register_model(name, "v1.0.0")
     deploy_resp = client.post(
         "/deployments/",
-        json={"model_name": name, "model_version": "v1.0.0", "project_id": PID},
+        json={"model_name": name, "model_version": "v1.0.0"},
     )
     deployment_id = deploy_resp.json()["id"]
 
     response = client.post(
-        f"/deployments/{deployment_id}/predict?project_id={PID}",
+        f"/deployments/{deployment_id}/predict",
         json={"features": {"f1": 1.0}},  # missing f2
     )
     assert response.status_code == 500
@@ -337,11 +333,11 @@ def test_predict_by_model_name(mock_store, mock_joblib):
     _register_model(name, "v1.0.0")
     client.post(
         "/deployments/",
-        json={"model_name": name, "model_version": "v1.0.0", "project_id": PID},
+        json={"model_name": name, "model_version": "v1.0.0"},
     )
 
     response = client.post(
-        f"/models/{name}/predict?project_id={PID}",
+        f"/models/{name}/predict",
         json={"features": {"f1": 1.0, "f2": 2.0}},
     )
     assert response.status_code == 200
@@ -350,7 +346,7 @@ def test_predict_by_model_name(mock_store, mock_joblib):
 
 def test_predict_by_model_name_no_deployment():
     response = client.post(
-        f"/models/nonexistent-abc/predict?project_id={PID}",
+        "/models/nonexistent-abc/predict",
         json={"features": {"f1": 1.0}},
     )
     assert response.status_code == 404
