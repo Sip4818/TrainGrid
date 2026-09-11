@@ -5,7 +5,6 @@ from backend.shared.errors import (
     DatasetUploadError,
     DeploymentAlreadyExistsError,
     DeploymentNotFoundError,
-    DeploymentNotInProjectError,
     ModelNotDeployableError,
     ModelNotFoundError,
     ModelVersionExistsError,
@@ -142,16 +141,6 @@ async def handle_prediction_error(request: Request, exc: Exception) -> JSONRespo
     )
 
 
-async def handle_deployment_not_in_project(
-    request: Request, exc: Exception
-) -> JSONResponse:
-    """Catch DeploymentNotInProjectError and return a 404."""
-    return JSONResponse(
-        status_code=404,
-        content={"detail": {"code": "DEPLOYMENT_NOT_IN_PROJECT", "message": str(exc)}},
-    )
-
-
 def register_exception_handlers(app: FastAPI) -> None:
     """Register all custom exception handlers on the FastAPI app."""
     app.add_exception_handler(TrainGridError, handle_traingrid_error)
@@ -169,7 +158,4 @@ def register_exception_handlers(app: FastAPI) -> None:
         DeploymentAlreadyExistsError, handle_deployment_already_exists
     )
     app.add_exception_handler(PredictionError, handle_prediction_error)
-    app.add_exception_handler(
-        DeploymentNotInProjectError, handle_deployment_not_in_project
-    )
     app.add_exception_handler(Exception, handle_generic_error)
