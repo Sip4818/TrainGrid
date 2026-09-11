@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
 import { useModels } from "../features/models/hooks";
 import { ModelStage } from "../features/models/types";
 import { Badge } from "../components/ui/Badge";
@@ -29,9 +28,7 @@ const STAGE_FILTER_OPTIONS = [
 ];
 
 export function ModelsPage(): React.ReactElement {
-  const { projectId } = useParams<{ projectId: string }>();
-  const pid = Number(projectId);
-  const modelsQuery = useModels(pid);
+  const modelsQuery = useModels();
 
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [stageFilter, setStageFilter] = useState("");
@@ -84,7 +81,6 @@ export function ModelsPage(): React.ReactElement {
       <PageHeader title="Model Registry">
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <Select
-            label="Filter by stage"
             options={STAGE_FILTER_OPTIONS}
             value={stageFilter}
             onChange={(e) => setStageFilter(e.target.value)}
