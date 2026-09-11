@@ -171,15 +171,6 @@ class RegisteredModel(Base):
     # Which training run produced this model
     run_id: Column = Column(Integer, ForeignKey("runs.id"), nullable=False)
 
-    # Direct FKs for project/experiment scoping (avoids 3-JOIN through
-    # run → experiment → project)
-    project_id: Column = Column(
-        Integer, ForeignKey("projects.id"), nullable=False, index=True
-    )
-    experiment_id: Column = Column(
-        Integer, ForeignKey("experiments.id"), nullable=False
-    )
-
     # Lifecycle stage
     stage: Column = Column(SQLEnum(ModelStage), default=ModelStage.NONE)
 
@@ -205,9 +196,17 @@ class RegisteredModel(Base):
     )
 
     # Relationships
-    run = relationship("RunModel")
-    project = relationship("ProjectModel")
-    experiment = relationship("ExperimentModel")
+    run = relationship("RunModel", lazy="joined")
+
+    @property
+    def experiment_id(self) -> int:
+        """Experiment that produced the run, derived from the parent run."""
+        return self.run.experiment_id  # type: ignore[return-value]
+
+    @property
+    def project_id(self) -> int:
+        """Project owning this model, derived from run → experiment."""
+        return self.run.experiment.project_id  # type: ignore[return-value]
 
     __table_args__ = (
         UniqueConstraint("name", "version", name="uq_model_name_version"),
@@ -220,8 +219,9 @@ class DeploymentModel(Base):
     A deployment loads a registered model artifact into the in-memory serving
     pool so it can receive prediction requests over HTTP.
 
-    Project scope is traced through registered_model_id → RegisteredModel.project_id,
-    not stored directly on this table.
+    Project scope is traced through registered_model_id → RegisteredModel.project_id
+    (a @property that traverses run → experiment → project), not stored directly on
+    this table.
     """
 
     __tablename__ = "deployments"
