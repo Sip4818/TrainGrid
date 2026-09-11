@@ -26,22 +26,22 @@ export function useTrainers() {
 }
 
 /**
- * Fetch all registered models for a project.
+ * Fetch all registered models globally.
  */
-export function useModels(projectId: number) {
+export function useModels() {
   return useQuery<RegisteredModelSummary[]>({
-    queryKey: ["models", projectId],
-    queryFn: () => listModels(projectId),
+    queryKey: ["models"],
+    queryFn: listModels,
   });
 }
 
 /**
  * Fetch the latest version of a model by name.
  */
-export function useModel(name: string, projectId: number) {
+export function useModel(name: string) {
   return useQuery<RegisteredModel>({
-    queryKey: ["model", name, projectId],
-    queryFn: () => getModel(name, projectId),
+    queryKey: ["model", name],
+    queryFn: () => getModel(name),
     enabled: name.length > 0,
   });
 }
@@ -49,10 +49,10 @@ export function useModel(name: string, projectId: number) {
 /**
  * Fetch all versions of a model.
  */
-export function useModelVersions(name: string, projectId: number) {
+export function useModelVersions(name: string) {
   return useQuery<RegisteredModel[]>({
-    queryKey: ["modelVersions", name, projectId],
-    queryFn: () => listModelVersions(name, projectId),
+    queryKey: ["modelVersions", name],
+    queryFn: () => listModelVersions(name),
     enabled: name.length > 0,
   });
 }
