@@ -14,16 +14,13 @@ from backend.api.schemas.deployment import (
 )
 from backend.infrastructure.database.models import (
     DeploymentModel,
-    ExperimentModel,
     RegisteredModel,
-    RunModel,
 )
 from backend.infrastructure.storage.local_store import local_artifact_store
 from backend.shared.enums import DeploymentStatus
 from backend.shared.errors import (
     DeploymentAlreadyExistsError,
     DeploymentNotFoundError,
-    DeploymentNotInProjectError,
     ModelNotDeployableError,
     PredictionError,
 )
@@ -43,13 +40,12 @@ class DeploymentService:
     def deploy_model(self, payload: DeploymentCreate) -> DeploymentResponse:
         """Deploy a registered model: load artifact into serving pool, create DB row."""
         logger.info(
-            "Deploying model name=%s version=%s project_id=%d",
+            "Deploying model name=%s version=%s",
             payload.model_name,
             payload.model_version,
-            payload.project_id,
         )
 
-        # Validate registered model exists and belongs to the project
+        # Validate registered model exists
         registered = (
             self.db.query(RegisteredModel)
             .filter(
@@ -60,10 +56,6 @@ class DeploymentService:
         )
         if registered is None:
             raise ModelNotDeployableError(payload.model_name, payload.model_version)
-        if registered.project_id != payload.project_id:
-            raise DeploymentNotInProjectError(
-                f"{payload.model_name}:{payload.model_version}", payload.project_id
-            )
 
         # Check not already deployed
         existing = (
@@ -107,16 +99,13 @@ class DeploymentService:
         )
         return DeploymentResponse.model_validate(deployment)
 
-    def undeploy_model(self, deployment_id: int, project_id: int) -> DeploymentResponse:
+    def undeploy_model(self, deployment_id: int) -> DeploymentResponse:
         """Stop a deployment: remove from serving pool, update DB status."""
-        logger.info(
-            "Undeploying deployment_id=%d project_id=%d", deployment_id, project_id
-        )
+        logger.info("Undeploying deployment_id=%d", deployment_id)
 
         deployment = self.db.get(DeploymentModel, deployment_id)
         if deployment is None:
             raise DeploymentNotFoundError(deployment_id)
-        self._validate_deployment_scope(deployment, project_id)
 
         # Remove from serving pool
         pool_key = f"{deployment.model_name}:{deployment.model_version}"
@@ -137,17 +126,13 @@ class DeploymentService:
         self,
         deployment_id: int,
         features: dict[str, Any] | list[dict[str, Any]],
-        project_id: int,
     ) -> PredictResponse:
         """Run prediction on a deployed model."""
-        logger.info(
-            "Predicting on deployment_id=%d project_id=%d", deployment_id, project_id
-        )
+        logger.info("Predicting on deployment_id=%d", deployment_id)
 
         deployment = self.db.get(DeploymentModel, deployment_id)
         if deployment is None:
             raise DeploymentNotFoundError(deployment_id)
-        self._validate_deployment_scope(deployment, project_id)
 
         pool_key = f"{deployment.model_name}:{deployment.model_version}"
 
@@ -199,66 +184,40 @@ class DeploymentService:
         self,
         model_name: str,
         features: dict[str, Any] | list[dict[str, Any]],
-        project_id: int,
     ) -> PredictResponse:
-        """Find the latest deployment for a model name within a project and predict."""
-        logger.info("Predicting by model_name=%s project_id=%d", model_name, project_id)
+        """Find the latest deployment for a model name and predict."""
+        logger.info("Predicting by model_name=%s", model_name)
 
         deployment = (
             self.db.query(DeploymentModel)
-            .join(
-                RegisteredModel,
-                DeploymentModel.registered_model_id == RegisteredModel.id,
-            )
-            .join(RunModel, RegisteredModel.run_id == RunModel.id)
-            .join(ExperimentModel, RunModel.experiment_id == ExperimentModel.id)
             .filter(
                 DeploymentModel.model_name == model_name,
                 DeploymentModel.status == DeploymentStatus.ACTIVE,
-                ExperimentModel.project_id == project_id,
             )
             .order_by(DeploymentModel.id.desc())
             .first()
         )
         if deployment is None:
             raise DeploymentNotFoundError(0)
-        return self.predict(int(deployment.id), features, project_id)
+        return self.predict(int(deployment.id), features)
 
-    def list_deployments(self, project_id: int) -> list[DeploymentResponse]:
-        """List all deployments for a project (traced through registered model)."""
-        logger.info("Listing deployments for project_id=%d", project_id)
+    def list_deployments(self) -> list[DeploymentResponse]:
+        """List all deployments."""
+        logger.info("Listing deployments")
         deployments = (
-            self.db.query(DeploymentModel)
-            .join(
-                RegisteredModel,
-                DeploymentModel.registered_model_id == RegisteredModel.id,
-            )
-            .join(RunModel, RegisteredModel.run_id == RunModel.id)
-            .join(ExperimentModel, RunModel.experiment_id == ExperimentModel.id)
-            .filter(ExperimentModel.project_id == project_id)
-            .order_by(DeploymentModel.id.desc())
-            .all()
+            self.db.query(DeploymentModel).order_by(DeploymentModel.id.desc()).all()
         )
         return [DeploymentResponse.model_validate(d) for d in deployments]
 
-    def get_deployment(self, deployment_id: int, project_id: int) -> DeploymentResponse:
-        """Get a single deployment by ID, scoped to a project."""
-        logger.info("Getting deployment_id=%d project_id=%d", deployment_id, project_id)
+    def get_deployment(self, deployment_id: int) -> DeploymentResponse:
+        """Get a single deployment by ID."""
+        logger.info("Getting deployment_id=%d", deployment_id)
         deployment = self.db.get(DeploymentModel, deployment_id)
         if deployment is None:
             raise DeploymentNotFoundError(deployment_id)
-        self._validate_deployment_scope(deployment, project_id)
         return DeploymentResponse.model_validate(deployment)
 
     # --- Private helpers ---
-
-    def _validate_deployment_scope(
-        self, deployment: DeploymentModel, project_id: int
-    ) -> None:
-        """Verify the deployment's registered model belongs to the given project."""
-        registered = self.db.get(RegisteredModel, deployment.registered_model_id)
-        if registered is None or registered.project_id != project_id:
-            raise DeploymentNotInProjectError(int(deployment.id), project_id)
 
     def _load_model(self, registered: RegisteredModel, pool_key: str) -> None:
         """Load a .joblib model artifact into the serving pool."""
