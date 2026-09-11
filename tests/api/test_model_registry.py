@@ -25,7 +25,7 @@ def _create_experiment(name: str = "test-experiment") -> int:
         db.close()
 
 
-def _create_completed_run(experiment_id: int, project_id: int = 1) -> int:
+def _create_completed_run(experiment_id: int) -> int:
     db = SessionLocal()
     try:
         run = RunModel(
@@ -79,8 +79,6 @@ def test_register_model(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
             "description": "First version",
         },
     )
@@ -107,8 +105,6 @@ def test_register_model_duplicate_version(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
     # Register same name+version again
@@ -119,8 +115,6 @@ def test_register_model_duplicate_version(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id2,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
     assert response.status_code == 409
@@ -137,44 +131,6 @@ def test_register_model_run_not_completed(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
-        },
-    )
-    assert response.status_code == 422
-    data = response.json()
-    assert data["detail"]["code"] == "RUN_NOT_IN_SCOPE"
-
-
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
-def test_register_model_run_wrong_project(mock_delay):
-    run_id = _create_completed_run(1)
-    response = client.post(
-        "/models/",
-        json={
-            "name": "fraud-detector",
-            "version": "v1.0.0",
-            "run_id": run_id,
-            "project_id": 999,
-            "experiment_id": 1,
-        },
-    )
-    assert response.status_code == 422
-    data = response.json()
-    assert data["detail"]["code"] == "RUN_NOT_IN_SCOPE"
-
-
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
-def test_register_model_run_wrong_experiment(mock_delay):
-    run_id = _create_completed_run(1)
-    response = client.post(
-        "/models/",
-        json={
-            "name": "fraud-detector",
-            "version": "v1.0.0",
-            "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 999,
         },
     )
     assert response.status_code == 422
@@ -189,8 +145,6 @@ def test_register_model_run_not_found():
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": 99999,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
     assert response.status_code == 404
@@ -210,35 +164,14 @@ def test_list_models(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
-    response = client.get("/models/", params={"project_id": 1})
+    response = client.get("/models/")
     assert response.status_code == 200
     data = response.json()
     assert len(data) >= 1
     names = [m["name"] for m in data]
     assert "fraud-detector" in names
-
-
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
-def test_list_models_scoped_to_project(mock_delay):
-    run_id = _create_completed_run(1)
-    client.post(
-        "/models/",
-        json={
-            "name": "fraud-detector",
-            "version": "v1.0.0",
-            "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
-        },
-    )
-    response = client.get("/models/", params={"project_id": 999})
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 0
 
 
 @patch("backend.workers.tasks.training_tasks.start_training_run.delay")
@@ -250,11 +183,9 @@ def test_get_model(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
-    response = client.get("/models/fraud-detector", params={"project_id": 1})
+    response = client.get("/models/fraud-detector")
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "fraud-detector"
@@ -262,7 +193,7 @@ def test_get_model(mock_delay):
 
 
 def test_get_model_not_found():
-    response = client.get("/models/unknown-model", params={"project_id": 1})
+    response = client.get("/models/unknown-model")
     assert response.status_code == 404
     data = response.json()
     assert data["detail"]["code"] == "MODEL_NOT_FOUND"
@@ -280,8 +211,6 @@ def test_list_model_versions(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id1,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
     run_id2 = _create_completed_run(1)
@@ -291,11 +220,9 @@ def test_list_model_versions(mock_delay):
             "name": "fraud-detector",
             "version": "v2.0.0",
             "run_id": run_id2,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
-    response = client.get("/models/fraud-detector/versions", params={"project_id": 1})
+    response = client.get("/models/fraud-detector/versions")
     assert response.status_code == 200
     data = response.json()
     versions = [v["version"] for v in data]
@@ -304,7 +231,7 @@ def test_list_model_versions(mock_delay):
 
 
 def test_list_model_versions_not_found():
-    response = client.get("/models/unknown-model/versions", params={"project_id": 1})
+    response = client.get("/models/unknown-model/versions")
     assert response.status_code == 404
     data = response.json()
     assert data["detail"]["code"] == "MODEL_NOT_FOUND"
@@ -319,13 +246,9 @@ def test_get_model_version(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
-    response = client.get(
-        "/models/fraud-detector/versions/v1.0.0", params={"project_id": 1}
-    )
+    response = client.get("/models/fraud-detector/versions/v1.0.0")
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "fraud-detector"
@@ -333,9 +256,7 @@ def test_get_model_version(mock_delay):
 
 
 def test_get_model_version_not_found():
-    response = client.get(
-        "/models/fraud-detector/versions/v9.9.9", params={"project_id": 1}
-    )
+    response = client.get("/models/fraud-detector/versions/v9.9.9")
     assert response.status_code == 404
     data = response.json()
     assert data["detail"]["code"] == "MODEL_VERSION_NOT_FOUND"
@@ -353,14 +274,11 @@ def test_promote_none_to_staging(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
     response = client.post(
         "/models/fraud-detector/versions/v1.0.0/promote",
         json={"stage": "staging"},
-        params={"project_id": 1},
     )
     assert response.status_code == 200
     data = response.json()
@@ -376,21 +294,17 @@ def test_promote_staging_to_production(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
     # First promote to staging
     client.post(
         "/models/fraud-detector/versions/v1.0.0/promote",
         json={"stage": "staging"},
-        params={"project_id": 1},
     )
     # Then promote to production
     response = client.post(
         "/models/fraud-detector/versions/v1.0.0/promote",
         json={"stage": "production"},
-        params={"project_id": 1},
     )
     assert response.status_code == 200
     data = response.json()
@@ -406,26 +320,21 @@ def test_demote_production_to_staging(mock_delay):
             "name": "fraud-detector",
             "version": "v1.0.0",
             "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
     # Promote to staging, then production
     client.post(
         "/models/fraud-detector/versions/v1.0.0/promote",
         json={"stage": "staging"},
-        params={"project_id": 1},
     )
     client.post(
         "/models/fraud-detector/versions/v1.0.0/promote",
         json={"stage": "production"},
-        params={"project_id": 1},
     )
     # Demote back to staging
     response = client.post(
         "/models/fraud-detector/versions/v1.0.0/promote",
         json={"stage": "staging"},
-        params={"project_id": 1},
     )
     assert response.status_code == 200
     data = response.json()
@@ -441,15 +350,12 @@ def test_promote_invalid_transition(mock_delay):
             "name": "invalid-transition-model",
             "version": "v1.0.0",
             "run_id": run_id,
-            "project_id": 1,
-            "experiment_id": 1,
         },
     )
     # Try to go directly from none to production (invalid)
     response = client.post(
         "/models/invalid-transition-model/versions/v1.0.0/promote",
         json={"stage": "production"},
-        params={"project_id": 1},
     )
     assert response.status_code == 422
     data = response.json()
@@ -461,7 +367,6 @@ def test_promote_model_not_found(mock_delay):
     response = client.post(
         "/models/unknown-model/versions/v1.0.0/promote",
         json={"stage": "staging"},
-        params={"project_id": 1},
     )
     assert response.status_code == 404
     data = response.json()
