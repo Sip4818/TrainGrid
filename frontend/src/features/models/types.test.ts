@@ -117,8 +117,6 @@ describe("ModelRegisterRequest interface", () => {
       name: "fraud-detector",
       version: "v1.0.0",
       run_id: 5,
-      project_id: 1,
-      experiment_id: 10,
     };
     expect(req.name).toBe("fraud-detector");
   });
@@ -128,8 +126,6 @@ describe("ModelRegisterRequest interface", () => {
       name: "model",
       version: "v1.0.0",
       run_id: 1,
-      project_id: 1,
-      experiment_id: 1,
       description: "My model",
     };
     expect(req.description).toBe("My model");
@@ -140,8 +136,6 @@ describe("ModelRegisterRequest interface", () => {
       name: "model",
       version: "v1.0.0",
       run_id: 1,
-      project_id: 1,
-      experiment_id: 1,
     };
     expect(req.description).toBeUndefined();
   });
