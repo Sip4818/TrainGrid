@@ -98,28 +98,23 @@ export const endpoints = {
       `/models/${name}/versions/${version}/promote` as const,
   },
   deployments: {
-    /** GET /deployments/ — list all deployments for a project */
-    list: (projectId: number) =>
-      `/deployments/?project_id=${projectId}` as const,
+    /** GET /deployments/ — list all deployments */
+    list: () => "/deployments/" as const,
 
-    /** GET /deployments/{id} — get a single deployment scoped to a project */
-    detail: (id: number, projectId: number) =>
-      `/deployments/${id}?project_id=${projectId}` as const,
+    /** GET /deployments/{id} — get a single deployment */
+    detail: (id: number) => `/deployments/${id}` as const,
 
     /** POST /deployments/ — deploy a registered model */
     create: () => "/deployments/" as const,
 
-    /** DELETE /deployments/{id} — undeploy a model scoped to a project */
-    delete: (id: number, projectId: number) =>
-      `/deployments/${id}?project_id=${projectId}` as const,
+    /** DELETE /deployments/{id} — undeploy a model */
+    delete: (id: number) => `/deployments/${id}` as const,
 
     /** POST /deployments/{id}/predict — predict using a specific deployment */
-    predict: (id: number, projectId: number) =>
-      `/deployments/${id}/predict?project_id=${projectId}` as const,
+    predict: (id: number) => `/deployments/${id}/predict` as const,
 
     /** POST /models/{name}/predict — predict using latest deployment of a model */
-    predictByName: (name: string, projectId: number) =>
-      `/models/${name}/predict?project_id=${projectId}` as const,
+    predictByName: (name: string) => `/models/${name}/predict` as const,
   },
 } as const;
 
