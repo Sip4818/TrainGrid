@@ -60,8 +60,8 @@ def start_training_run(run_id: str) -> dict[str, str]:
             metrics = trainer.evaluate()
             logger.info("Training completed for run_id=%s metrics=%s", run_id, metrics)
 
-            artifact_key = f"runs/{run_id}/model.joblib"
-            tmp_model = tmp_root / "model.joblib"
+            artifact_key = f"runs/{run_id}/model{trainer_cls.model_extension}"
+            tmp_model = tmp_root / f"model{trainer_cls.model_extension}"
             trainer.save(str(tmp_model))
             local_artifact_store.save(tmp_model, artifact_key)
 
