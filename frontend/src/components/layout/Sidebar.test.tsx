@@ -45,6 +45,8 @@ function renderWithRoute(initialEntries: string[]) {
           <Route path="/" element={<Sidebar />} />
           <Route path="/projects" element={<Sidebar />} />
           <Route path="/projects/:projectId" element={<Sidebar />} />
+          <Route path="/models" element={<Sidebar />} />
+          <Route path="/deployments" element={<Sidebar />} />
           <Route path="/experiments/:experimentId" element={<Sidebar />} />
         </Routes>
       </MemoryRouter>
@@ -143,6 +145,32 @@ describe("Sidebar", () => {
     // No project is active (no projectId in URL), so experiments should be hidden
     expect(screen.queryByText("Exp A")).toBeNull();
     expect(screen.queryByText("Exp B")).toBeNull();
+  });
+
+  it("shows Models and Deployments links without a selected project", async () => {
+    mockApi();
+    renderWithRoute(["/"]);
+
+    await waitFor(() => {
+      expect(screen.getByText("Alpha")).toBeDefined();
+    });
+    expect(screen.getByText("Models").getAttribute("href")).toBe("/models");
+    expect(screen.getByText("Deployments").getAttribute("href")).toBe(
+      "/deployments",
+    );
+  });
+
+  it("shows Models and Deployments links with a selected project", async () => {
+    mockApi();
+    renderWithRoute(["/projects/1"]);
+
+    await waitFor(() => {
+      expect(screen.getByText("Alpha")).toBeDefined();
+    });
+    expect(screen.getByText("Models").getAttribute("href")).toBe("/models");
+    expect(screen.getByText("Deployments").getAttribute("href")).toBe(
+      "/deployments",
+    );
   });
 
   it("shows experiments when navigating to an experiment route", async () => {

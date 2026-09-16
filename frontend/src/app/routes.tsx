@@ -20,11 +20,11 @@ export const routes: RouteObject[] = [
         element: <ProjectsPage />,
       },
       {
-        path: "projects/:projectId/models",
+        path: "models",
         element: <ModelsPage />,
       },
       {
-        path: "projects/:projectId/deployments",
+        path: "deployments",
         element: <DeploymentsPage />,
       },
       {

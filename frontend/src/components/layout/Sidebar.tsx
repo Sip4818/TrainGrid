@@ -136,33 +136,29 @@ export function Sidebar(): React.ReactElement {
           })}
         </nav>
 
-        {projectId && (
-          <>
-            <NavLink
-              to={`/projects/${projectId}/models`}
-              style={({ isActive: linkActive }) => ({
-                ...deploymentsLinkStyle,
-                color: linkActive ? "#ffffff" : "#9ca3af",
-                fontWeight: linkActive ? 600 : 500,
-                borderTop: "none",
-                marginTop: "8px",
-                paddingTop: "0",
-              })}
-            >
-              Models
-            </NavLink>
-            <NavLink
-              to={`/projects/${projectId}/deployments`}
-              style={({ isActive: linkActive }) => ({
-                ...deploymentsLinkStyle,
-                color: linkActive ? "#ffffff" : "#9ca3af",
-                fontWeight: linkActive ? 600 : 500,
-              })}
-            >
-              Deployments
-            </NavLink>
-          </>
-        )}
+        <NavLink
+          to="/models"
+          style={({ isActive: linkActive }) => ({
+            ...deploymentsLinkStyle,
+            color: linkActive ? "#ffffff" : "#9ca3af",
+            fontWeight: linkActive ? 600 : 500,
+            borderTop: "none",
+            marginTop: "8px",
+            paddingTop: "0",
+          })}
+        >
+          Models
+        </NavLink>
+        <NavLink
+          to="/deployments"
+          style={({ isActive: linkActive }) => ({
+            ...deploymentsLinkStyle,
+            color: linkActive ? "#ffffff" : "#9ca3af",
+            fontWeight: linkActive ? 600 : 500,
+          })}
+        >
+          Deployments
+        </NavLink>
       </div>
     </aside>
   );
