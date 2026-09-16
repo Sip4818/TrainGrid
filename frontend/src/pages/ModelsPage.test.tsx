@@ -71,10 +71,10 @@ function renderWithProviders(
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={options.initialEntries ?? ["/projects/1/models"]}>
+      <MemoryRouter initialEntries={options.initialEntries ?? ["/models"]}>
         <Routes>
-          <Route path="/projects/:projectId/models" element={ui} />
-          <Route path="/projects/:projectId/deployments" element={<div>deployments</div>} />
+          <Route path="/models" element={ui} />
+          <Route path="/deployments" element={<div>deployments</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
