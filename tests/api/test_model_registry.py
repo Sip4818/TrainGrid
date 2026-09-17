@@ -359,7 +359,83 @@ def test_promote_invalid_transition(mock_delay):
     )
     assert response.status_code == 422
     data = response.json()
-    assert data["detail"]["code"] == "RUN_NOT_IN_SCOPE"
+    assert data["detail"]["code"] == "INVALID_STAGE_TRANSITION"
+
+
+@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+def test_promote_archived_to_staging(mock_delay):
+    run_id = _create_completed_run(1)
+    client.post(
+        "/models/",
+        json={
+            "name": "archived-comeback-model",
+            "version": "v1.0.0",
+            "run_id": run_id,
+        },
+    )
+    # Drive to archived: none -> staging -> production -> archived
+    for stage in ("staging", "production", "archived"):
+        client.post(
+            "/models/archived-comeback-model/versions/v1.0.0/promote",
+            json={"stage": stage},
+        )
+    # Archived versions can be brought back directly to staging
+    response = client.post(
+        "/models/archived-comeback-model/versions/v1.0.0/promote",
+        json={"stage": "staging"},
+    )
+    assert response.status_code == 200
+    assert response.json()["stage"] == "staging"
+
+
+@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+def test_promote_archived_to_none(mock_delay):
+    run_id = _create_completed_run(1)
+    client.post(
+        "/models/",
+        json={
+            "name": "archived-reset-model",
+            "version": "v1.0.0",
+            "run_id": run_id,
+        },
+    )
+    for stage in ("staging", "production", "archived"):
+        client.post(
+            "/models/archived-reset-model/versions/v1.0.0/promote",
+            json={"stage": stage},
+        )
+    response = client.post(
+        "/models/archived-reset-model/versions/v1.0.0/promote",
+        json={"stage": "none"},
+    )
+    assert response.status_code == 200
+    assert response.json()["stage"] == "none"
+
+
+@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+def test_promote_archived_to_production_rejected(mock_delay):
+    run_id = _create_completed_run(1)
+    client.post(
+        "/models/",
+        json={
+            "name": "archived-skip-model",
+            "version": "v1.0.0",
+            "run_id": run_id,
+        },
+    )
+    for stage in ("staging", "production", "archived"):
+        client.post(
+            "/models/archived-skip-model/versions/v1.0.0/promote",
+            json={"stage": stage},
+        )
+    # Archived must pass through staging; direct to production is forbidden
+    response = client.post(
+        "/models/archived-skip-model/versions/v1.0.0/promote",
+        json={"stage": "production"},
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data["detail"]["code"] == "INVALID_STAGE_TRANSITION"
 
 
 @patch("backend.workers.tasks.training_tasks.start_training_run.delay")

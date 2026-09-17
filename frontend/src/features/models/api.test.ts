@@ -32,6 +32,7 @@ const sampleModel: RegisteredModel = {
   dataset_hash: "def456",
   config: { n_estimators: 100 },
   updated_at: "2026-01-02T00:00:00Z",
+  allowed_stages: [ModelStage.STAGING, ModelStage.ARCHIVED],
 };
 
 beforeEach(() => {

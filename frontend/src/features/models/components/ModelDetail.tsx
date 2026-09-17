@@ -11,23 +11,14 @@ interface ModelDetailProps {
   onBack: () => void;
 }
 
-const STAGE_ORDER: ModelStage[] = [
-  ModelStage.NONE,
-  ModelStage.STAGING,
-  ModelStage.PRODUCTION,
-  ModelStage.ARCHIVED,
-];
-
-function nextStage(current: ModelStage): ModelStage | null {
-  const idx = STAGE_ORDER.indexOf(current);
-  if (idx < STAGE_ORDER.length - 1) return STAGE_ORDER[idx + 1]!;
-  return null;
-}
-
-function prevStage(current: ModelStage): ModelStage | null {
-  const idx = STAGE_ORDER.indexOf(current);
-  if (idx > 0) return STAGE_ORDER[idx - 1]!;
-  return null;
+/**
+ * Targets that move a version toward active use read as promotions;
+ * targets that move it out of active use read as demotions.
+ */
+function actionLabel(target: ModelStage): string {
+  return target === ModelStage.STAGING || target === ModelStage.PRODUCTION
+    ? `Promote → ${target}`
+    : `Demote → ${target}`;
 }
 
 interface VersionRow extends Record<string, unknown> {
@@ -36,6 +27,7 @@ interface VersionRow extends Record<string, unknown> {
   metrics: Record<string, unknown>;
   created_at: string;
   run_id: number;
+  allowed_stages: ModelStage[];
 }
 
 export function ModelDetail({
@@ -86,29 +78,19 @@ export function ModelDetail({
       key: "version",
       label: "Actions",
       render: (_value, row) => {
-        const stage = row.stage as ModelStage;
-        const nxt = nextStage(stage);
-        const prv = prevStage(stage);
+        const allowed = (row.allowed_stages as ModelStage[] | undefined) ?? [];
         return (
           <div style={{ display: "flex", gap: "6px" }}>
-            {nxt && (
+            {allowed.map((target) => (
               <Button
+                key={target}
                 variant="secondary"
-                onClick={() => handlePromote(row.version as string, nxt)}
+                onClick={() => handlePromote(row.version as string, target)}
                 disabled={promoteMutation.isPending}
               >
-                Promote → {nxt}
+                {actionLabel(target)}
               </Button>
-            )}
-            {prv && (
-              <Button
-                variant="secondary"
-                onClick={() => handlePromote(row.version as string, prv)}
-                disabled={promoteMutation.isPending}
-              >
-                Demote → {prv}
-              </Button>
-            )}
+            ))}
           </div>
         );
       },

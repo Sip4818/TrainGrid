@@ -27,6 +27,7 @@ const sampleModel: RegisteredModel = {
   metrics: { accuracy: 0.95 },
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-02T00:00:00Z",
+  allowed_stages: [ModelStage.STAGING, ModelStage.ARCHIVED],
 };
 
 beforeEach(() => {

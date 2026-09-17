@@ -50,6 +50,10 @@ class RegisteredModelResponse(BaseModel):
     metrics: dict[str, Any] = {}
     created_at: datetime
     updated_at: datetime
+    allowed_stages: list[ModelStage] = Field(
+        default_factory=list,
+        description="Legal stage transitions from the current stage",
+    )
 
     class Config:
         from_attributes = True
