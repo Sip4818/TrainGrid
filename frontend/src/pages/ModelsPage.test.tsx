@@ -253,6 +253,7 @@ describe("ModelsPage", () => {
         metrics: { accuracy: 0.95 },
         created_at: "2026-09-05T00:00:00Z",
         updated_at: "2026-09-06T00:00:00Z",
+        allowed_stages: [ModelStage.STAGING, ModelStage.ARCHIVED],
       },
       {
         id: 2,
@@ -268,6 +269,7 @@ describe("ModelsPage", () => {
         metrics: {},
         created_at: "2026-09-01T00:00:00Z",
         updated_at: "2026-09-02T00:00:00Z",
+        allowed_stages: [ModelStage.NONE, ModelStage.STAGING],
       },
     ];
 
@@ -300,6 +302,57 @@ describe("ModelsPage", () => {
     expect(screen.getByText("v1.0.1")).toBeDefined();
     expect(screen.getByText("v1.0.0")).toBeDefined();
     expect(screen.getByText("Latest version")).toBeDefined();
+  });
+
+  it("offers legal transitions for an archived version", async () => {
+    const versions = [
+      {
+        id: 2,
+        name: "fraud-detector",
+        version: "v1.0.0",
+        stage: ModelStage.ARCHIVED,
+        run_id: 3,
+        description: null,
+        artifact_path: "runs/3/model.joblib",
+        artifact_checksum: null,
+        dataset_hash: null,
+        config: {},
+        metrics: {},
+        created_at: "2026-09-01T00:00:00Z",
+        updated_at: "2026-09-02T00:00:00Z",
+        allowed_stages: [ModelStage.NONE, ModelStage.STAGING],
+      },
+    ];
+
+    mockApi(sampleModels);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/versions")) {
+        return new Response(JSON.stringify(versions), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify(sampleModels), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    renderWithProviders(<ModelsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("fraud-detector")).toBeDefined();
+    });
+
+    screen.getByText("fraud-detector").click();
+
+    await waitFor(() => {
+      expect(screen.getByText("Version History")).toBeDefined();
+    });
+    expect(screen.getByText("Promote → staging")).toBeDefined();
+    expect(screen.getByText("Demote → none")).toBeDefined();
+    expect(screen.queryByText("Demote → production")).toBeNull();
   });
 
   it("back button returns to models list", async () => {
