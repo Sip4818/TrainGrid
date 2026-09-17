@@ -51,6 +51,12 @@ export interface RegisteredModel {
   metrics: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  /**
+   * Legal stage transitions from the current stage.
+   * Provided by the backend (STAGE_TRANSITIONS); the UI renders
+   * one action button per entry instead of guessing legality.
+   */
+  allowed_stages: ModelStage[];
 }
 
 /**
