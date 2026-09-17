@@ -10,7 +10,7 @@ def test_list_trainers():
     assert response.status_code == 200
     trainers = response.json()
     names = {t["name"] for t in trainers}
-    assert names == {"random_forest", "xgboost"}
+    assert names == {"random_forest", "xgboost", "pytorch_mlp"}
 
 
 def test_trainer_labels_and_config_schemas():

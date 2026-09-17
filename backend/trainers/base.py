@@ -5,6 +5,7 @@ from typing import Any, ClassVar
 class BaseTrainer(ABC):
     config_class: ClassVar[type]
     label: ClassVar[str] = ""
+    model_extension: ClassVar[str] = ".joblib"
 
     @abstractmethod
     def train(self) -> Any:
