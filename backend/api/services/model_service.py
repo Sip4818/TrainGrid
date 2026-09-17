@@ -20,6 +20,7 @@ from backend.infrastructure.database.models import (
 from backend.infrastructure.storage.local_store import local_artifact_store
 from backend.shared.enums import ModelStage, RunStatus
 from backend.shared.errors import (
+    InvalidStageTransitionError,
     ModelNotFoundError,
     ModelVersionExistsError,
     ModelVersionNotFoundError,
@@ -35,7 +36,7 @@ STAGE_TRANSITIONS: dict[ModelStage, list[ModelStage]] = {
     ModelStage.NONE: [ModelStage.STAGING, ModelStage.ARCHIVED],
     ModelStage.STAGING: [ModelStage.PRODUCTION, ModelStage.NONE, ModelStage.ARCHIVED],
     ModelStage.PRODUCTION: [ModelStage.STAGING, ModelStage.ARCHIVED],
-    ModelStage.ARCHIVED: [ModelStage.NONE],
+    ModelStage.ARCHIVED: [ModelStage.NONE, ModelStage.STAGING],
 }
 
 
@@ -121,7 +122,7 @@ class ModelService:
             payload.name,
             payload.version,
         )
-        return RegisteredModelResponse.model_validate(registered)
+        return self._to_response(registered)
 
     def list_models(self) -> list[RegisteredModelSummary]:
         """List all registered models globally (latest version per name)."""
@@ -169,7 +170,7 @@ class ModelService:
         )
         if model is None:
             raise ModelNotFoundError(name)
-        return RegisteredModelResponse.model_validate(model)
+        return self._to_response(model)
 
     def list_model_versions(self, name: str) -> list[RegisteredModelResponse]:
         """List all versions of a model."""
@@ -182,7 +183,7 @@ class ModelService:
         )
         if not models:
             raise ModelNotFoundError(name)
-        return [RegisteredModelResponse.model_validate(m) for m in models]
+        return [self._to_response(m) for m in models]
 
     def get_model_version(self, name: str, version: str) -> RegisteredModelResponse:
         """Get a specific version of a model."""
@@ -197,7 +198,7 @@ class ModelService:
         )
         if model is None:
             raise ModelVersionNotFoundError(name, version)
-        return RegisteredModelResponse.model_validate(model)
+        return self._to_response(model)
 
     def promote_model(
         self, name: str, version: str, stage: ModelStage
@@ -223,11 +224,7 @@ class ModelService:
         current_stage = cast(ModelStage, model.stage)
         allowed = STAGE_TRANSITIONS.get(current_stage, [])
         if stage not in allowed:
-            raise RunNotInScopeError(
-                cast(int, model.id),
-                cast(int, model.project_id),
-                cast(int, model.experiment_id),
-            )
+            raise InvalidStageTransitionError(name, version, current_stage, allowed)
 
         model.stage = stage  # type: ignore[assignment]
         model.updated_at = datetime.utcnow()  # type: ignore[assignment]
@@ -241,9 +238,17 @@ class ModelService:
             current_stage.value,
             stage.value,
         )
-        return RegisteredModelResponse.model_validate(model)
+        return self._to_response(model)
 
     # --- Private helpers ---
+
+    def _to_response(self, model: RegisteredModel) -> RegisteredModelResponse:
+        """Serialize a version including its legal stage transitions."""
+        response = RegisteredModelResponse.model_validate(model)
+        response.allowed_stages = STAGE_TRANSITIONS.get(
+            cast(ModelStage, model.stage), []
+        )
+        return response
 
     def _compute_artifact_checksum(self, artifact_path: str | None) -> str | None:
         """Compute SHA-256 of the .joblib artifact file."""
