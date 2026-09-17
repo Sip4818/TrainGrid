@@ -21,3 +21,20 @@ class DeploymentStatus(str, Enum):
     ACTIVE = "active"
     FAILED = "failed"
     STOPPED = "stopped"
+
+
+class SweepStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class SearchStrategy(str, Enum):
+    GRID = "grid"
+    RANDOM = "random"
+
+
+class SweepGoal(str, Enum):
+    MAXIMIZE = "maximize"
+    MINIMIZE = "minimize"

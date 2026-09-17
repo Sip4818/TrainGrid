@@ -12,6 +12,7 @@ from backend.api.routers import (
     models,
     projects,
     runs,
+    sweeps,
 )
 from backend.infrastructure.database.seed import seed_defaults
 from backend.infrastructure.database.session import Base, engine
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(projects.router)
     app.include_router(experiments.router)
     app.include_router(datasets.router)
+    app.include_router(sweeps.router)
 
     return app
 

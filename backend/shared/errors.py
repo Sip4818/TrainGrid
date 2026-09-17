@@ -137,6 +137,21 @@ class DeploymentNotFoundError(NotFoundError):
         super().__init__(f"Deployment with id '{deployment_id}' not found")
 
 
+class SweepNotFoundError(NotFoundError):
+    """Raised when a hyperparameter sweep ID does not exist."""
+
+    def __init__(self, sweep_id: int) -> None:
+        self.sweep_id = sweep_id
+        super().__init__(f"Sweep with id '{sweep_id}' not found")
+
+
+class InvalidSearchSpaceError(TrainGridError):
+    """Raised when a sweep search space is malformed or exceeds limits."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
 class ModelNotDeployableError(NotFoundError):
     """Raised when trying to deploy a model that doesn't exist in the registry."""
 

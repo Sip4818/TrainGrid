@@ -5,6 +5,7 @@ from backend.shared.errors import (
     DatasetUploadError,
     DeploymentAlreadyExistsError,
     DeploymentNotFoundError,
+    InvalidSearchSpaceError,
     InvalidStageTransitionError,
     ModelNotDeployableError,
     ModelNotFoundError,
@@ -14,6 +15,7 @@ from backend.shared.errors import (
     PredictionError,
     RunNotInExperimentError,
     RunNotInScopeError,
+    SweepNotFoundError,
     TrainerNotFoundError,
     TrainGridError,
 )
@@ -118,6 +120,22 @@ async def handle_invalid_stage_transition(
     )
 
 
+async def handle_invalid_search_space(request: Request, exc: Exception) -> JSONResponse:
+    """Catch InvalidSearchSpaceError and return a 422."""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": {"code": "INVALID_SEARCH_SPACE", "message": str(exc)}},
+    )
+
+
+async def handle_sweep_not_found(request: Request, exc: Exception) -> JSONResponse:
+    """Catch SweepNotFoundError and return a 404."""
+    return JSONResponse(
+        status_code=404,
+        content={"detail": {"code": "SWEEP_NOT_FOUND", "message": str(exc)}},
+    )
+
+
 async def handle_deployment_not_found(request: Request, exc: Exception) -> JSONResponse:
     """Catch DeploymentNotFoundError and return a 404."""
     return JSONResponse(
@@ -166,6 +184,8 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         InvalidStageTransitionError, handle_invalid_stage_transition
     )
+    app.add_exception_handler(InvalidSearchSpaceError, handle_invalid_search_space)
+    app.add_exception_handler(SweepNotFoundError, handle_sweep_not_found)
     app.add_exception_handler(DeploymentNotFoundError, handle_deployment_not_found)
     app.add_exception_handler(ModelNotDeployableError, handle_model_not_deployable)
     app.add_exception_handler(

@@ -13,7 +13,14 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
 from backend.infrastructure.database.session import Base
-from backend.shared.enums import DeploymentStatus, ModelStage, RunStatus
+from backend.shared.enums import (
+    DeploymentStatus,
+    ModelStage,
+    RunStatus,
+    SearchStrategy,
+    SweepGoal,
+    SweepStatus,
+)
 
 
 class ProjectModel(Base):
@@ -92,6 +99,9 @@ class RunModel(Base):
     # Links this run to a specific experiment
     experiment_id: Column = Column(Integer, ForeignKey("experiments.id"), index=True)
 
+    # Links this run to its sweep, if created as part of one (nullable)
+    sweep_id: Column = Column(Integer, ForeignKey("sweeps.id"), nullable=True)
+
     # The current status of the run (PENDING, RUNNING, COMPLETED, etc.)
     status: Column = Column(SQLEnum(RunStatus), default=RunStatus.PENDING)
 
@@ -119,10 +129,93 @@ class RunModel(Base):
     # Run belongs to an experiment
     experiment = relationship("ExperimentModel", back_populates="runs")
 
+    # Run optionally belongs to a sweep
+    sweep = relationship(
+        "SweepModel", back_populates="runs", foreign_keys="RunModel.sweep_id"
+    )
+
     @property
     def project_id(self) -> int:
         """Project owning this run, derived from the parent experiment."""
         return self.experiment.project_id  # type: ignore[return-value]
+
+
+class SweepModel(Base):
+    """
+    SQLAlchemy model for the 'sweeps' table.
+    A sweep fans out N training runs over hyperparameter combinations and
+    records the best-performing child run once all complete.
+    """
+
+    __tablename__ = "sweeps"
+
+    # Cap on generated combinations (grid and random alike)
+    MAX_COMBINATIONS = 100
+
+    # Primary key, indexed for fast lookups
+    id: Column = Column(Integer, primary_key=True, index=True)
+
+    # Links this sweep to its owning project
+    project_id: Column = Column(
+        Integer, ForeignKey("projects.id"), nullable=False, index=True
+    )
+
+    # Links this sweep to its experiment
+    experiment_id: Column = Column(
+        Integer, ForeignKey("experiments.id"), nullable=False, index=True
+    )
+
+    # Which trainer to use for all child runs
+    trainer_name: Column = Column(String, nullable=False)
+
+    # Shared dataset block for all child runs
+    dataset_path: Column = Column(String, nullable=False)
+    target_column: Column = Column(String, nullable=False)
+    feature_columns: Column = Column(JSON, nullable=False)
+
+    # Hyperparameter search space: param name -> candidate values
+    search_space: Column = Column(JSON, nullable=False)
+
+    # Search strategy (grid or random)
+    strategy: Column = Column(SQLEnum(SearchStrategy), nullable=False)
+
+    # For random search: number of trials to sample (None for grid)
+    max_combinations: Column = Column(Integer, nullable=True)
+
+    # Metric to optimize and optimization direction
+    metric: Column = Column(String, nullable=False, default="accuracy")
+    goal: Column = Column(
+        SQLEnum(SweepGoal), nullable=False, default=SweepGoal.MAXIMIZE
+    )
+
+    # Current sweep state
+    status: Column = Column(SQLEnum(SweepStatus), default=SweepStatus.PENDING)
+
+    # ID of the best child run (set by the aggregator). use_alter breaks the
+    # runs <-> sweeps DDL cycle (runs.sweep_id points back at this table).
+    best_run_id: Column = Column(
+        Integer, ForeignKey("runs.id", use_alter=True), nullable=True
+    )
+
+    # Automatically set when the row is created
+    created_at: Column = Column(DateTime, default=datetime.utcnow)
+
+    # Set when the sweep is dispatched
+    started_at: Column = Column(DateTime, nullable=True)
+
+    # Set when the aggregator completes
+    finished_at: Column = Column(DateTime, nullable=True)
+
+    # Sweep has many child runs (no delete cascade: runs belong to the
+    # experiment and outlive their sweep)
+    runs = relationship(
+        "RunModel",
+        back_populates="sweep",
+        foreign_keys="RunModel.sweep_id",
+    )
+
+    # Best child run (nullable until aggregation)
+    best_run = relationship("RunModel", foreign_keys=[best_run_id])
 
 
 class DatasetModel(Base):
