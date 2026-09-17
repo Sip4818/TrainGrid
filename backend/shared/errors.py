@@ -1,3 +1,6 @@
+from backend.shared.enums import ModelStage
+
+
 class TrainGridError(Exception):
     """Base exception for all TrainGrid application errors."""
 
@@ -101,6 +104,28 @@ class RunNotInScopeError(TrainGridError):
         super().__init__(
             f"Run '{run_id}' does not belong to project '{project_id}', "
             f"experiment '{experiment_id}'"
+        )
+
+
+class InvalidStageTransitionError(TrainGridError):
+    """Raised when a model version moves to a forbidden stage."""
+
+    def __init__(
+        self,
+        name: str,
+        version: str,
+        current_stage: ModelStage,
+        allowed_stages: list[ModelStage],
+    ) -> None:
+        self.name = name
+        self.version = version
+        self.current_stage = current_stage
+        self.allowed_stages = allowed_stages
+        allowed = ", ".join(s.value for s in allowed_stages) or "none"
+        super().__init__(
+            f"Cannot move model '{name}' version '{version}' "
+            f"from stage '{current_stage.value}' to the requested stage. "
+            f"Allowed targets: {allowed}"
         )
 
 
