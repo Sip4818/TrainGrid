@@ -5,6 +5,7 @@ from backend.shared.errors import (
     DatasetUploadError,
     DeploymentAlreadyExistsError,
     DeploymentNotFoundError,
+    InvalidStageTransitionError,
     ModelNotDeployableError,
     ModelNotFoundError,
     ModelVersionExistsError,
@@ -107,6 +108,16 @@ async def handle_run_not_in_scope(request: Request, exc: Exception) -> JSONRespo
     )
 
 
+async def handle_invalid_stage_transition(
+    request: Request, exc: Exception
+) -> JSONResponse:
+    """Catch InvalidStageTransitionError and return a 422."""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": {"code": "INVALID_STAGE_TRANSITION", "message": str(exc)}},
+    )
+
+
 async def handle_deployment_not_found(request: Request, exc: Exception) -> JSONResponse:
     """Catch DeploymentNotFoundError and return a 404."""
     return JSONResponse(
@@ -152,6 +163,9 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ModelVersionNotFoundError, handle_model_version_not_found)
     app.add_exception_handler(ModelVersionExistsError, handle_model_version_exists)
     app.add_exception_handler(RunNotInScopeError, handle_run_not_in_scope)
+    app.add_exception_handler(
+        InvalidStageTransitionError, handle_invalid_stage_transition
+    )
     app.add_exception_handler(DeploymentNotFoundError, handle_deployment_not_found)
     app.add_exception_handler(ModelNotDeployableError, handle_model_not_deployable)
     app.add_exception_handler(
