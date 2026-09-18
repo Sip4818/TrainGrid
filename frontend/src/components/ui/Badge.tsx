@@ -2,8 +2,14 @@ import type { ReactNode } from "react";
 import { RunStatus } from "../../features/runs/types";
 import { ModelStage } from "../../features/models/types";
 import { DeploymentStatus } from "../../features/deployments/types";
+import { SweepStatus } from "../../features/sweeps/types";
 
-type BadgeVariant = RunStatus | ModelStage | DeploymentStatus | "default";
+type BadgeVariant =
+  | RunStatus
+  | ModelStage
+  | DeploymentStatus
+  | SweepStatus
+  | "default";
 
 interface BadgeProps {
   children: ReactNode;
