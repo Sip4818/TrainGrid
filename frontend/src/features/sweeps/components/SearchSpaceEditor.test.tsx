@@ -166,6 +166,23 @@ describe("SearchSpaceEditor", () => {
     expect(screen.getByText(/not an integer/)).toBeDefined();
   });
 
+  it("hides errors for untouched empty fields until submitted", () => {
+    const { rerender } = render(
+      <SearchSpaceEditor schema={schema} values={{}} onChange={() => {}} />,
+    );
+    expect(screen.queryByText(/at least one/)).toBeNull();
+
+    rerender(
+      <SearchSpaceEditor
+        schema={schema}
+        values={{}}
+        onChange={() => {}}
+        showAllErrors
+      />,
+    );
+    expect(screen.getAllByText(/at least one/).length).toBeGreaterThan(0);
+  });
+
   it("calls onChange with raw text", () => {
     const onChange = vi.fn();
     render(
