@@ -145,6 +145,11 @@ interface SearchSpaceEditorProps {
   schema: JsonSchema;
   values: Record<string, string>;
   onChange: (key: string, value: string) => void;
+  /**
+   * Show errors for untouched (empty) fields too. Parents set this after
+   * a submit attempt; before that only fields with text show errors.
+   */
+  showAllErrors?: boolean;
 }
 
 /**
@@ -156,6 +161,7 @@ export function SearchSpaceEditor({
   schema,
   values,
   onChange,
+  showAllErrors = false,
 }: SearchSpaceEditorProps): React.ReactElement {
   const fields = tunableFields(schema);
   const errors = getSearchSpaceErrors(values, schema);
@@ -169,7 +175,8 @@ export function SearchSpaceEditor({
       {fields.map(({ name, prop }) => {
         const label = prop.title ?? humanize(name);
         const type = resolveType(prop);
-        const error = errors[name];
+        const raw = values[name] ?? "";
+        const error = showAllErrors || raw !== "" ? errors[name] : undefined;
         return (
           <div
             key={name}
@@ -183,7 +190,7 @@ export function SearchSpaceEditor({
                   ? 'JSON array, e.g. [[128, 64], [256, 128]]'
                   : "comma-separated values"
               }
-              value={values[name] ?? ""}
+              value={raw}
               onChange={(e) => onChange(name, e.target.value)}
             />
             {error && (
