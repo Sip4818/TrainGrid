@@ -97,3 +97,21 @@ describe("endpoints.models", () => {
     );
   });
 });
+
+describe("endpoints.sweeps", () => {
+  it("list() returns scoped sweeps URL", () => {
+    expect(endpoints.sweeps.list(1, 2)).toBe(
+      "/sweeps/?project_id=1&experiment_id=2",
+    );
+  });
+
+  it("detail(id) returns scoped sweep URL", () => {
+    expect(endpoints.sweeps.detail(7, 1, 2)).toBe(
+      "/sweeps/7?project_id=1&experiment_id=2",
+    );
+  });
+
+  it("create() returns /sweeps/", () => {
+    expect(endpoints.sweeps.create()).toBe("/sweeps/");
+  });
+});
