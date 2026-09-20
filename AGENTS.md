@@ -130,6 +130,66 @@ Before we scale horizontally by adding new models, we should make the existing v
 - **One Commit Per File Change:** Each file change must be committed separately — never bundle multiple files into a single commit. If lint auto-fixes touch several files after the fact, commit them as a single `style:` pass.
 - **Merging:** Always merge with a merge commit — **never squash**. Each per-file commit must be preserved in `main` history.
 
+---
+
+## Templates
+
+### Issue Template
+
+```markdown
+## Problem
+[Describe the bug, gap, or missing capability cleanly]
+
+## Goal
+[State what victory looks like in 1-2 sentences]
+
+## Scope
+[Detailed breakdown of what needs to be implemented across layers/components]
+
+### Part / Layer 1: [Name]
+- [Details]
+
+**Files affected:**
+- `path/to/file`
+
+## Acceptance Criteria
+- [ ] Criteria 1
+- [ ] Criteria 2
+- [ ] All existing tests pass (`pytest` / `vitest`) and `./check.sh` is green.
+- [ ] New tests added covering the new functionality.
+
+## Out of Scope
+- [Explicit non-goals]
+```
+
+### Pull Request Template
+
+```markdown
+## Description
+[Brief summary of WHAT was changed and WHY]
+
+## Related Issue
+Closes #[Issue Number]
+
+## Changes Made
+- [List specific changes per directory/file]
+
+## How Has This Been Tested?
+- [ ] Ran `./check.sh` locally (linting, type checking, unit tests passed)
+- [ ] Added new unit/integration tests for changes
+- [ ] Verified manually end-to-end / via UI / via curl
+
+## Architectural Impact & Rationale
+[Brief explanation of architectural decisions, location of new files, or design patterns used]
+
+## Checklist
+- [ ] I have followed the project guidelines in `AGENTS.md`.
+- [ ] No phase/week/step plan numbers are referenced in this PR title or body.
+- [ ] Each file change is committed individually (or clean style pass).
+- [ ] CI checks are green.
+```
+
+
 
 ---
 
