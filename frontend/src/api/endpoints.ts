@@ -116,5 +116,22 @@ export const endpoints = {
     /** POST /models/{name}/predict — predict using latest deployment of a model */
     predictByName: (name: string) => `/models/${name}/predict` as const,
   },
+  sweeps: {
+    /**
+     * GET /sweeps/ — list all hyperparameter sweeps within an experiment.
+     */
+    list: (projectId: number, experimentId: number) =>
+      `/sweeps/?project_id=${projectId}&experiment_id=${experimentId}` as const,
+
+    /**
+     * GET /sweeps/{id} — get a single hyperparameter sweep, scoped to its
+     * project and experiment.
+     */
+    detail: (id: number, projectId: number, experimentId: number) =>
+      `/sweeps/${id}?project_id=${projectId}&experiment_id=${experimentId}` as const,
+
+    /** POST /sweeps/ — create a new hyperparameter sweep (scope in body) */
+    create: () => "/sweeps/" as const,
+  }
 } as const;
 

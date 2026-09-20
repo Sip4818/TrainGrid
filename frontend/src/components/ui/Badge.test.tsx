@@ -4,6 +4,7 @@ import { Badge } from "./Badge";
 import { RunStatus } from "../../features/runs/types";
 import { ModelStage } from "../../features/models/types";
 import { DeploymentStatus } from "../../features/deployments/types";
+import { SweepStatus } from "../../features/sweeps/types";
 
 describe("Badge", () => {
   it("renders children text", () => {
@@ -79,5 +80,15 @@ describe("Badge", () => {
   it("renders with DeploymentStatus.STOPPED variant", () => {
     render(<Badge variant={DeploymentStatus.STOPPED}>stopped</Badge>);
     expect(screen.getByText("stopped")).toBeInTheDocument();
+  });
+
+  it("renders with SweepStatus.RUNNING variant", () => {
+    render(<Badge variant={SweepStatus.RUNNING}>running</Badge>);
+    expect(screen.getByText("running")).toBeInTheDocument();
+  });
+
+  it("renders with SweepStatus.COMPLETED variant", () => {
+    render(<Badge variant={SweepStatus.COMPLETED}>completed</Badge>);
+    expect(screen.getByText("completed")).toBeInTheDocument();
   });
 });

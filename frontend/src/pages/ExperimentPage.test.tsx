@@ -84,6 +84,8 @@ function mockApi(
   runs: unknown[] = [],
   trainers: unknown[] = defaultTrainers,
   experiment: unknown = sampleExperiment,
+  sweeps: unknown[] = [],
+  datasets: unknown[] = [],
 ) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(
     async (input, init) => {
@@ -96,7 +98,13 @@ function mockApi(
       }
       const url = String(input);
       if (url.includes("/datasets/")) {
-        return new Response(JSON.stringify([]), {
+        return new Response(JSON.stringify(datasets), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/sweeps/")) {
+        return new Response(JSON.stringify(sweeps), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
@@ -539,6 +547,219 @@ describe("ExperimentPage dataset picker", () => {
       project_id: 1,
       experiment_id: 10,
       trainer_name: "random_forest",
+    });
+  });
+});
+
+describe("ExperimentPage sweeps tab", () => {
+  const sampleSweep = {
+    id: 7,
+    project_id: 1,
+    experiment_id: 10,
+    trainer_name: "random_forest",
+    dataset_path: "datasets/1/dataset.csv",
+    target_column: "target",
+    feature_columns: ["feature1"],
+    search_space: { n_estimators: [100, 200] },
+    strategy: "grid",
+    max_combinations: null,
+    metric: "accuracy",
+    goal: "maximize",
+    status: "running",
+    best_run_id: null,
+    created_at: "2024-01-01T00:00:00Z",
+    started_at: "2024-01-01T00:01:00Z",
+    finished_at: null,
+    run_ids: [],
+  };
+
+  const completedSweep = {
+    ...sampleSweep,
+    status: "completed",
+    best_run_id: 1,
+    finished_at: "2024-01-01T00:05:00Z",
+    run_ids: [1],
+  };
+
+  const sampleDatasets = [
+    { store_key: "datasets/1/dataset.csv", name: "iris.csv" },
+  ];
+
+  async function goToSweepsTab(sweeps: unknown[] = [sampleSweep]) {
+    mockApi([sampleRun], defaultTrainers, sampleExperiment, sweeps);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
+    await waitFor(() => screen.getByRole("tab", { name: "Sweeps" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Sweeps" }));
+  }
+
+  it("renders Runs and Sweeps tabs with Runs active by default", async () => {
+    mockApi([sampleRun]);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
+
+    await waitFor(() => screen.getByRole("tab", { name: "Runs" }));
+    expect(
+      screen.getByRole("tab", { name: "Runs" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("tab", { name: "Sweeps" }).getAttribute("aria-selected"),
+    ).toBe("false");
+    // Runs content visible, sweep actions hidden until tab switch
+    expect(screen.getByText("New Run")).toBeDefined();
+    expect(screen.queryByText("New Sweep")).toBeNull();
+  });
+
+  it("lists sweeps with trainer, strategy, and status", async () => {
+    await goToSweepsTab();
+
+    await waitFor(() => {
+      expect(screen.getByText("random_forest")).toBeDefined();
+    });
+    expect(screen.getByText("grid")).toBeDefined();
+    expect(screen.getByText("running")).toBeDefined();
+    expect(screen.getByText("New Sweep")).toBeDefined();
+  });
+
+  it("opens the create sweep modal with model and search space fields", async () => {
+    await goToSweepsTab([]);
+
+    screen.getByText("New Sweep").click();
+
+    await waitFor(() => screen.getByText("Create Hyperparameter Sweep"));
+    expect(screen.getByLabelText("Model")).toBeDefined();
+    expect(screen.getByLabelText("Dataset")).toBeDefined();
+    expect(screen.getByLabelText("Target Column")).toBeDefined();
+    expect(screen.getByLabelText("Strategy")).toBeDefined();
+    expect(screen.getByLabelText("N Estimators")).toBeDefined();
+  });
+
+  it("creates a sweep with dataset block and search space payload", async () => {
+    let postedBody: unknown = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const method = (init?.method as string | undefined) ?? "GET";
+      const url = String(input);
+      if (method === "POST" && url.includes("/sweeps/")) {
+        postedBody = JSON.parse(init?.body as string);
+        return new Response(JSON.stringify(sampleSweep), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (method === "POST") {
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/datasets/")) {
+        return new Response(JSON.stringify(sampleDatasets), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/experiments/")) {
+        return new Response(JSON.stringify(sampleExperiment), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/trainers/")) {
+        return new Response(JSON.stringify(defaultTrainers), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/sweeps/")) {
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify([sampleRun]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
+    await waitFor(() => screen.getByRole("tab", { name: "Sweeps" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Sweeps" }));
+
+    await waitFor(() => screen.getByText("New Sweep"));
+    screen.getByText("New Sweep").click();
+    await waitFor(() => screen.getByText("Create Hyperparameter Sweep"));
+
+    fireEvent.change(screen.getByLabelText("Model"), {
+      target: { value: "random_forest" },
+    });
+    await waitFor(() => screen.getByLabelText("N Estimators"));
+    fireEvent.change(screen.getByLabelText("Dataset"), {
+      target: { value: "datasets/1/dataset.csv" },
+    });
+    fireEvent.change(screen.getByLabelText("Max Depth"), {
+      target: { value: "5, 10" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create Sweep" }));
+
+    await waitFor(() => {
+      expect(postedBody).not.toBeNull();
+    });
+    expect(postedBody).toMatchObject({
+      project_id: 1,
+      experiment_id: 10,
+      trainer_name: "random_forest",
+      dataset_path: "datasets/1/dataset.csv",
+      target_column: "target",
+      feature_columns: ["feature1", "feature2"],
+      strategy: "grid",
+      metric: "accuracy",
+      goal: "maximize",
+    });
+    expect(
+      (postedBody as unknown as Record<string, unknown>)["search_space"],
+    ).toMatchObject({ n_estimators: [100], max_depth: [5, 10] });
+  });
+
+  it("shows random strategy max combinations field", async () => {
+    await goToSweepsTab([]);
+
+    screen.getByText("New Sweep").click();
+    await waitFor(() => screen.getByText("Create Hyperparameter Sweep"));
+
+    expect(screen.queryByLabelText("Max Combinations")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Strategy"), {
+      target: { value: "random" },
+    });
+    expect(screen.getByLabelText("Max Combinations")).toBeDefined();
+  });
+
+  it("opens sweep detail on row click and returns on back", async () => {
+    mockApi([sampleRun], defaultTrainers, sampleExperiment, [completedSweep]);
+    renderWithProviders(<ExperimentPage />, {
+      initialEntries: ["/projects/1/experiments/10"],
+    });
+    await waitFor(() => screen.getByRole("tab", { name: "Sweeps" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Sweeps" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("random_forest")).toBeDefined();
+    });
+    screen.getByText("random_forest").click();
+
+    await waitFor(() => {
+      expect(screen.getByText("Sweep #7")).toBeDefined();
+    });
+    expect(screen.getByText("Run #1")).toBeDefined();
+    expect(screen.getByText("Combinations")).toBeDefined();
+
+    screen.getByText("← Back").click();
+    await waitFor(() => {
+      expect(screen.getByText("New Sweep")).toBeDefined();
     });
   });
 });
