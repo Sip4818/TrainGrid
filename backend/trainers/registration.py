@@ -1,6 +1,8 @@
 import importlib
 import pkgutil
 
+from backend.shared.errors import CannotRegisterModelTrainerError
+
 
 def register_all() -> None:
     """Import every trainer package so its module-level self-registration runs.
@@ -12,9 +14,11 @@ def register_all() -> None:
     import backend.trainers as trainers_pkg
 
     for mod in pkgutil.iter_modules(trainers_pkg.__path__):
-        if mod.name in {"base", "registry", "configs"}:
+        if mod.name in {"base", "registry", "configs", "registration"}:
             continue
         try:
             importlib.import_module(f"backend.trainers.{mod.name}.trainer")
         except ImportError:
-            pass
+            raise CannotRegisterModelTrainerError(
+                f"Failed to import trainer module for '{mod.name}'"
+            )

@@ -175,3 +175,10 @@ class PredictionError(TrainGridError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
+
+
+class CannotRegisterModelTrainerError(TrainGridError):
+    """Raised when a model trainer cannot be registered."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)

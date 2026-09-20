@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from backend.shared.errors import (
+    CannotRegisterModelTrainerError,
     DatasetUploadError,
     DeploymentAlreadyExistsError,
     DeploymentNotFoundError,
@@ -170,6 +171,18 @@ async def handle_prediction_error(request: Request, exc: Exception) -> JSONRespo
     )
 
 
+async def handle_cannot_register_model_trainer(
+    request: Request, exc: Exception
+) -> JSONResponse:
+    """Catch CannotRegisterModelTrainerError and return a 500."""
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": {"code": "CANNOT_REGISTER_MODEL_TRAINER", "message": str(exc)}
+        },
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register all custom exception handlers on the FastAPI app."""
     app.add_exception_handler(TrainGridError, handle_traingrid_error)
@@ -193,3 +206,6 @@ def register_exception_handlers(app: FastAPI) -> None:
     )
     app.add_exception_handler(PredictionError, handle_prediction_error)
     app.add_exception_handler(Exception, handle_generic_error)
+    app.add_exception_handler(
+        CannotRegisterModelTrainerError, handle_cannot_register_model_trainer
+    )

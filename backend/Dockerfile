@@ -19,7 +19,8 @@ RUN pip install --no-cache-dir \
     scikit-learn \
     pandas \
     xgboost \
-    psycopg2-binary
+    psycopg2-binary \
+    torch
 
 COPY backend/ ./backend/
 
