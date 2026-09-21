@@ -65,4 +65,15 @@ describe("Modal", () => {
     );
     expect(screen.getByRole("dialog")).toHaveAttribute("aria-modal", "true");
   });
+
+  it("caps dialog height to prevent viewport overflow", () => {
+    render(
+      <Modal isOpen={true} onClose={() => {}} title="Overflow Test">
+        <p>Content</p>
+      </Modal>,
+    );
+    const dialog = screen.getByRole("dialog").firstChild as HTMLElement;
+    expect(dialog.style.maxHeight).toBe("85vh");
+    expect(dialog.style.overflow).toBe("auto");
+  });
 });
