@@ -24,6 +24,7 @@ const dialogStyle: React.CSSProperties = {
   padding: "24px",
   minWidth: "320px",
   maxWidth: "480px",
+  maxHeight: "85vh",
   width: "100%",
   boxShadow: "0 4px 24px rgba(0, 0, 0, 0.15)",
   position: "relative",
