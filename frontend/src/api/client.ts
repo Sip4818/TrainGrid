@@ -42,6 +42,9 @@ export class ApiError extends Error {
   }
 }
 
+/** Header carrying the end-to-end correlation ID (see backend middleware). */
+export const CORRELATION_ID_HEADER = "X-Correlation-ID";
+
 /** Internal fetch wrapper shared by get/post/del. */
 async function request<T>(
   method: "GET" | "POST" | "DELETE",
@@ -50,7 +53,11 @@ async function request<T>(
 ): Promise<T> {
   const url = `${BASE_URL}${path}`;
   const isFormData = body instanceof FormData;
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    // Originate the trace: the backend echoes this ID back in responses
+    // and propagates it to Celery workers so logs can be joined by ID.
+    [CORRELATION_ID_HEADER]: crypto.randomUUID(),
+  };
   if (!isFormData) {
     headers["Content-Type"] = "application/json";
   }
