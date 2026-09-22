@@ -25,12 +25,13 @@ def _create_completed_run(experiment_id: int, project_id: int = 1) -> int:
         },
     }
     with patch(
-        "backend.workers.tasks.training_tasks.start_training_run.delay"
+        "backend.workers.tasks.training_tasks.start_training_run.apply_async"
     ) as mock_delay:
         response = client.post("/runs/", json=payload)
         assert response.status_code == 200
         run_id = response.json()["id"]
-        mock_delay.assert_called_once_with(str(run_id))
+        mock_delay.assert_called_once()
+        assert mock_delay.call_args.kwargs["args"] == [str(run_id)]
 
     db = SessionLocal()
     try:
@@ -71,7 +72,7 @@ def test_create_run():
     }
     # Patch the Celery task so no real broker is needed
     with patch(
-        "backend.workers.tasks.training_tasks.start_training_run.delay"
+        "backend.workers.tasks.training_tasks.start_training_run.apply_async"
     ) as mock_delay:
         response = client.post("/runs/", json=payload)
         assert response.status_code == 200
@@ -83,7 +84,8 @@ def test_create_run():
         # The default status for a new run is "pending" (see RunModel default)
         assert data["status"] == "pending"
         assert "id" in data
-        mock_delay.assert_called_once_with(str(data["id"]))
+        mock_delay.assert_called_once()
+        assert mock_delay.call_args.kwargs["args"] == [str(data["id"])]
 
 
 def test_create_run_unknown_trainer():
