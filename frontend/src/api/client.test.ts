@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, apiClient } from "./client";
+import { ApiError, CORRELATION_ID_HEADER, apiClient } from "./client";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -25,10 +25,38 @@ describe("apiClient.get", () => {
     const result = await apiClient.get<typeof data>("/runs/1");
 
     expect(result).toEqual(data);
-    expect(fetchSpy).toHaveBeenCalledWith(`${BASE_URL}/runs/1`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `${BASE_URL}/runs/1`,
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          [CORRELATION_ID_HEADER]: expect.any(String),
+        }),
+      }),
+    );
+  });
+
+  it("sends a valid UUID correlation ID on every request", async () => {
+    const fetchSpy = mockFetch(200, {});
+
+    await apiClient.get("/runs/1");
+    await apiClient.get("/runs/2");
+
+    const ids = fetchSpy.mock.calls.map(
+      (call) =>
+        (call[1] as { headers: Record<string, string> }).headers[
+          CORRELATION_ID_HEADER
+        ],
+    );
+    const uuidPattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    expect(ids).toHaveLength(2);
+    for (const id of ids) {
+      expect(id).toMatch(uuidPattern);
+    }
+    // Each request gets a fresh ID so traces never cross.
+    expect(ids[0]).not.toBe(ids[1]);
   });
 
   it("throws ApiError on 404", async () => {
@@ -75,11 +103,17 @@ describe("apiClient.post", () => {
     const result = await apiClient.post("/runs/", payload);
 
     expect(result).toEqual(responseBody);
-    expect(fetchSpy).toHaveBeenCalledWith(`${BASE_URL}/runs/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `${BASE_URL}/runs/`,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          [CORRELATION_ID_HEADER]: expect.any(String),
+        }),
+        body: JSON.stringify(payload),
+      }),
+    );
   });
 
   it("throws ApiError on validation error (422)", async () => {
@@ -95,11 +129,17 @@ describe("apiClient.post", () => {
     const fetchSpy = mockFetch(200, {});
     await apiClient.post("/runs/");
 
-    expect(fetchSpy).toHaveBeenCalledWith(`${BASE_URL}/runs/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: undefined,
-    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `${BASE_URL}/runs/`,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          [CORRELATION_ID_HEADER]: expect.any(String),
+        }),
+        body: undefined,
+      }),
+    );
   });
 });
 
