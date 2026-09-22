@@ -99,12 +99,13 @@ def test_delete_project_cascades_to_experiments_and_runs():
         },
     }
     with patch(
-        "backend.workers.tasks.training_tasks.start_training_run.delay"
+        "backend.workers.tasks.training_tasks.start_training_run.apply_async"
     ) as mock_delay:
         response = client.post("/runs/", json=payload)
         assert response.status_code == 200
         run_id = response.json()["id"]
-        mock_delay.assert_called_once_with(str(run_id))
+        mock_delay.assert_called_once()
+        assert mock_delay.call_args.kwargs["args"] == [str(run_id)]
 
     response = client.delete(f"/projects/{project['id']}")
     assert response.status_code == 200
