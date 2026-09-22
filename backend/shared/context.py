@@ -8,9 +8,7 @@ celery_app), not via shared memory — each process holds its own copy.
 
 from contextvars import ContextVar, Token
 
-correlation_id_var: ContextVar[str | None] = ContextVar(
-    "correlation_id", default=None
-)
+correlation_id_var: ContextVar[str | None] = ContextVar("correlation_id", default=None)
 
 
 def get_correlation_id() -> str | None:

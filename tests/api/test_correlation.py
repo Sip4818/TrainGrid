@@ -6,14 +6,14 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from backend.api.core.logging import (
+    CorrelationIdFilter,
+    JsonFormatter,
+)
 from backend.api.main import app
 from backend.api.middleware.correlation import (
     CORRELATION_ID_HEADER,
     CorrelationIdMiddleware,
-)
-from backend.api.core.logging import (
-    CorrelationIdFilter,
-    JsonFormatter,
 )
 from backend.shared.context import (
     get_correlation_id,
@@ -65,8 +65,13 @@ def test_correlation_id_filter_injects_id():
     token = set_correlation_id("req-123")
     try:
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname=__file__, lineno=1,
-            msg="hello", args=(), exc_info=None,
+            name="test",
+            level=logging.INFO,
+            pathname=__file__,
+            lineno=1,
+            msg="hello",
+            args=(),
+            exc_info=None,
         )
         assert CorrelationIdFilter().filter(record) is True
         assert record.correlation_id == "req-123"
@@ -77,8 +82,13 @@ def test_correlation_id_filter_injects_id():
 def test_correlation_id_filter_defaults_when_unset():
     assert get_correlation_id() is None
     record = logging.LogRecord(
-        name="test", level=logging.INFO, pathname=__file__, lineno=1,
-        msg="hello", args=(), exc_info=None,
+        name="test",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg="hello",
+        args=(),
+        exc_info=None,
     )
     CorrelationIdFilter().filter(record)
 
@@ -87,8 +97,13 @@ def test_correlation_id_filter_defaults_when_unset():
 
 def test_json_formatter_includes_correlation_id():
     record = logging.LogRecord(
-        name="test", level=logging.INFO, pathname=__file__, lineno=1,
-        msg="hello", args=(), exc_info=None,
+        name="test",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg="hello",
+        args=(),
+        exc_info=None,
     )
     record.correlation_id = "req-123"
 
