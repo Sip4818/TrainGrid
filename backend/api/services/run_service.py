@@ -3,6 +3,7 @@ from typing import Any, cast
 from sqlalchemy.orm import Session
 
 from backend.api.core.logging import get_logger
+from backend.api.middleware.correlation import CORRELATION_ID_HEADER
 from backend.api.schemas.run import RunComparisonItem, RunComparisonResponse, RunCreate
 from backend.infrastructure.database.models import (
     DatasetModel,
@@ -10,6 +11,7 @@ from backend.infrastructure.database.models import (
     ProjectModel,
     RunModel,
 )
+from backend.shared.context import get_correlation_id
 from backend.shared.enums import RunStatus
 from backend.shared.errors import (
     ExperimentNotFoundError,
@@ -65,7 +67,10 @@ class RunService:
         from backend.workers.tasks.training_tasks import start_training_run
 
         try:
-            start_training_run.delay(str(run.id))
+            start_training_run.apply_async(
+                args=[str(run.id)],
+                headers={CORRELATION_ID_HEADER: get_correlation_id()},
+            )
             logger.info("Celery task dispatched for run_id=%d", run.id)
         except Exception as exc:  # noqa: BLE001
             logger.error("Failed to enqueue Celery task for run_id=%d: %s", run.id, exc)
