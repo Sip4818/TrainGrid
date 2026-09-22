@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.core.exceptions import register_exception_handlers
 from backend.api.core.logging import configure_logging
+from backend.api.middleware.correlation import CorrelationIdMiddleware
 from backend.api.routers import (
     datasets,
     deployments,
@@ -43,6 +44,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Bind a correlation ID to every request for end-to-end tracing
+    app.add_middleware(CorrelationIdMiddleware)
 
     # 3. Register Exception Handlers
     register_exception_handlers(app)
