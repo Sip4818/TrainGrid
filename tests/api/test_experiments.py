@@ -149,12 +149,13 @@ def test_delete_experiment_cascades_to_runs():
         },
     }
     with patch(
-        "backend.workers.tasks.training_tasks.start_training_run.delay"
+        "backend.workers.tasks.training_tasks.start_training_run.apply_async"
     ) as mock_delay:
         response = client.post("/runs/", json=payload)
         assert response.status_code == 200
         run_id = response.json()["id"]
-        mock_delay.assert_called_once_with(str(run_id))
+        mock_delay.assert_called_once()
+        assert mock_delay.call_args.kwargs["args"] == [str(run_id)]
 
     response = client.delete(
         f"/experiments/{experiment['id']}", params={"project_id": 1}
@@ -185,7 +186,7 @@ def test_experiment_run_count_reflects_runs():
             "feature_columns": ["f1", "f2"],
         },
     }
-    with patch("backend.workers.tasks.training_tasks.start_training_run.delay"):
+    with patch("backend.workers.tasks.training_tasks.start_training_run.apply_async"):
         client.post("/runs/", json=payload)
 
     response = client.get(f"/experiments/{experiment['id']}", params={"project_id": 1})
