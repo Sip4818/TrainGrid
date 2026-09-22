@@ -26,9 +26,7 @@ class JsonFormatter(logging.Formatter):
             "logger": record.name,
             "location": f"{record.filename}:{record.lineno}",
             "msg": record.getMessage(),
-            "correlation_id": getattr(
-                record, "correlation_id", MISSING_CORRELATION_ID
-            ),
+            "correlation_id": getattr(record, "correlation_id", MISSING_CORRELATION_ID),
         }
         return json.dumps(payload)
 
@@ -56,3 +54,8 @@ def configure_logging() -> None:
     # Avoid duplicate handlers if called multiple times
     if not root.handlers:
         root.addHandler(handler)
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Return a logger for the given name (typically __name__)."""
+    return logging.getLogger(name)
