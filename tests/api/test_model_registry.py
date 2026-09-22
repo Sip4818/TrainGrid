@@ -70,7 +70,7 @@ def _create_run_with_status(experiment_id: int, status: RunStatus) -> int:
 # --- Registration tests ---
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_register_model(mock_delay):
     run_id = _create_completed_run(1)
     response = client.post(
@@ -95,7 +95,7 @@ def test_register_model(mock_delay):
     assert data["metrics"]["accuracy"] == 0.95
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_register_model_duplicate_version(mock_delay):
     run_id = _create_completed_run(1)
     # Register first time
@@ -122,7 +122,7 @@ def test_register_model_duplicate_version(mock_delay):
     assert data["detail"]["code"] == "MODEL_VERSION_EXISTS"
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_register_model_run_not_completed(mock_delay):
     run_id = _create_run_with_status(1, RunStatus.RUNNING)
     response = client.post(
@@ -155,7 +155,7 @@ def test_register_model_run_not_found():
 # --- List and get tests ---
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_list_models(mock_delay):
     run_id = _create_completed_run(1)
     client.post(
@@ -174,7 +174,7 @@ def test_list_models(mock_delay):
     assert "fraud-detector" in names
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_get_model(mock_delay):
     run_id = _create_completed_run(1)
     client.post(
@@ -202,7 +202,7 @@ def test_get_model_not_found():
 # --- Version tests ---
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_list_model_versions(mock_delay):
     run_id1 = _create_completed_run(1)
     client.post(
@@ -237,7 +237,7 @@ def test_list_model_versions_not_found():
     assert data["detail"]["code"] == "MODEL_NOT_FOUND"
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_get_model_version(mock_delay):
     run_id = _create_completed_run(1)
     client.post(
@@ -265,7 +265,7 @@ def test_get_model_version_not_found():
 # --- Promote tests ---
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_promote_none_to_staging(mock_delay):
     run_id = _create_completed_run(1)
     client.post(
@@ -285,7 +285,7 @@ def test_promote_none_to_staging(mock_delay):
     assert data["stage"] == "staging"
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_promote_staging_to_production(mock_delay):
     run_id = _create_completed_run(1)
     client.post(
@@ -311,7 +311,7 @@ def test_promote_staging_to_production(mock_delay):
     assert data["stage"] == "production"
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_demote_production_to_staging(mock_delay):
     run_id = _create_completed_run(1)
     client.post(
@@ -341,7 +341,7 @@ def test_demote_production_to_staging(mock_delay):
     assert data["stage"] == "staging"
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_promote_invalid_transition(mock_delay):
     run_id = _create_completed_run(1)
     client.post(
@@ -362,7 +362,7 @@ def test_promote_invalid_transition(mock_delay):
     assert data["detail"]["code"] == "INVALID_STAGE_TRANSITION"
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_promote_archived_to_staging(mock_delay):
     run_id = _create_completed_run(1)
     client.post(
@@ -388,7 +388,7 @@ def test_promote_archived_to_staging(mock_delay):
     assert response.json()["stage"] == "staging"
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_promote_archived_to_none(mock_delay):
     run_id = _create_completed_run(1)
     client.post(
@@ -412,7 +412,7 @@ def test_promote_archived_to_none(mock_delay):
     assert response.json()["stage"] == "none"
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_promote_archived_to_production_rejected(mock_delay):
     run_id = _create_completed_run(1)
     client.post(
@@ -438,7 +438,7 @@ def test_promote_archived_to_production_rejected(mock_delay):
     assert data["detail"]["code"] == "INVALID_STAGE_TRANSITION"
 
 
-@patch("backend.workers.tasks.training_tasks.start_training_run.delay")
+@patch("backend.workers.tasks.training_tasks.start_training_run.apply_async")
 def test_promote_model_not_found(mock_delay):
     response = client.post(
         "/models/unknown-model/versions/v1.0.0/promote",
