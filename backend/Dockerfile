@@ -4,23 +4,17 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    UV_SYSTEM_PYTHON=1
 
-RUN pip install --no-cache-dir \
-    fastapi \
-    "uvicorn[standard]" \
-    celery \
-    redis \
-    python-multipart \
-    pydantic-settings \
-    sqlalchemy \
-    alembic \
-    httpx \
-    scikit-learn \
-    pandas \
-    xgboost \
-    psycopg2-binary \
-    torch
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Copy workspace metadata first so dependency layers cache
+# until pyproject.toml or uv.lock change.
+COPY pyproject.toml uv.lock ./
+COPY backend/pyproject.toml backend/README.MD ./backend/
+
+RUN uv sync --frozen --no-dev --package backend
 
 COPY backend/ ./backend/
 
