@@ -4,8 +4,7 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app \
-    UV_SYSTEM_PYTHON=1
+    PYTHONPATH=/app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -15,6 +14,10 @@ COPY pyproject.toml uv.lock ./
 COPY backend/pyproject.toml backend/README.MD ./backend/
 
 RUN uv sync --frozen --no-dev --package backend
+
+# uv installs into /app/.venv; put its console scripts
+# (uvicorn, celery) on PATH for the container commands.
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY backend/ ./backend/
 
