@@ -2,12 +2,19 @@ from pathlib import Path
 from typing import cast
 from unittest.mock import patch
 
+from prometheus_client import REGISTRY
+
 from backend.infrastructure.database.models import RunModel
 from backend.infrastructure.database.session import Base, SessionLocal, engine
 from backend.infrastructure.storage.local_store import LocalArtifactStore
 from backend.shared.enums import RunStatus
 from backend.trainers.base import BaseTrainer
 from backend.workers.tasks.training_tasks import start_training_run
+
+
+def _sample_value(name: str, labels: dict[str, str]) -> float:
+    """Read a sample from the shared global registry, defaulting to 0."""
+    return REGISTRY.get_sample_value(name, labels) or 0.0
 
 
 class FakeConfig:
@@ -84,6 +91,66 @@ def test_start_training_run_resolves_trainer_via_registry(tmp_path):
     assert updated.artifact_path == f"runs/{run_id}/model.joblib"
     db.close()
     assert (tmp_path / "runs" / str(run_id) / "model.joblib").is_file()
+
+
+def test_training_run_records_lifecycle_metrics(tmp_path):
+    """Status transitions, duration, and gauge move together with the task."""
+    Base.metadata.create_all(bind=engine)
+
+    store = LocalArtifactStore(root=tmp_path)
+    source = tmp_path / "uploaded.csv"
+    source.write_text("f1,f2,target\n1,2,0\n")
+    store.save(source, "datasets/1/dataset.csv")
+
+    db = SessionLocal()
+    run_id = _create_run(
+        {
+            "trainer_name": "fake",
+            "dataset_path": "datasets/1/dataset.csv",
+            "target_column": "target",
+            "feature_columns": ["f1", "f2"],
+        },
+        db,
+    )
+    db.close()
+
+    pending_running = {"from_status": "pending", "to_status": "running"}
+    running_completed = {"from_status": "running", "to_status": "completed"}
+    duration = {"trainer_name": "fake", "status": "completed"}
+    before_pr = _sample_value("traingrid_runs_status_transitions_total", pending_running)
+    before_rc = _sample_value(
+        "traingrid_runs_status_transitions_total", running_completed
+    )
+    before_dur = _sample_value("traingrid_training_duration_seconds_count", duration)
+    before_gauge = _sample_value("traingrid_active_runs", {})
+
+    with (
+        patch(
+            "backend.trainers.registry.trainer_registry.get",
+            return_value=FakeTrainer,
+        ),
+        patch(
+            "backend.workers.tasks.training_tasks.local_artifact_store",
+            store,
+        ),
+    ):
+        result = start_training_run(str(run_id))
+
+    assert result["status"] == "completed"
+    assert (
+        _sample_value("traingrid_runs_status_transitions_total", pending_running)
+        == before_pr + 1
+    )
+    assert (
+        _sample_value("traingrid_runs_status_transitions_total", running_completed)
+        == before_rc + 1
+    )
+    assert (
+        _sample_value("traingrid_training_duration_seconds_count", duration)
+        == before_dur + 1
+    )
+    # Gauge incremented on RUNNING and decremented on COMPLETED.
+    assert _sample_value("traingrid_active_runs", {}) == before_gauge
 
 
 def _create_run(config: dict, db) -> int:
