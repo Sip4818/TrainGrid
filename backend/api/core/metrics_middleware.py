@@ -18,7 +18,8 @@ from backend.infrastructure.tracking.metrics_store import (
     http_requests_total,
 )
 
-METRICS_PATH = "/metrics"
+# Both the bare path and the mount's trailing-slash redirect target are skipped.
+METRICS_PATHS = ("/metrics", "/metrics/")
 UNMATCHED_ROUTE = "unmatched"
 
 
@@ -35,7 +36,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        if request.url.path == METRICS_PATH:
+        if request.url.path in METRICS_PATHS:
             return await call_next(request)
         start = time.perf_counter()
         response = await call_next(request)
