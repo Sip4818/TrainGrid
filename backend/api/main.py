@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import make_asgi_app
 
 from backend.api.core.exceptions import register_exception_handlers
 from backend.api.core.logging import configure_logging
+from backend.api.core.metrics_middleware import MetricsMiddleware
 from backend.api.middleware.correlation import CorrelationIdMiddleware
 from backend.api.routers import (
     datasets,
@@ -48,6 +50,10 @@ def create_app() -> FastAPI:
     # Bind a correlation ID to every request for end-to-end tracing
     app.add_middleware(CorrelationIdMiddleware)
 
+    # Record Prometheus HTTP telemetry for every request. Added last so it
+    # runs outermost and wraps everything, including CORS handling.
+    app.add_middleware(MetricsMiddleware)
+
     # 3. Register Exception Handlers
     register_exception_handlers(app)
 
@@ -61,6 +67,9 @@ def create_app() -> FastAPI:
     app.include_router(experiments.router)
     app.include_router(datasets.router)
     app.include_router(sweeps.router)
+
+    # 5. Expose Prometheus metrics for scraping (handles content negotiation).
+    app.mount("/metrics", make_asgi_app())
 
     return app
 

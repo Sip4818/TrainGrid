@@ -11,6 +11,9 @@ from backend.infrastructure.database.models import (
     ProjectModel,
     RunModel,
 )
+from backend.infrastructure.tracking.metrics_store import (
+    traingrid_runs_created_total,
+)
 from backend.shared.context import get_correlation_id
 from backend.shared.enums import RunStatus
 from backend.shared.errors import (
@@ -60,6 +63,7 @@ class RunService:
         self.db.add(run)
         self.db.commit()
         self.db.refresh(run)
+        traingrid_runs_created_total.labels(payload.trainer_name).inc()
         logger.info(
             "Run persisted run_id=%d experiment_id=%d", run.id, run.experiment_id
         )
