@@ -2,6 +2,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -22,8 +23,12 @@ from backend.workers.celery_app import celery_app
 logger = get_logger(__name__)
 
 
-def _status_label(status: RunStatus | str) -> str:
-    """Return the plain string value for a status (enum member or raw str)."""
+def _status_label(status: Any) -> str:
+    """Return the plain string value for a status (enum member or raw str).
+
+    Typed as ``Any`` because SQLAlchemy model attributes are untyped
+    (``Column[Any]``); at runtime the value is always a ``RunStatus`` or str.
+    """
     if isinstance(status, RunStatus):
         return status.value
     return str(status)
