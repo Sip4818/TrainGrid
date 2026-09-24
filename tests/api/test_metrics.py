@@ -71,9 +71,7 @@ def test_runs_created_counter_increments() -> None:
             "n_estimators": 10,
         },
     }
-    with patch(
-        "backend.workers.tasks.training_tasks.start_training_run.apply_async"
-    ):
+    with patch("backend.workers.tasks.training_tasks.start_training_run.apply_async"):
         response = client.post("/runs/", json=payload)
 
     assert response.status_code == 200

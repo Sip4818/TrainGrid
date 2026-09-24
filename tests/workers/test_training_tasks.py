@@ -117,7 +117,9 @@ def test_training_run_records_lifecycle_metrics(tmp_path):
     pending_running = {"from_status": "pending", "to_status": "running"}
     running_completed = {"from_status": "running", "to_status": "completed"}
     duration = {"trainer_name": "fake", "status": "completed"}
-    before_pr = _sample_value("traingrid_runs_status_transitions_total", pending_running)
+    before_pr = _sample_value(
+        "traingrid_runs_status_transitions_total", pending_running
+    )
     before_rc = _sample_value(
         "traingrid_runs_status_transitions_total", running_completed
     )
