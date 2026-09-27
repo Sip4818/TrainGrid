@@ -1,7 +1,12 @@
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+
+import redis.asyncio as redis_asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
 
+from backend.api.core.config import settings
 from backend.api.core.exceptions import register_exception_handlers
 from backend.api.core.logging import configure_logging
 from backend.api.core.metrics_middleware import MetricsMiddleware
@@ -15,11 +20,20 @@ from backend.api.routers import (
     models,
     projects,
     runs,
+    streams,
     sweeps,
 )
 from backend.infrastructure.database.seed import seed_defaults
 from backend.infrastructure.database.session import Base, engine
 from backend.trainers.registration import register_all
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Own the shared async Redis client used by the SSE stream endpoint."""
+    app.state.redis = redis_asyncio.from_url(settings.redis_url, decode_responses=True)
+    yield
+    await app.state.redis.aclose()
 
 
 def create_app() -> FastAPI:
@@ -36,7 +50,7 @@ def create_app() -> FastAPI:
     register_all()
 
     # 2. Create App
-    app = FastAPI(title="TrainGrid API")
+    app = FastAPI(title="TrainGrid API", lifespan=lifespan)
 
     # Configure CORS middleware
     app.add_middleware(
@@ -67,6 +81,7 @@ def create_app() -> FastAPI:
     app.include_router(experiments.router)
     app.include_router(datasets.router)
     app.include_router(sweeps.router)
+    app.include_router(streams.router)
 
     # 5. Expose Prometheus metrics for scraping (handles content negotiation).
     app.mount("/metrics", make_asgi_app())
