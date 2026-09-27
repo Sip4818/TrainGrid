@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestClassifier  # type: ignore[import-untyp
 from sklearn.metrics import accuracy_score  # type: ignore[import-untyped]
 from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
 
-from backend.trainers.base import BaseTrainer
+from backend.trainers.base import BaseTrainer, TrainingCallback
 from backend.trainers.registry import trainer_registry
 
 from .config import RandomForestClassifierConfig
@@ -45,7 +45,11 @@ class RandomForestClassifierTrainer(BaseTrainer):
         self.y_train = y_train
         self.y_test = y_test
 
-    def train(self):
+    def train(self, on_event: TrainingCallback | None = None):
+        # NOTE: on_event is intentionally ignored. RandomForestClassifier.fit()
+        # is a single atomic call with no per-step hook, so there are no
+        # intermediate metrics to report. The signature accepts the callback
+        # only to satisfy the BaseTrainer contract.
         self.load_data()
         self.validate_data()
         self.preprocess_data()

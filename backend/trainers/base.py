@@ -1,5 +1,17 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Any, ClassVar
+
+# Event payload emitted by trainers as training progresses, e.g.
+# {"type": "epoch", "epoch": 5, "total_epochs": 50, "loss": 0.12, "val_loss": 0.18}.
+# Trainers stay decoupled from consumers (Redis, SSE, logging): they only know
+# this shape contract, never who listens.
+TrainingEvent = dict[str, Any]
+
+# Callback trainers invoke to report progress. Optional everywhere: trainers
+# whose algorithm has no iterative steps (e.g. RandomForest's atomic fit())
+# simply ignore it.
+TrainingCallback = Callable[[TrainingEvent], None]
 
 
 class BaseTrainer(ABC):
@@ -8,7 +20,7 @@ class BaseTrainer(ABC):
     model_extension: ClassVar[str] = ".joblib"
 
     @abstractmethod
-    def train(self) -> Any:
+    def train(self, on_event: TrainingCallback | None = None) -> Any:
         raise NotImplementedError
 
     @abstractmethod
