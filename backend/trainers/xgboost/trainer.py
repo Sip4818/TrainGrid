@@ -4,7 +4,7 @@ from sklearn.metrics import accuracy_score  # type: ignore[import-untyped]
 from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
 from xgboost import XGBClassifier  # type: ignore[import-untyped]
 
-from backend.trainers.base import BaseTrainer
+from backend.trainers.base import BaseTrainer, TrainingCallback
 from backend.trainers.registry import trainer_registry
 
 from .config import XGBoostClassifierConfig
@@ -17,7 +17,7 @@ class XGBoostClassifierTrainer(BaseTrainer):
     def __init__(self, config: XGBoostClassifierConfig):
         self.config = config
         self.data = None
-        self.model = None
+        self.model: XGBClassifier | None = None
         self.X_train = None
         self.X_test = None
         self.y_train = None
@@ -45,7 +45,7 @@ class XGBoostClassifierTrainer(BaseTrainer):
         self.y_train = y_train
         self.y_test = y_test
 
-    def train(self):
+    def train(self, on_event: TrainingCallback | None = None):
         self.load_data()
         self.validate_data()
         self.preprocess_data()
@@ -58,6 +58,21 @@ class XGBoostClassifierTrainer(BaseTrainer):
         )
         model.fit(self.X_train, self.y_train)
         self.model = model
+        if on_event is not None:
+            # Single completion event only: XGBClassifier.fit() is one
+            # blocking call and per-round progress via XGBoost's native
+            # callback API is deferred, so consumers get exactly one point.
+            train_accuracy = float(
+                accuracy_score(self.y_train, model.predict(self.X_train))
+            )
+            on_event(
+                {
+                    "type": "epoch",
+                    "epoch": 1,
+                    "total_epochs": 1,
+                    "accuracy": train_accuracy,
+                }
+            )
         return self.model
 
     def evaluate(self) -> dict[str, float]:
