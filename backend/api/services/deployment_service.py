@@ -17,6 +17,10 @@ from backend.infrastructure.database.models import (
     RegisteredModel,
 )
 from backend.infrastructure.storage.local_store import local_artifact_store
+from backend.infrastructure.tracking.metrics_store import (
+    traingrid_inference_duration_seconds,
+    traingrid_inference_requests_total,
+)
 from backend.shared.enums import DeploymentStatus
 from backend.shared.errors import (
     DeploymentAlreadyExistsError,
@@ -158,6 +162,8 @@ class DeploymentService:
         self._validate_features(feature_list, model)  # type: ignore[arg-type]
 
         # Run predictions
+        model_name = str(deployment.model_name)
+        traingrid_inference_requests_total.labels(model_name).inc()
         start = time.perf_counter()
         try:
             results = [self._predict_single(model, f) for f in feature_list]  # type: ignore[arg-type]
@@ -165,6 +171,10 @@ class DeploymentService:
             raise
         except Exception as exc:
             raise PredictionError(f"Prediction failed: {exc}") from exc
+        finally:
+            traingrid_inference_duration_seconds.labels(model_name).observe(
+                time.perf_counter() - start
+            )
         latency_ms = (time.perf_counter() - start) * 1000
 
         model_str = f"{deployment.model_name}:{deployment.model_version}"

@@ -19,6 +19,7 @@ dependencies = [
     "pandas",
     "xgboost",
     "torch==2.14.0",
+    "prometheus-client",
 ]
 
 [[tool.uv.index]]

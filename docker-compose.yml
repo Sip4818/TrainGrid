@@ -44,10 +44,15 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    ports:
+      # Prometheus metrics served by the worker process itself (Option D,
+      # issue #88). Scrape together with the API's :8000/metrics.
+      - "8001:8001"
     environment:
       DATABASE_URL: postgresql://traingrid:traingrid@postgres:5432/traingrid
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
+      TRAINGRID_WORKER_METRICS_PORT: 8001
     volumes:
       - artifacts:/app/artifacts
     depends_on:

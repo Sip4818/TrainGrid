@@ -269,6 +269,42 @@ def test_predict_single(mock_store, mock_joblib):
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
 @patch("backend.api.services.deployment_service.local_artifact_store")
+def test_predict_records_inference_metrics(mock_store, mock_joblib):
+    """Prediction increments the inference counter and duration histogram."""
+    from prometheus_client import REGISTRY
+
+    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_joblib.load.return_value = _mock_model(["f1", "f2"])
+
+    name = _next_name("predict-metrics")
+    _register_model(name, "v1.0.0")
+    deploy_resp = client.post(
+        "/deployments/",
+        json={"model_name": name, "model_version": "v1.0.0"},
+    )
+    deployment_id = deploy_resp.json()["id"]
+
+    labels = {"model_name": name}
+
+    def _value(metric: str) -> float:
+        return REGISTRY.get_sample_value(metric, labels) or 0.0
+
+    before_count = _value("traingrid_inference_requests_total")
+    before_dur = _value("traingrid_inference_duration_seconds_count")
+
+    response = client.post(
+        f"/deployments/{deployment_id}/predict",
+        json={"features": {"f1": 1.0, "f2": 2.0}},
+    )
+
+    assert response.status_code == 200
+    assert _value("traingrid_inference_requests_total") == before_count + 1
+    assert _value("traingrid_inference_duration_seconds_count") == before_dur + 1
+
+
+@patch("backend.api.services.deployment_service.serving_pool", {})
+@patch("backend.api.services.deployment_service.joblib")
+@patch("backend.api.services.deployment_service.local_artifact_store")
 def test_predict_batch(mock_store, mock_joblib):
     mock_store.load.return_value = "/tmp/model.joblib"
     mock_model = _mock_model(["f1", "f2"])
