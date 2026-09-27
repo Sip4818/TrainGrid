@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
-from backend.trainers.base import BaseTrainer
+from backend.trainers.base import BaseTrainer, TrainingCallback
 from backend.trainers.registry import trainer_registry
 
 from .config import PyTorchMLPConfig
@@ -95,7 +95,7 @@ class PyTorchMLPTrainer(BaseTrainer):
         self.y_train = torch.tensor(y_train)
         self.y_test = torch.tensor(y_test)
 
-    def train(self) -> MLP:
+    def train(self, on_event: TrainingCallback | None = None) -> MLP:
         df = self.load_data()
         self.validate_data(df)
         self.preprocess_data(df)
@@ -146,14 +146,20 @@ class PyTorchMLPTrainer(BaseTrainer):
         epochs_without_improvement = 0
 
         self.model.train()
-        for _ in range(self.config.epochs):
-            # Train phase
+        for epoch in range(self.config.epochs):
+            # Train phase (mean batch loss is reported per epoch, so the
+            # training curve is available alongside validation loss)
+            train_loss_sum = 0.0
+            batch_count = 0
             for X_batch, y_batch in dataloader:
                 optimizer.zero_grad()
                 output = self.model(X_batch)
                 loss = criterion(output, y_batch)
                 loss.backward()
                 optimizer.step()
+                train_loss_sum += loss.item()
+                batch_count += 1
+            train_loss = train_loss_sum / batch_count if batch_count else 0.0
 
             # Validation phase
             self.model.eval()
@@ -161,6 +167,17 @@ class PyTorchMLPTrainer(BaseTrainer):
                 val_output = self.model(self.X_test)
                 val_loss = criterion(val_output, self.y_test)
             self.model.train()
+
+            if on_event is not None:
+                on_event(
+                    {
+                        "type": "epoch",
+                        "epoch": epoch + 1,
+                        "total_epochs": self.config.epochs,
+                        "loss": train_loss,
+                        "val_loss": val_loss.item(),
+                    }
+                )
 
             # Early stopping check
             if val_loss.item() < best_val_loss - self.config.early_stopping_min_delta:
