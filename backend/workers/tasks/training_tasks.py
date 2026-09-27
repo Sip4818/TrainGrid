@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from backend.api.core.logging import get_logger
 from backend.infrastructure.database.models import RunModel
 from backend.infrastructure.database.session import SessionLocal
+from backend.infrastructure.queue.event_publisher import publish_training_event
 from backend.infrastructure.storage.local_store import local_artifact_store
 from backend.infrastructure.tracking.metrics_store import (
     traingrid_active_runs,
@@ -17,6 +18,7 @@ from backend.infrastructure.tracking.metrics_store import (
 )
 from backend.shared.enums import RunStatus
 from backend.shared.errors import TrainingRunNotFoundError
+from backend.trainers.base import TrainingEvent
 from backend.trainers.registry import trainer_registry
 from backend.workers.celery_app import celery_app
 
@@ -70,6 +72,7 @@ def start_training_run(run_id: str) -> dict[str, str]:
         _transition_to(db, run, RunStatus.RUNNING)
         run.started_at = datetime.now(tz=timezone.utc)  # type: ignore[assignment]
         db.commit()
+        publish_training_event(run_id, {"type": "status", "status": "running"})
         training_begun = True
         training_started = time.perf_counter()
         traingrid_active_runs.inc()
@@ -92,7 +95,11 @@ def start_training_run(run_id: str) -> dict[str, str]:
             trainer = trainer_cls(  # type: ignore[call-arg]
                 config=trainer_cls.config_class(**config_data)
             )
-            trainer.train()
+
+            def _emit(event: TrainingEvent) -> None:
+                publish_training_event(run_id, event)
+
+            trainer.train(on_event=_emit)
             metrics = trainer.evaluate()
             logger.info("Training completed for run_id=%s metrics=%s", run_id, metrics)
 
@@ -109,6 +116,9 @@ def start_training_run(run_id: str) -> dict[str, str]:
         traingrid_training_duration_seconds.labels(
             trainer_name or "unknown", _status_label(RunStatus.COMPLETED)
         ).observe(time.perf_counter() - training_started)
+        publish_training_event(
+            run_id, {"type": "status", "status": "completed", "metrics": metrics}
+        )
 
         return {"run_id": run_id, "status": "completed"}
 
@@ -127,6 +137,9 @@ def start_training_run(run_id: str) -> dict[str, str]:
             else:
                 run.status = RunStatus.FAILED  # type: ignore[assignment]
                 db.commit()
+            publish_training_event(
+                run_id, {"type": "status", "status": "failed", "error": str(e)}
+            )
         return {"run_id": run_id, "status": "failed", "error": str(e)}
     finally:
         db.close()

@@ -30,7 +30,7 @@ class FakeTrainer(BaseTrainer):
     def __init__(self, config):
         self.config = config
 
-    def train(self):
+    def train(self, on_event=None):
         return None
 
     def evaluate(self) -> dict[str, float]:
@@ -179,7 +179,7 @@ class RecordingFakeTrainer(FakeTrainer):
             "dataset_path"
         ]
 
-    def train(self):
+    def train(self, on_event=None):
         dataset_path = RecordingFakeTrainer.captured_paths["dataset_path"]
         assert Path(dataset_path).is_file(), (
             f"materialized dataset not readable: {dataset_path}"
@@ -226,3 +226,96 @@ def test_store_key_dataset_path_is_materialized(tmp_path):
     materialized = RecordingFakeTrainer.captured_paths["dataset_path"]
     assert materialized != "datasets/1/dataset.csv"
     assert RecordingFakeTrainer.captured_paths["content"] == source.read_text()
+
+
+class EmittingFakeTrainer(FakeTrainer):
+    """FakeTrainer that fires two epoch events through the callback."""
+
+    def train(self, on_event=None):
+        assert on_event is not None, "task must pass a callback to train()"
+        on_event({"type": "epoch", "epoch": 1, "total_epochs": 2, "loss": 0.5})
+        on_event({"type": "epoch", "epoch": 2, "total_epochs": 2, "loss": 0.4})
+        return None
+
+
+class FailingFakeTrainer(FakeTrainer):
+    """FakeTrainer whose training blows up mid-run."""
+
+    def train(self, on_event=None):
+        raise RuntimeError("boom")
+
+
+def _run_task_with_trainer(tmp_path, trainer_cls, config_extra=None):
+    """Create a PENDING run and execute the task synchronously.
+
+    Returns (result, run_id, published_events) with publish_training_event
+    patched to collect events instead of hitting Redis.
+    """
+    Base.metadata.create_all(bind=engine)
+
+    store = LocalArtifactStore(root=tmp_path)
+    source = tmp_path / "uploaded.csv"
+    source.write_text("f1,f2,target\n1,2,0\n")
+    store.save(source, "datasets/1/dataset.csv")
+
+    db = SessionLocal()
+    config = {
+        "trainer_name": "fake",
+        "dataset_path": "datasets/1/dataset.csv",
+        "target_column": "target",
+        "feature_columns": ["f1", "f2"],
+    }
+    config.update(config_extra or {})
+    run_id = _create_run(config, db)
+    db.close()
+
+    published = []
+    with (
+        patch(
+            "backend.trainers.registry.trainer_registry.get",
+            return_value=trainer_cls,
+        ),
+        patch(
+            "backend.workers.tasks.training_tasks.local_artifact_store",
+            store,
+        ),
+        patch(
+            "backend.workers.tasks.training_tasks.publish_training_event",
+            side_effect=lambda rid, event: published.append((rid, event)),
+        ),
+    ):
+        result = start_training_run(str(run_id))
+    return result, run_id, published
+
+
+def test_task_publishes_lifecycle_events(tmp_path):
+    result, run_id, published = _run_task_with_trainer(tmp_path, FakeTrainer)
+
+    assert result["status"] == "completed"
+    assert published[0] == (str(run_id), {"type": "status", "status": "running"})
+    assert published[-1] == (
+        str(run_id),
+        {"type": "status", "status": "completed", "metrics": {"accuracy": 0.95}},
+    )
+
+
+def test_task_forwards_trainer_epoch_events(tmp_path):
+    result, run_id, published = _run_task_with_trainer(tmp_path, EmittingFakeTrainer)
+
+    assert result["status"] == "completed"
+    epochs = [e for _, e in published if e.get("type") == "epoch"]
+    assert epochs == [
+        {"type": "epoch", "epoch": 1, "total_epochs": 2, "loss": 0.5},
+        {"type": "epoch", "epoch": 2, "total_epochs": 2, "loss": 0.4},
+    ]
+
+
+def test_task_publishes_failed_event(tmp_path):
+    result, run_id, published = _run_task_with_trainer(tmp_path, FailingFakeTrainer)
+
+    assert result["status"] == "failed"
+    assert published[0] == (str(run_id), {"type": "status", "status": "running"})
+    assert published[-1] == (
+        str(run_id),
+        {"type": "status", "status": "failed", "error": "boom"},
+    )
