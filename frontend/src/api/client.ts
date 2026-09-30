@@ -15,6 +15,14 @@ const BASE_URL: string =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 /**
+ * Build an absolute API URL for a path. Needed by consumers that cannot
+ * use fetch (e.g. EventSource for SSE streams).
+ */
+export function apiUrl(path: string): string {
+  return `${BASE_URL}${path}`;
+}
+
+/**
  * Error thrown when the API returns a non-2xx status code.
  */
 export class ApiError extends Error {
@@ -51,7 +59,7 @@ async function request<T>(
   path: string,
   body?: unknown,
 ): Promise<T> {
-  const url = `${BASE_URL}${path}`;
+  const url = apiUrl(path);
   const isFormData = body instanceof FormData;
   const headers: Record<string, string> = {
     // Originate the trace: the backend echoes this ID back in responses

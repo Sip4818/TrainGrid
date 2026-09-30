@@ -30,6 +30,13 @@ export const endpoints = {
       `/runs/${id}?project_id=${projectId}&experiment_id=${experimentId}` as const,
 
     /**
+     * GET /runs/{id}/stream — stream live training events (SSE),
+     * scoped to the run's project and experiment like detail/delete.
+     */
+    stream: (id: number, projectId: number, experimentId: number) =>
+      `/runs/${id}/stream?project_id=${projectId}&experiment_id=${experimentId}` as const,
+
+    /**
      * GET /runs/compare — compare runs side-by-side within an experiment.
      * run_ids are sent as repeated query params (e.g. run_ids=1&run_ids=2).
      */

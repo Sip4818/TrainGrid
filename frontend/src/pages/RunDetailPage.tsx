@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useRun } from "../features/runs/hooks";
+import { useRun, useRunStream, isLiveStatus } from "../features/runs/hooks";
 import { RunStatus } from "../features/runs/types";
+import { LiveTrainingView } from "../features/runs/components/LiveTrainingView";
 import { Badge } from "../components/ui/Badge";
 import { Spinner } from "../components/ui/Spinner";
 import { Button } from "../components/ui/Button";
@@ -107,7 +109,20 @@ export function RunDetailPage(): React.ReactElement {
 
   const experimentBack = `/projects/${pid}/experiments/${eid}`;
 
-  const { data: run, isLoading, isError, error } = useRun(id, pid, eid);
+  // Tracks whether the SSE stream owns updates; while true the
+  // legacy 3s polling in useRun is suspended (resumes on stream close).
+  const [streamActive, setStreamActive] = useState(false);
+
+  const { data: run, isLoading, isError, error } = useRun(id, pid, eid, {
+    disablePolling: streamActive,
+  });
+  const stream = useRunStream(
+    id,
+    pid,
+    eid,
+    isLiveStatus(run?.status),
+    setStreamActive,
+  );
 
   // Invalid run ID
   if (!runId || Number.isNaN(id)) {
@@ -220,6 +235,13 @@ export function RunDetailPage(): React.ReactElement {
       }))
     : [];
 
+  // Live view appears once stream data arrives (or while actively
+  // streaming an in-progress run); completed runs keep static metrics.
+  const showLive =
+    stream.epochs.length > 0 ||
+    stream.logLines.length > 0 ||
+    (stream.streaming && isLiveStatus(run.status));
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <PageHeader
@@ -258,6 +280,16 @@ export function RunDetailPage(): React.ReactElement {
             {statusLabels[run.status as RunStatus] ?? run.status}
           </Badge>
         </div>
+
+        {/* Live Training (SSE stream while the run is active) */}
+        {showLive && (
+          <Section title="Live Training">
+            <LiveTrainingView
+              epochs={stream.epochs}
+              logLines={stream.logLines}
+            />
+          </Section>
+        )}
 
         {/* Config */}
         <Section title="Configuration">

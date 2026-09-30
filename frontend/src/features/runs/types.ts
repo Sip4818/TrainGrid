@@ -52,6 +52,48 @@ export interface Run {
 }
 
 /**
+ * EpochPoint is one plotted point of the live training curve.
+ * Fields are optional because trainers report what they can:
+ * PyTorch sends loss/val_loss per epoch, XGBoost a single accuracy point.
+ */
+export interface EpochPoint {
+  epoch: number;
+  total_epochs: number;
+  loss?: number;
+  val_loss?: number;
+  accuracy?: number;
+}
+
+/**
+ * EpochEvent carries per-epoch training metrics from the worker.
+ * Mirrors the Layer 1 trainer callback payload.
+ */
+export interface EpochEvent {
+  type: "epoch";
+  epoch: number;
+  total_epochs: number;
+  loss?: number;
+  val_loss?: number;
+  accuracy?: number;
+}
+
+/**
+ * StatusEvent carries run lifecycle changes from the Celery task.
+ * Mirrors the Layer 2 lifecycle publishes.
+ */
+export interface StatusEvent {
+  type: "status";
+  status: RunStatus;
+  metrics?: Record<string, unknown>;
+  error?: string;
+}
+
+/**
+ * TrainingEvent is any message received on the SSE run stream.
+ */
+export type TrainingEvent = EpochEvent | StatusEvent;
+
+/**
  * RunComparisonItem is one run's entry in the comparison matrix.
  * Mirrors the backend RunComparisonItem schema.
  */
