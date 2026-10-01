@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from backend.api.core.logging import get_logger
 from backend.api.schemas.dataset import DatasetResponse
 from backend.infrastructure.database.models import DatasetModel
-from backend.infrastructure.storage.local_store import local_artifact_store
+from backend.infrastructure.storage import get_artifact_store
 from backend.shared.errors import DatasetUploadError
 
 logger = get_logger(__name__)
@@ -48,7 +48,7 @@ class DatasetService:
             tmp.write(content)
             tmp_path = Path(tmp.name)
         try:
-            local_artifact_store.save(tmp_path, store_key)
+            get_artifact_store().save(tmp_path, store_key)
         finally:
             tmp_path.unlink(missing_ok=True)
 
