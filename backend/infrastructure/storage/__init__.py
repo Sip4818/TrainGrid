@@ -43,7 +43,5 @@ def get_artifact_store() -> ArtifactStore:
     except Exception as e:  # noqa: BLE001
         if settings.s3_strict:
             raise
-        logger.warning(
-            "S3 init failed (%s) — falling back to LocalArtifactStore", e
-        )
+        logger.warning("S3 init failed (%s) — falling back to LocalArtifactStore", e)
         return LocalArtifactStore(settings.artifact_root)

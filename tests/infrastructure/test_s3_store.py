@@ -55,8 +55,7 @@ def test_save_creates_nested_keys(s3_client, tmp_path):
     store.save(source, "runs/2/nested/model.joblib")
 
     keys = [
-        obj["Key"]
-        for obj in s3_client.list_objects(Bucket="test-bucket")["Contents"]
+        obj["Key"] for obj in s3_client.list_objects(Bucket="test-bucket")["Contents"]
     ]
     assert "runs/2/nested/model.joblib" in keys
 
