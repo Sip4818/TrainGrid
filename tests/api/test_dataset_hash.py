@@ -8,7 +8,7 @@ from backend.api.main import app
 client = TestClient(app)
 
 
-@patch("backend.api.services.dataset_service.local_artifact_store")
+@patch("backend.api.services.dataset_service.get_artifact_store")
 def test_upload_csv_computes_hash(mock_store):
     """Verify SHA-256 hash is computed and stored on dataset upload."""
     csv_content = b"col1,col2\n1,2\n3,4\n"
@@ -36,7 +36,7 @@ def test_upload_csv_computes_hash(mock_store):
         db.close()
 
 
-@patch("backend.api.services.dataset_service.local_artifact_store")
+@patch("backend.api.services.dataset_service.get_artifact_store")
 def test_hash_is_deterministic(mock_store):
     """Verify the same content always produces the same hash."""
     csv_content = b"a,b\n1,2\n"
