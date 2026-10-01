@@ -16,7 +16,7 @@ from backend.infrastructure.database.models import (
     DeploymentModel,
     RegisteredModel,
 )
-from backend.infrastructure.storage.local_store import local_artifact_store
+from backend.infrastructure.storage import get_artifact_store
 from backend.infrastructure.tracking.metrics_store import (
     traingrid_inference_duration_seconds,
     traingrid_inference_requests_total,
@@ -234,7 +234,7 @@ class DeploymentService:
         logger.info("Loading model into pool key=%s", pool_key)
         try:
             tmp_dir = Path("/tmp")
-            loaded_path = local_artifact_store.load(
+            loaded_path = get_artifact_store().load(
                 str(registered.artifact_path), tmp_dir / pool_key.replace(":", "_")
             )
             model = joblib.load(loaded_path)  # type: ignore[no-untyped-call]

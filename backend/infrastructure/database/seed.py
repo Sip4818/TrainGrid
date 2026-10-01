@@ -8,7 +8,7 @@ from backend.infrastructure.database.models import (
     ProjectModel,
 )
 from backend.infrastructure.database.session import SessionLocal
-from backend.infrastructure.storage.local_store import local_artifact_store
+from backend.infrastructure.storage import get_artifact_store
 
 logger = get_logger(__name__)
 
@@ -80,7 +80,7 @@ def seed_defaults() -> None:
                 tmp.write(csv_bytes)
                 tmp_path = Path(tmp.name)
             try:
-                local_artifact_store.save(tmp_path, store_key)
+                get_artifact_store().save(tmp_path, store_key)
             finally:
                 tmp_path.unlink(missing_ok=True)
 

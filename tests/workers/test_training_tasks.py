@@ -75,8 +75,8 @@ def test_start_training_run_resolves_trainer_via_registry(tmp_path):
             return_value=FakeTrainer,
         ) as mock_get,
         patch(
-            "backend.workers.tasks.training_tasks.local_artifact_store",
-            store,
+            "backend.workers.tasks.training_tasks.get_artifact_store",
+            return_value=store,
         ),
     ):
         result = start_training_run(str(run_id))
@@ -132,8 +132,8 @@ def test_training_run_records_lifecycle_metrics(tmp_path):
             return_value=FakeTrainer,
         ),
         patch(
-            "backend.workers.tasks.training_tasks.local_artifact_store",
-            store,
+            "backend.workers.tasks.training_tasks.get_artifact_store",
+            return_value=store,
         ),
     ):
         result = start_training_run(str(run_id))
@@ -216,8 +216,8 @@ def test_store_key_dataset_path_is_materialized(tmp_path):
             return_value=RecordingFakeTrainer,
         ),
         patch(
-            "backend.workers.tasks.training_tasks.local_artifact_store",
-            store,
+            "backend.workers.tasks.training_tasks.get_artifact_store",
+            return_value=store,
         ),
     ):
         result = start_training_run(str(run_id))
@@ -276,8 +276,8 @@ def _run_task_with_trainer(tmp_path, trainer_cls, config_extra=None):
             return_value=trainer_cls,
         ),
         patch(
-            "backend.workers.tasks.training_tasks.local_artifact_store",
-            store,
+            "backend.workers.tasks.training_tasks.get_artifact_store",
+            return_value=store,
         ),
         patch(
             "backend.workers.tasks.training_tasks.publish_training_event",

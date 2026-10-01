@@ -108,9 +108,9 @@ def _mock_model(feature_names=None):
 
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
-@patch("backend.api.services.deployment_service.local_artifact_store")
+@patch("backend.api.services.deployment_service.get_artifact_store")
 def test_deploy_model(mock_store, mock_joblib):
-    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_store.return_value.load.return_value = "/tmp/model.joblib"
     mock_joblib.load.return_value = _mock_model(["f1", "f2"])
 
     name = _next_name("deploy")
@@ -139,9 +139,9 @@ def test_deploy_model_not_in_registry():
 
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
-@patch("backend.api.services.deployment_service.local_artifact_store")
+@patch("backend.api.services.deployment_service.get_artifact_store")
 def test_deploy_model_already_deployed(mock_store, mock_joblib):
-    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_store.return_value.load.return_value = "/tmp/model.joblib"
     mock_joblib.load.return_value = _mock_model(["f1", "f2"])
 
     name = _next_name("dup")
@@ -165,9 +165,9 @@ def test_deploy_model_already_deployed(mock_store, mock_joblib):
 
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
-@patch("backend.api.services.deployment_service.local_artifact_store")
+@patch("backend.api.services.deployment_service.get_artifact_store")
 def test_list_deployments(mock_store, mock_joblib):
-    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_store.return_value.load.return_value = "/tmp/model.joblib"
     mock_joblib.load.return_value = _mock_model(["f1", "f2"])
 
     name = _next_name("list")
@@ -185,9 +185,9 @@ def test_list_deployments(mock_store, mock_joblib):
 
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
-@patch("backend.api.services.deployment_service.local_artifact_store")
+@patch("backend.api.services.deployment_service.get_artifact_store")
 def test_get_deployment(mock_store, mock_joblib):
-    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_store.return_value.load.return_value = "/tmp/model.joblib"
     mock_joblib.load.return_value = _mock_model(["f1", "f2"])
 
     name = _next_name("get")
@@ -213,9 +213,9 @@ def test_get_deployment_not_found():
 
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
-@patch("backend.api.services.deployment_service.local_artifact_store")
+@patch("backend.api.services.deployment_service.get_artifact_store")
 def test_undeploy_model(mock_store, mock_joblib):
-    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_store.return_value.load.return_value = "/tmp/model.joblib"
     mock_joblib.load.return_value = _mock_model(["f1", "f2"])
 
     name = _next_name("undeploy")
@@ -241,9 +241,9 @@ def test_undeploy_deployment_not_found():
 
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
-@patch("backend.api.services.deployment_service.local_artifact_store")
+@patch("backend.api.services.deployment_service.get_artifact_store")
 def test_predict_single(mock_store, mock_joblib):
-    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_store.return_value.load.return_value = "/tmp/model.joblib"
     mock_joblib.load.return_value = _mock_model(["f1", "f2"])
 
     name = _next_name("predict-single")
@@ -268,12 +268,12 @@ def test_predict_single(mock_store, mock_joblib):
 
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
-@patch("backend.api.services.deployment_service.local_artifact_store")
+@patch("backend.api.services.deployment_service.get_artifact_store")
 def test_predict_records_inference_metrics(mock_store, mock_joblib):
     """Prediction increments the inference counter and duration histogram."""
     from prometheus_client import REGISTRY
 
-    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_store.return_value.load.return_value = "/tmp/model.joblib"
     mock_joblib.load.return_value = _mock_model(["f1", "f2"])
 
     name = _next_name("predict-metrics")
@@ -304,9 +304,9 @@ def test_predict_records_inference_metrics(mock_store, mock_joblib):
 
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
-@patch("backend.api.services.deployment_service.local_artifact_store")
+@patch("backend.api.services.deployment_service.get_artifact_store")
 def test_predict_batch(mock_store, mock_joblib):
-    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_store.return_value.load.return_value = "/tmp/model.joblib"
     mock_model = _mock_model(["f1", "f2"])
     mock_model.predict.return_value = np.array([0, 1])
     mock_model.predict_proba.return_value = np.array([[0.9, 0.1], [0.2, 0.8]])
@@ -338,9 +338,9 @@ def test_predict_deployment_not_found():
 
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
-@patch("backend.api.services.deployment_service.local_artifact_store")
+@patch("backend.api.services.deployment_service.get_artifact_store")
 def test_predict_feature_validation_error(mock_store, mock_joblib):
-    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_store.return_value.load.return_value = "/tmp/model.joblib"
     mock_joblib.load.return_value = _mock_model(["f1", "f2"])
 
     name = _next_name("predict-features")
@@ -360,9 +360,9 @@ def test_predict_feature_validation_error(mock_store, mock_joblib):
 
 @patch("backend.api.services.deployment_service.serving_pool", {})
 @patch("backend.api.services.deployment_service.joblib")
-@patch("backend.api.services.deployment_service.local_artifact_store")
+@patch("backend.api.services.deployment_service.get_artifact_store")
 def test_predict_by_model_name(mock_store, mock_joblib):
-    mock_store.load.return_value = "/tmp/model.joblib"
+    mock_store.return_value.load.return_value = "/tmp/model.joblib"
     mock_joblib.load.return_value = _mock_model(["f1", "f2"])
 
     name = _next_name("predict-name")
