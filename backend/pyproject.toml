@@ -20,6 +20,7 @@ dependencies = [
     "xgboost",
     "torch==2.14.0",
     "prometheus-client",
+    "boto3",
 ]
 
 [[tool.uv.index]]
@@ -41,6 +42,7 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "pandas-stubs",
+    "moto[s3]",
 ]
 
 # 1. Global configurations MUST come before any specific [[tool.mypy.overrides]] arrays
