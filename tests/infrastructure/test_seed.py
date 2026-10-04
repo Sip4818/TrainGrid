@@ -50,12 +50,12 @@ def test_seed_creates_default_experiment():
 
 
 def test_seed_creates_default_dataset(tmp_path, monkeypatch):
+    from backend.infrastructure.storage.local_store import LocalArtifactStore
+
+    store = LocalArtifactStore(tmp_path / "artifacts")
     monkeypatch.setattr(
-        "backend.infrastructure.database.seed.local_artifact_store",
-        __import__(
-            "backend.infrastructure.storage.local_store",
-            fromlist=["LocalArtifactStore"],
-        ).LocalArtifactStore(tmp_path / "artifacts"),
+        "backend.infrastructure.database.seed.get_artifact_store",
+        lambda: store,
     )
 
     seed_defaults()
@@ -81,12 +81,12 @@ def test_seed_creates_default_dataset(tmp_path, monkeypatch):
 
 
 def test_seed_idempotent(tmp_path, monkeypatch):
+    from backend.infrastructure.storage.local_store import LocalArtifactStore
+
+    store = LocalArtifactStore(tmp_path / "artifacts")
     monkeypatch.setattr(
-        "backend.infrastructure.database.seed.local_artifact_store",
-        __import__(
-            "backend.infrastructure.storage.local_store",
-            fromlist=["LocalArtifactStore"],
-        ).LocalArtifactStore(tmp_path / "artifacts"),
+        "backend.infrastructure.database.seed.get_artifact_store",
+        lambda: store,
     )
 
     seed_defaults()

@@ -10,7 +10,7 @@ from backend.api.core.logging import get_logger
 from backend.infrastructure.database.models import RunModel
 from backend.infrastructure.database.session import SessionLocal
 from backend.infrastructure.queue.event_publisher import publish_training_event
-from backend.infrastructure.storage.local_store import local_artifact_store
+from backend.infrastructure.storage import get_artifact_store
 from backend.infrastructure.tracking.metrics_store import (
     traingrid_active_runs,
     traingrid_runs_status_transitions_total,
@@ -53,7 +53,7 @@ def resolve_dataset_path(dataset_path: str, tmp_dir: Path) -> str:
     dataset (e.g. 'datasets/3/dataset.csv'). Store keys are materialized
     into tmp_dir for the trainer to read.
     """
-    return str(local_artifact_store.load(dataset_path, tmp_dir / "dataset.csv"))
+    return str(get_artifact_store().load(dataset_path, tmp_dir / "dataset.csv"))
 
 
 @celery_app.task(name="training.start_run")
@@ -106,7 +106,7 @@ def start_training_run(run_id: str) -> dict[str, str]:
             artifact_key = f"runs/{run_id}/model{trainer_cls.model_extension}"
             tmp_model = tmp_root / f"model{trainer_cls.model_extension}"
             trainer.save(str(tmp_model))
-            local_artifact_store.save(tmp_model, artifact_key)
+            get_artifact_store().save(tmp_model, artifact_key)
 
         run.metrics = metrics  # type: ignore[assignment]
         run.artifact_path = artifact_key  # type: ignore[assignment]

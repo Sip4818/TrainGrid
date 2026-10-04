@@ -12,8 +12,8 @@ CSV_BYTES = b"feature1,feature2,target\n1,2,0\n"
 
 def _upload_csv(store: LocalArtifactStore, filename: str, content: bytes = CSV_BYTES):
     with patch(
-        "backend.api.services.dataset_service.local_artifact_store",
-        store,
+        "backend.api.services.dataset_service.get_artifact_store",
+        return_value=store,
     ):
         return client.post(
             "/datasets/",
@@ -39,8 +39,8 @@ def test_upload_csv_creates_dataset_and_stores_file(tmp_path):
 def test_upload_csv_custom_name(tmp_path):
     store = LocalArtifactStore(root=tmp_path / "artifacts")
     with patch(
-        "backend.api.services.dataset_service.local_artifact_store",
-        store,
+        "backend.api.services.dataset_service.get_artifact_store",
+        return_value=store,
     ):
         response = client.post(
             "/datasets/",

@@ -17,7 +17,7 @@ from backend.infrastructure.database.models import (
     RegisteredModel,
     RunModel,
 )
-from backend.infrastructure.storage.local_store import local_artifact_store
+from backend.infrastructure.storage import get_artifact_store
 from backend.shared.enums import ModelStage, RunStatus
 from backend.shared.errors import (
     InvalidStageTransitionError,
@@ -256,7 +256,7 @@ class ModelService:
             return None
         try:
             tmp_dir = Path("/tmp")
-            loaded_path = local_artifact_store.load(artifact_path, tmp_dir / "checksum")
+            loaded_path = get_artifact_store().load(artifact_path, tmp_dir / "checksum")
             with open(loaded_path, "rb") as f:
                 content = f.read()
             return hashlib.sha256(content).hexdigest()
