@@ -69,7 +69,7 @@ class TrainGridClient:
         method: str,
         path: str,
         *,
-        params: dict[str, object] | None = None,
+        params: dict[str, Any] | None = None,
         json: dict[str, object] | None = None,
     ) -> Any:
         """Send a request, raising ``TrainGridAPIError`` on API failures."""
@@ -116,9 +116,7 @@ class TrainGridClient:
             "trainer_name": trainer_name,
             "config": config,
         }
-        result: dict[str, object] = await self._request(
-            "POST", "/runs/", json=payload
-        )
+        result: dict[str, object] = await self._request("POST", "/runs/", json=payload)
         return result
 
     async def get_run(
