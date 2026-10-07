@@ -51,10 +51,12 @@ class TrainGridClient:
         self,
         base_url: str | None = None,
         timeout: float | None = None,
+        transport: httpx.BaseTransport | None = None,
     ) -> None:
         self._client = httpx.AsyncClient(
             base_url=base_url or get_api_base_url(),
             timeout=timeout if timeout is not None else get_api_timeout(),
+            transport=transport,
         )
 
     async def health(self) -> dict[str, object]:
