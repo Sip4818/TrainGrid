@@ -2,7 +2,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from backend.infrastructure.storage import get_artifact_store
+from backend.infrastructure.storage import _cached_s3_store, get_artifact_store
 from backend.infrastructure.storage.local_store import LocalArtifactStore
 from backend.infrastructure.storage.s3_store import S3ArtifactStore
 
@@ -98,11 +98,11 @@ def test_factory_returns_local_by_default(monkeypatch):
     from backend.api.core import config
 
     monkeypatch.setattr(config.settings, "storage_backend", "local")
-    get_artifact_store.cache_clear()
+    _cached_s3_store.cache_clear()
     try:
         assert isinstance(get_artifact_store(), LocalArtifactStore)
     finally:
-        get_artifact_store.cache_clear()
+        _cached_s3_store.cache_clear()
 
 
 def test_factory_returns_s3_when_configured(monkeypatch, s3_client):
@@ -120,11 +120,11 @@ def test_factory_returns_s3_when_configured(monkeypatch, s3_client):
             client=s3_client,
         ),
     )
-    get_artifact_store.cache_clear()
+    _cached_s3_store.cache_clear()
     try:
         assert isinstance(get_artifact_store(), S3ArtifactStore)
     finally:
-        get_artifact_store.cache_clear()
+        _cached_s3_store.cache_clear()
 
 
 def test_factory_falls_back_to_local_on_s3_failure(monkeypatch):
@@ -136,11 +136,11 @@ def test_factory_falls_back_to_local_on_s3_failure(monkeypatch):
         "backend.infrastructure.storage._build_s3_store",
         lambda: (_ for _ in ()).throw(RuntimeError("S3 down")),
     )
-    get_artifact_store.cache_clear()
+    _cached_s3_store.cache_clear()
     try:
         assert isinstance(get_artifact_store(), LocalArtifactStore)
     finally:
-        get_artifact_store.cache_clear()
+        _cached_s3_store.cache_clear()
 
 
 def test_factory_strict_raises_instead_of_fallback(monkeypatch):
@@ -152,9 +152,39 @@ def test_factory_strict_raises_instead_of_fallback(monkeypatch):
         "backend.infrastructure.storage._build_s3_store",
         lambda: (_ for _ in ()).throw(RuntimeError("S3 down")),
     )
-    get_artifact_store.cache_clear()
+    _cached_s3_store.cache_clear()
     try:
         with pytest.raises(RuntimeError, match="S3 down"):
             get_artifact_store()
     finally:
-        get_artifact_store.cache_clear()
+        _cached_s3_store.cache_clear()
+
+
+def test_factory_recovers_when_s3_comes_back(monkeypatch, s3_client):
+    """A failed S3 init must not be cached: the next call retries S3."""
+    from backend.api.core import config
+
+    monkeypatch.setattr(config.settings, "storage_backend", "s3")
+    monkeypatch.setattr(config.settings, "s3_strict", False)
+    monkeypatch.setattr(config.settings, "s3_create_bucket_on_init", False)
+    s3_client.create_bucket(Bucket=config.settings.s3_bucket_name)
+    monkeypatch.setattr(
+        "backend.infrastructure.storage._build_s3_store",
+        lambda: (_ for _ in ()).throw(RuntimeError("S3 down")),
+    )
+    _cached_s3_store.cache_clear()
+    try:
+        assert isinstance(get_artifact_store(), LocalArtifactStore)
+
+        monkeypatch.setattr(
+            "backend.infrastructure.storage._build_s3_store",
+            lambda: S3ArtifactStore(
+                bucket=config.settings.s3_bucket_name,
+                region="us-east-1",
+                create_bucket_on_init=False,
+                client=s3_client,
+            ),
+        )
+        assert isinstance(get_artifact_store(), S3ArtifactStore)
+    finally:
+        _cached_s3_store.cache_clear()
