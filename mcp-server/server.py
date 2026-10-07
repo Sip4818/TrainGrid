@@ -2,14 +2,13 @@
 
 Serves MCP tools over ``POST /mcp`` per spec 2025-11-25. Stateless mode keeps
 each request independent so the service can sit behind Docker Compose without
-session affinity. Domain tools (list/create/compare runs) land in a later
-slice; this scaffold exposes ``ping`` so the Inspector
-``initialize`` -> ``tools/list`` -> ``tools/call`` flow can be verified.
+session affinity. Tools call the TrainGrid API over HTTP only (never the DB).
 """
 
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -29,6 +28,76 @@ async def ping() -> str:
         return f"ok: api={data}"
     except Exception as exc:
         return f"unhealthy: {exc}"
+    finally:
+        await client.aclose()
+
+
+@mcp.tool(description="List registered trainers with labels and config schemas.")
+async def list_trainers() -> list[dict[str, Any]]:
+    """Return trainers from ``GET /trainers/``."""
+    client = TrainGridClient()
+    try:
+        trainers: list[dict[str, Any]] = await client.list_trainers()
+        return trainers
+    finally:
+        await client.aclose()
+
+
+@mcp.tool(description="Create a training run for a trainer with the given config.")
+async def create_run(
+    project_id: int,
+    experiment_id: int,
+    trainer_name: str,
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    """Create a run via ``POST /runs/`` and return the run payload."""
+    client = TrainGridClient()
+    try:
+        run: dict[str, Any] = await client.create_run(
+            project_id, experiment_id, trainer_name, config
+        )
+        return run
+    finally:
+        await client.aclose()
+
+
+@mcp.tool(description="Get a training run by ID, with status, config, and metrics.")
+async def get_run(
+    run_id: int,
+    project_id: int | None = None,
+    experiment_id: int | None = None,
+) -> dict[str, Any]:
+    """Return the run from ``GET /runs/{id}`` (scoped when both IDs given)."""
+    client = TrainGridClient()
+    try:
+        run: dict[str, Any] = await client.get_run(run_id, project_id, experiment_id)
+        return run
+    finally:
+        await client.aclose()
+
+
+@mcp.tool(description="List training runs within an experiment.")
+async def list_runs(project_id: int, experiment_id: int) -> list[dict[str, Any]]:
+    """Return runs from ``GET /runs/`` for the project and experiment."""
+    client = TrainGridClient()
+    try:
+        runs: list[dict[str, Any]] = await client.list_runs(project_id, experiment_id)
+        return runs
+    finally:
+        await client.aclose()
+
+
+@mcp.tool(description="Compare training runs side-by-side (config and metrics matrix).")
+async def compare_runs(
+    project_id: int, experiment_id: int, run_ids: list[int]
+) -> dict[str, Any]:
+    """Return the comparison from ``GET /runs/compare``."""
+    client = TrainGridClient()
+    try:
+        comparison: dict[str, Any] = await client.compare_runs(
+            project_id, experiment_id, run_ids
+        )
+        return comparison
     finally:
         await client.aclose()
 
