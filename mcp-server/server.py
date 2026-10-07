@@ -32,9 +32,7 @@ async def ping() -> str:
         await client.aclose()
 
 
-@mcp.tool(
-    description="List registered trainers with labels and config schemas."
-)
+@mcp.tool(description="List registered trainers with labels and config schemas.")
 async def list_trainers() -> list[dict[str, Any]]:
     """Return trainers from ``GET /trainers/``."""
     client = TrainGridClient()
@@ -63,9 +61,7 @@ async def create_run(
         await client.aclose()
 
 
-@mcp.tool(
-    description="Get a training run by ID, with status, config, and metrics."
-)
+@mcp.tool(description="Get a training run by ID, with status, config, and metrics.")
 async def get_run(
     run_id: int,
     project_id: int | None = None,
@@ -74,32 +70,24 @@ async def get_run(
     """Return the run from ``GET /runs/{id}`` (scoped when both IDs given)."""
     client = TrainGridClient()
     try:
-        run: dict[str, Any] = await client.get_run(
-            run_id, project_id, experiment_id
-        )
+        run: dict[str, Any] = await client.get_run(run_id, project_id, experiment_id)
         return run
     finally:
         await client.aclose()
 
 
 @mcp.tool(description="List training runs within an experiment.")
-async def list_runs(
-    project_id: int, experiment_id: int
-) -> list[dict[str, Any]]:
+async def list_runs(project_id: int, experiment_id: int) -> list[dict[str, Any]]:
     """Return runs from ``GET /runs/`` for the project and experiment."""
     client = TrainGridClient()
     try:
-        runs: list[dict[str, Any]] = await client.list_runs(
-            project_id, experiment_id
-        )
+        runs: list[dict[str, Any]] = await client.list_runs(project_id, experiment_id)
         return runs
     finally:
         await client.aclose()
 
 
-@mcp.tool(
-    description="Compare training runs side-by-side (config and metrics matrix)."
-)
+@mcp.tool(description="Compare training runs side-by-side (config and metrics matrix).")
 async def compare_runs(
     project_id: int, experiment_id: int, run_ids: list[int]
 ) -> dict[str, Any]:
