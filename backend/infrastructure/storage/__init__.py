@@ -28,18 +28,26 @@ def _build_s3_store() -> S3ArtifactStore:
 
 
 @lru_cache(maxsize=1)
+def _cached_s3_store() -> S3ArtifactStore:
+    """Build and healthcheck the S3 store once; failures are never cached."""
+    store = _build_s3_store()
+    store.healthcheck()
+    return store
+
+
 def get_artifact_store() -> ArtifactStore:
     """Return the configured artifact store, falling back to local on S3 failure.
 
     ``STORAGE_BACKEND=s3`` selects S3/MinIO; anything else selects local.
     With ``s3_strict=true`` S3 errors raise instead of falling back (prod).
+
+    Only healthy S3 stores are cached: a failed S3 init returns a fresh
+    local store each call so a later call recovers once S3 is reachable.
     """
     if settings.storage_backend.lower() != "s3":
         return LocalArtifactStore(settings.artifact_root)
     try:
-        store = _build_s3_store()
-        store.healthcheck()
-        return store
+        return _cached_s3_store()
     except Exception as e:  # noqa: BLE001
         if settings.s3_strict:
             raise

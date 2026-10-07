@@ -151,3 +151,93 @@ jobs:
       - name: Stop Docker Compose
         if: always()
         run: docker compose down -v
+
+  s3-storage:
+    name: S3 artifact storage test (LocalStack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7.1.6
+
+      - name: Start stack in S3 mode
+        run: |
+          COMPOSE_PROFILES=s3 STORAGE_BACKEND=s3 docker compose up -d --wait --build
+          echo "Waiting for API..."; for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/health > /dev/null && echo "API ready!" && break
+            sleep 2
+          done
+          curl -sf http://localhost:8000/health > /dev/null || { echo "API never became ready"; exit 1; }
+
+      - name: Upload dataset and verify it lands in LocalStack
+        run: |
+          printf 'feature1,feature2,target\n1,2,0\n3,4,1\n' > /tmp/dataset.csv
+          response=$(curl -sf -X POST http://localhost:8000/datasets/ \
+            -F "file=@/tmp/dataset.csv;type=text/csv" \
+            -F "name=ci-s3-test")
+          echo "$response"
+          store_key=$(echo "$response" | python3 -c "import sys,json; print(json.load(sys.stdin)['store_key'])")
+          echo "store_key=$store_key" | tee -a "$GITHUB_ENV"
+          STORE_KEY="$store_key" uv run --with boto3 --no-project python -c "
+          import os
+          import boto3
+          s3 = boto3.client('s3', endpoint_url='http://localhost:4566', region_name='us-east-1', aws_access_key_id='test', aws_secret_access_key='test')
+          body = s3.get_object(Bucket='traingrid-artifacts', Key=os.environ['STORE_KEY'])['Body'].read()
+          assert b'feature1' in body, 'dataset bytes mismatch'
+          print('dataset verified in bucket:', os.environ['STORE_KEY'])
+          "
+
+      - name: Train a run and verify the model artifact lands in LocalStack
+        run: |
+          run_response=$(curl -sf -X POST http://localhost:8000/runs/ \
+            -H "Content-Type: application/json" \
+            -d "{\"experiment_id\":1,\"project_id\":1,\"trainer_name\":\"random_forest\",\"config\":{\"dataset_path\":\"$store_key\",\"target_column\":\"target\",\"feature_columns\":[\"feature1\",\"feature2\"],\"n_estimators\":10}}")
+          echo "$run_response"
+          run_id=$(echo "$run_response" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          echo "run_id=$run_id"
+          # Poll without -f so HTTP errors keep their body for diagnosis;
+          # tolerate a few transient read failures before giving up.
+          status="pending"
+          read_failures=0
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /tmp/run.json -w "%{http_code}" "http://localhost:8000/runs/$run_id")
+            if [ "$code" != "200" ]; then
+              echo "GET /runs/$run_id returned HTTP $code body: $(cat /tmp/run.json)"
+              read_failures=$((read_failures + 1))
+              [ "$read_failures" -ge 3 ] && { echo "run polling failed 3 times"; exit 1; }
+              sleep 10
+              continue
+            fi
+            read_failures=0
+            status=$(python3 -c "import json; print(json.load(open('/tmp/run.json'))['status'])")
+            echo "status=$status"
+            [ "$status" = "completed" ] && break
+            if [ "$status" = "failed" ]; then
+              echo "run failed, full record:"; cat /tmp/run.json; exit 1
+            fi
+            sleep 10
+          done
+          [ "$status" = "completed" ] || { echo "run did not complete in time"; exit 1; }
+          artifact_path=$(curl -sf "http://localhost:8000/runs/$run_id" | python3 -c "import sys,json; print(json.load(sys.stdin)['artifact_path'])")
+          echo "artifact_path=$artifact_path"
+          ARTIFACT_PATH="$artifact_path" uv run --with boto3 --no-project python -c "
+          import os
+          import boto3
+          s3 = boto3.client('s3', endpoint_url='http://localhost:4566', region_name='us-east-1', aws_access_key_id='test', aws_secret_access_key='test')
+          key = os.environ['ARTIFACT_PATH']
+          size = s3.head_object(Bucket='traingrid-artifacts', Key=key)['ContentLength']
+          assert size > 0, 'model artifact is empty'
+          print('model artifact verified in bucket:', key, 'size:', size)
+          "
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: COMPOSE_PROFILES=s3 docker compose logs --tail=50 api worker localstack
+
+      - name: Stop Docker Compose
+        if: always()
+        run: COMPOSE_PROFILES=s3 docker compose down -v

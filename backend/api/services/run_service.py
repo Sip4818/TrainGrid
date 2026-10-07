@@ -116,6 +116,15 @@ class RunService:
             return None
         return cast(str | None, dataset.hash)
 
+    def get_run_by_id(self, run_id: int) -> RunModel:
+        """Fetch a run by ID without project/experiment scope validation."""
+        logger.info("Fetching run run_id=%d", run_id)
+        run = self.db.get(RunModel, run_id)
+        if run is None:
+            logger.warning("Run run_id=%d not found", run_id)
+            raise TrainingRunNotFoundError(run_id)
+        return run
+
     def get_run(self, run_id: int, experiment_id: int, project_id: int) -> RunModel:
         logger.info(
             "Fetching run run_id=%d experiment_id=%d project_id=%d",

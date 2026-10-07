@@ -41,21 +41,29 @@ def compare_runs(
 @router.get("/{run_id}", response_model=Run)
 def get_run(
     run_id: int,
-    project_id: int = Query(..., description="Project owning the run"),
-    experiment_id: int = Query(..., description="Experiment owning the run"),
+    project_id: int | None = Query(
+        None, description="Project owning the run (optional scope check)"
+    ),
+    experiment_id: int | None = Query(
+        None, description="Experiment owning the run (optional scope check)"
+    ),
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """
-    Retrieve a training run by its ID, scoped to its experiment and project.
+    Retrieve a training run by its ID. Scope is validated only when both
+    project_id and experiment_id are provided.
     """
-    logger.info(
-        "Fetching run run_id=%d project_id=%d experiment_id=%d",
-        run_id,
-        project_id,
-        experiment_id,
-    )
     service = RunService(db)
-    run = service.get_run(run_id, experiment_id, project_id)
+    if project_id is not None and experiment_id is not None:
+        logger.info(
+            "Fetching run run_id=%d project_id=%d experiment_id=%d",
+            run_id,
+            project_id,
+            experiment_id,
+        )
+        run = service.get_run(run_id, experiment_id, project_id)
+    else:
+        run = service.get_run_by_id(run_id)
     logger.info("Run run_id=%d retrieved successfully", run_id)
     return run
 

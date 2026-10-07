@@ -143,6 +143,21 @@ def test_get_run_not_found():
     assert "not found" in data["detail"]["message"].lower()
 
 
+def test_get_run_without_scope_params():
+    run_id = _create_completed_run(experiment_id=1)
+
+    response = client.get(f"/runs/{run_id}")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == run_id
+
+
+def test_get_run_without_scope_params_not_found():
+    response = client.get("/runs/999999")
+
+    assert response.status_code == 404
+
+
 def test_get_run_not_in_experiment():
     other_experiment_id = _create_experiment(name="Other")
     run_id = _create_completed_run(experiment_id=1)
