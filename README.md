@@ -75,6 +75,18 @@ npm run dev
 docker compose up --build
 ```
 
+### Docker with S3 artifact storage (LocalStack)
+
+```bash
+make up-s3
+```
+
+This starts the stack with `STORAGE_BACKEND=s3`: artifacts (datasets, trained
+models) go to an S3 bucket hosted by LocalStack (a local S3-compatible
+service on port 4566) instead of the shared `artifacts` volume. The app
+creates the `traingrid-artifacts` bucket automatically on startup. Plain
+`make up` stays on local-disk storage with no S3 service running.
+
 ### Tests
 
 ```bash
