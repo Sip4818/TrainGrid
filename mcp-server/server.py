@@ -18,7 +18,9 @@ from traingrid_client import TrainGridClient
 mcp = FastMCP("TrainGrid", stateless_http=True, json_response=True)
 
 
-@mcp.tool(description="Health check: verifies the MCP server can reach the TrainGrid API.")
+@mcp.tool(
+    description="Health check: verifies the MCP server can reach the TrainGrid API."
+)
 async def ping() -> str:
     """Return API health or a short unhealthy reason (never raises)."""
     client = TrainGridClient()
