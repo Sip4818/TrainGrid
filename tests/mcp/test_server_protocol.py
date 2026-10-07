@@ -16,7 +16,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import httpx
 import pytest
-
 import server as mcp_server
 
 PROTOCOL_VERSION = "2025-11-25"
@@ -81,9 +80,7 @@ class _StubAPIHandler(BaseHTTPRequestHandler):
             self._send(
                 200,
                 {
-                    "runs": [
-                        {**STUB_RUN, "id": run_id} for run_id in run_ids
-                    ],
+                    "runs": [{**STUB_RUN, "id": run_id} for run_id in run_ids],
                     "metrics": ["accuracy"],
                 },
             )
@@ -319,9 +316,7 @@ def test_create_get_list_compare_round_trip(mcp_client):
     assert fetched["isError"] is False
     assert fetched["structuredContent"]["status"] == "pending"
 
-    listed = _call(
-        mcp_client, 11, "list_runs", {"project_id": 1, "experiment_id": 1}
-    )
+    listed = _call(mcp_client, 11, "list_runs", {"project_id": 1, "experiment_id": 1})
     assert listed["isError"] is False
     assert [r["id"] for r in listed["structuredContent"]["result"]] == [7]
 

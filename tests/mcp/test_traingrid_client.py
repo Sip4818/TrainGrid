@@ -11,7 +11,6 @@ import json
 
 import httpx
 import pytest
-
 from traingrid_client import TrainGridAPIError, TrainGridClient
 
 TRAINERS_PAYLOAD = [
