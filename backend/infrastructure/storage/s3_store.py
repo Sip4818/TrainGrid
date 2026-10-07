@@ -3,6 +3,7 @@ from typing import Any
 
 import boto3
 from botocore.client import BaseClient
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from backend.api.core.logging import get_logger
@@ -36,6 +37,10 @@ class S3ArtifactStore(ArtifactStore):
             kwargs: dict[str, Any] = {"region_name": region}
             if endpoint_url:
                 kwargs["endpoint_url"] = endpoint_url
+                # Local S3 emulators (LocalStack, MinIO) need path-style
+                # addressing (http://host/bucket/key). Real AWS (no
+                # endpoint_url) keeps the default virtual-hosted style.
+                kwargs["config"] = Config(s3={"addressing_style": "path"})
             if access_key:
                 kwargs["aws_access_key_id"] = access_key
             if secret_key:
