@@ -9,7 +9,7 @@ requires-python = ">=3.10"
 select = ["I", "E", "F", "W"]
 
 [tool.uv.workspace]
-members = ["backend"]
+members = ["backend", "mcp-server"]
 
 [tool.mypy]
 ignore_missing_imports = true
