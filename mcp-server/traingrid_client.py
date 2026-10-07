@@ -22,9 +22,9 @@ def get_api_base_url() -> str:
 def get_api_timeout() -> float:
     """Return the HTTP timeout in seconds."""
     try:
-        return float(os.getenv("TRAINGRID_API_TIMEOUT", "10.0"))
+        return float(os.getenv("TRAINGRID_API_TIMEOUT", "30.0"))
     except ValueError:
-        return 10.0
+        return 30.0
 
 
 class TrainGridAPIError(Exception):
