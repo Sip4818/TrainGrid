@@ -46,6 +46,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      localstack:
+        condition: service_healthy
+        required: false
     command: uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
 
   worker:
@@ -78,6 +81,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      localstack:
+        condition: service_healthy
+        required: false
     command: celery -A backend.workers.celery_app worker --loglevel=info
 
   frontend:
