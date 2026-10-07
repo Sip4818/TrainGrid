@@ -199,12 +199,26 @@ jobs:
           echo "$run_response"
           run_id=$(echo "$run_response" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
           echo "run_id=$run_id"
+          # Poll without -f so HTTP errors keep their body for diagnosis;
+          # tolerate a few transient read failures before giving up.
           status="pending"
+          read_failures=0
           for i in $(seq 1 30); do
-            status=$(curl -sf "http://localhost:8000/runs/$run_id" | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
+            code=$(curl -s -o /tmp/run.json -w "%{http_code}" "http://localhost:8000/runs/$run_id")
+            if [ "$code" != "200" ]; then
+              echo "GET /runs/$run_id returned HTTP $code body: $(cat /tmp/run.json)"
+              read_failures=$((read_failures + 1))
+              [ "$read_failures" -ge 3 ] && { echo "run polling failed 3 times"; exit 1; }
+              sleep 10
+              continue
+            fi
+            read_failures=0
+            status=$(python3 -c "import json; print(json.load(open('/tmp/run.json'))['status'])")
             echo "status=$status"
             [ "$status" = "completed" ] && break
-            [ "$status" = "failed" ] && { echo "run failed"; exit 1; }
+            if [ "$status" = "failed" ]; then
+              echo "run failed, full record:"; cat /tmp/run.json; exit 1
+            fi
             sleep 10
           done
           [ "$status" = "completed" ] || { echo "run did not complete in time"; exit 1; }
@@ -220,6 +234,10 @@ jobs:
           print('model artifact verified in bucket:', key, 'size:', size)
           "
 
+      - name: Dump service logs on failure
+        if: failure()
+        run: COMPOSE_PROFILES=s3 docker compose logs --tail=50 api worker localstack
+
       - name: Stop Docker Compose
         if: always()
-        run: docker compose down -v
+        run: COMPOSE_PROFILES=s3 docker compose down -v
