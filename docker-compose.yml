@@ -86,6 +86,21 @@ services:
         required: false
     command: celery -A backend.workers.celery_app worker --loglevel=info
 
+  mcp-server:
+    image: ${DOCKERHUB_USERNAME:-sahil4818}/traingrid-mcp-server:latest
+    build:
+      context: .
+      dockerfile: mcp-server/Dockerfile
+    ports:
+      # Streamable HTTP endpoint at :8002/mcp (spec 2025-11-25, stateless).
+      # Uses 8002 because the worker already serves Prometheus metrics on 8001.
+      - "8002:8002"
+    environment:
+      TRAINGRID_API_URL: http://api:8000
+      MCP_PORT: 8002
+    depends_on:
+      - api
+
   frontend:
     image: ${DOCKERHUB_USERNAME:-sahil4818}/traingrid-frontend:latest
     build:
