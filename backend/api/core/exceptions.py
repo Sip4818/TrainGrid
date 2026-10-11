@@ -14,6 +14,7 @@ from backend.shared.errors import (
     ModelVersionNotFoundError,
     NotFoundError,
     PredictionError,
+    PresignedUrlNotSupportedError,
     RunNotInExperimentError,
     RunNotInScopeError,
     SweepNotFoundError,
@@ -183,6 +184,21 @@ async def handle_cannot_register_model_trainer(
     )
 
 
+async def handle_presigned_url_not_supported(
+    request: Request, exc: Exception
+) -> JSONResponse:
+    """Catch PresignedUrlNotSupportedError and return a 400."""
+    return JSONResponse(
+        status_code=400,
+        content={
+            "detail": {
+                "code": "PRESIGNED_URL_NOT_SUPPORTED",
+                "message": str(exc),
+            }
+        },
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register all custom exception handlers on the FastAPI app."""
     app.add_exception_handler(TrainGridError, handle_traingrid_error)
@@ -205,6 +221,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         DeploymentAlreadyExistsError, handle_deployment_already_exists
     )
     app.add_exception_handler(PredictionError, handle_prediction_error)
+    app.add_exception_handler(
+        PresignedUrlNotSupportedError, handle_presigned_url_not_supported
+    )
     app.add_exception_handler(Exception, handle_generic_error)
     app.add_exception_handler(
         CannotRegisterModelTrainerError, handle_cannot_register_model_trainer
