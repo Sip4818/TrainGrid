@@ -12,6 +12,7 @@ from backend.api.core.logging import configure_logging
 from backend.api.core.metrics_middleware import MetricsMiddleware
 from backend.api.middleware.correlation import CorrelationIdMiddleware
 from backend.api.routers import (
+    artifacts,
     datasets,
     deployments,
     experiments,
@@ -82,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(datasets.router)
     app.include_router(sweeps.router)
     app.include_router(streams.router)
+    app.include_router(artifacts.router)
 
     # 5. Expose Prometheus metrics for scraping (handles content negotiation).
     app.mount("/metrics", make_asgi_app())
