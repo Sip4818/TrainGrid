@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -86,3 +87,25 @@ class S3ArtifactStore(ArtifactStore):
         destination_path.parent.mkdir(parents=True, exist_ok=True)
         self.client.download_file(self.bucket, artifact_path, str(destination_path))
         return destination_path
+
+    def generate_presigned_upload_url(
+        self, key: str, content_type: str, expires_in: int
+    ) -> tuple[str, datetime]:
+        url = self.client.generate_presigned_url(
+            "put_object",
+            Params={"Bucket": self.bucket, "Key": key, "ContentType": content_type},
+            ExpiresIn=expires_in,
+        )
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+        return url, expires_at
+
+    def generate_presigned_download_url(
+        self, key: str, expires_in: int
+    ) -> tuple[str, datetime]:
+        url = self.client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": self.bucket, "Key": key},
+            ExpiresIn=expires_in,
+        )
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+        return url, expires_at
