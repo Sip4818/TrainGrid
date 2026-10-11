@@ -182,3 +182,10 @@ class CannotRegisterModelTrainerError(TrainGridError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
+
+
+class PresignedUrlNotSupportedError(TrainGridError):
+    """Raised when a presigned URL is requested for an unsupported backend."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
