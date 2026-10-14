@@ -29,7 +29,12 @@ def create_upload_url(
 @router.get("/{artifact_id}/download-url")
 def create_download_url(
     artifact_id: str,
-    expires_in: int = Query(3600, ge=60, le=3600, description="Expiration time in seconds for the download URL"),
+    expires_in: int = Query(
+        3600,
+        ge=60,
+        le=3600,
+        description="Expiration time in seconds for the download URL",
+    ),
     db: Session = Depends(get_db),  # noqa: B008
 ) -> ArtifactDownloadUrlResponse:
     """Create a pre-signed URL for downloading an artifact."""
