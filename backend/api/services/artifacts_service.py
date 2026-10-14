@@ -43,9 +43,9 @@ class ArtifactsService:
         self, artifact_id: str, expires_in: int = 3600
     ) -> ArtifactDownloadUrlResponse:
         artifact_store = get_artifact_store()
-        #TODO: THIS IS A TEMPORARY FIX. WE CAN LOOK UP THE ARTIFACT PATH IN THE DB USING THE ARTIFACT ID. FOR NOW, WE'LL JUST USE A HARDCODED PATH.
-        #ALSO, WE NEED TO TAKE CARE OF DATASETS AND OTHER ARTIFACT TYPES.
-        key = f'runs/{artifact_id}/model.joblib'
+        # TODO: models-only for now; resolve datasets and other
+        # artifact types via DB lookup on artifact_id later.
+        key = f"runs/{artifact_id}/model.joblib"
 
         download_url, expires_at = artifact_store.generate_presigned_download_url(
             key=key,
