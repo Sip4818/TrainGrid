@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from backend.api.core.logging import get_logger
@@ -26,11 +26,12 @@ def create_upload_url(
     return ArtifactsService(db).create_upload_url(request)
 
 
-@router.post("/download-url")
+@router.get("/{artifact_id}/download-url")
 def create_download_url(
-    request: ArtifactUrlRequest,
+    artifact_id: str,
+    expires_in: int = Query(3600, ge=60, le=3600, description="Expiration time in seconds for the download URL"),
     db: Session = Depends(get_db),  # noqa: B008
 ) -> ArtifactDownloadUrlResponse:
     """Create a pre-signed URL for downloading an artifact."""
     logger.info("Creating download URL")
-    return ArtifactsService(db).create_download_url(request)
+    return ArtifactsService(db).create_download_url(artifact_id, expires_in)

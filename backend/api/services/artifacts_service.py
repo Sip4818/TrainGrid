@@ -40,16 +40,19 @@ class ArtifactsService:
         )
 
     def create_download_url(
-        self, request: ArtifactUrlRequest
+        self, artifact_id: str, expires_in: int = 3600
     ) -> ArtifactDownloadUrlResponse:
         artifact_store = get_artifact_store()
+        #TODO: THIS IS A TEMPORARY FIX. WE CAN LOOK UP THE ARTIFACT PATH IN THE DB USING THE ARTIFACT ID. FOR NOW, WE'LL JUST USE A HARDCODED PATH.
+        #ALSO, WE NEED TO TAKE CARE OF DATASETS AND OTHER ARTIFACT TYPES.
+        key = f'runs/{artifact_id}/model.joblib'
 
         download_url, expires_at = artifact_store.generate_presigned_download_url(
-            key=request.artifact_key,
-            expires_in=request.expires_in,
+            key=key,
+            expires_in=expires_in,
         )
         return ArtifactDownloadUrlResponse(
-            artifact_key=request.artifact_key,
+            artifact_key=key,
             download_url=download_url,
             expires_at=expires_at,
         )
