@@ -123,6 +123,27 @@ jobs:
             sleep 2
           done
 
+      - name: Verify MCP server startup and contract
+        run: |
+          echo "Waiting for MCP server..."; for i in $(seq 1 30); do
+            curl -sf -X POST http://localhost:8002/mcp \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json, text/event-stream" \
+              -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"ci-smoke","version":"0.1"}}}' > /tmp/mcp-init.json && echo "MCP ready!" && break
+            sleep 2
+          done
+          cat /tmp/mcp-init.json
+          grep -q '"protocolVersion":"2025-11-25"' /tmp/mcp-init.json || { echo "MCP initialize failed"; exit 1; }
+          tools=$(curl -sf -X POST http://localhost:8002/mcp \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json, text/event-stream" \
+            -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}')
+          echo "$tools"
+          for tool in ping list_trainers create_run get_run list_runs compare_runs; do
+            echo "$tools" | grep -q "\"name\":\"$tool\"" || { echo "MCP tool missing: $tool"; exit 1; }
+          done
+          echo "MCP startup and contract verified."
+
       - name: Seed a training run so the runs table has data
         run: |
           response=$(curl -sf -X POST http://localhost:8000/runs/ \
