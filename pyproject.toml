@@ -1,7 +1,7 @@
 [project]
 name = "project-root"
 version = "0.1.0"
-description = "Monorepo root for Frontend and Backend"
+description = "Backend-first ML orchestration platform"
 requires-python = ">=3.10"
 
 # This tells uv to look inside the backend folder for a Python project
