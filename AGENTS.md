@@ -8,7 +8,8 @@ tracking, and deploying ML models.
 - api/ -> FastAPI backend
 - workers/ -> Celery workers
 - trainers/ -> model-specific training logic
-- frontend/ -> React dashboard
+- infrastructure/ -> database, storage, queue, and tracking adapters
+- mcp-server/ -> MCP tool server that talks to the API over HTTP
 
 See docs/architecture.md for the detailed project structure and layer responsibilities.
 
@@ -31,39 +32,20 @@ celery -A backend.workers.celery_app worker --loglevel=info
 
 ## Known Issues
 
-- **Playwright E2E tests fail in `./check.sh` (local only):** The E2E tests require the frontend dev server to be running on `localhost:3000`, but `check.sh` does not start it, so the Playwright step stays commented out in `check.sh`. **Fixed in CI** — the `e2e-tests` job in `.github/workflows/ci.yml` starts the Docker Compose stack, seeds a training run, and runs `npx playwright test`; all 4 tests pass there.
-  - See `frontend/e2e/runs.spec.ts` — all 4 tests fail locally with `net::ERR_CONNECTION_REFUSED` when no server is available.
 - **Unnecessary `async` on exception handlers in `backend/api/core/exceptions.py`:** The three handler functions (`handle_traingrid_error`, `handle_not_found`, `handle_generic_error`) are declared `async` but never `await` anything — they only return a `JSONResponse`. FastAPI accepts both sync and async handlers, so these signatures work, but the `async` keyword is misleading. They should either be sync functions or should be removed if there's no I/O planned. Low priority — purely cosmetic.
 
 ## Current Status
 
-The backend is fully instrumented and the frontend connects correctly — training runs can be created, tracked, and viewed end-to-end.
+The backend is fully instrumented — training runs can be created, tracked, and inspected end-to-end through the HTTP API, OpenAPI docs, and the MCP server.
 
 ### Backend
 - FastAPI + SQLAlchemy + Celery fully wired with structured logging and exception handling
 - Errors return `{"detail": {"code": "...", "message": "..."}}` with correct HTTP status codes
 - RandomForest (`trainers/sklearn/`) and XGBoost (`trainers/xgboost/`) trainers implemented and registered in the `TrainerRegistry` via self-registration + auto-discovery (`backend/trainers/registration.py`); each exposes a `label` and a Pydantic `config_class`
-- `GET /trainers/` endpoint (`backend/api/routers/models.py`) lists registered trainers with labels and config JSON schemas — the single source of truth for the frontend model dropdown, so adding a trainer requires no frontend changes
-- Containerized via Docker Compose (PostgreSQL + Redis + API + Worker); SQLite used for local dev
-- CI/CD via GitHub Actions: ruff (lint), mypy (types), pytest (backend tests), Vitest (frontend unit tests), and Playwright E2E tests (Docker Compose stack)
-
-### Frontend
-> **Note:** The frontend is built in React/Vite/TypeScript. The owner has
-> worked through the codebase to understand the architecture — hooks (and why
-> they are used), the typed API client layer (`apiClient`, `ApiError`, endpoint
-> constants), and how pages wire features/components together through hooks.
-> All frontend code is validated via automated test suites (Vitest, Playwright)
-> and CI checks.
-
-- Vite + React + TypeScript app under `frontend/` with full runs list/detail views
-- API client layer with `apiClient` fetch wrapper, `ApiError` class, and endpoint constants
-- Create-run modal has a backend-driven Model dropdown (`useTrainers()` → `GET /trainers/`, with a hardcoded fallback); config inputs are model-conditional (e.g. `learning_rate` only for XGBoost) and empty optional fields are omitted so Pydantic defaults apply
-- 118 unit tests across 18 files + Playwright E2E tests
-- Containerized — multi-stage Dockerfile (node build → nginx serve) on port 3000
-
-### Active Issues
-- **#19** — Project & experiment management hierarchy (Week 5 work)
-- **#20** — Schema-driven config form generated from trainer schemas (supersedes the config portion of #18)
+- `GET /trainers/` endpoint (`backend/api/routers/models.py`) lists registered trainers with labels and config JSON schemas — the single source of truth for any client
+- 217 pytest tests across API, workers, trainers, infrastructure, and MCP
+- Containerized via Docker Compose (PostgreSQL + Redis + API + Worker + MCP server); SQLite used for local dev
+- CI/CD via GitHub Actions: ruff (lint), mypy (types), pytest (backend tests), an integration job (Docker Compose stack, MCP contract check, API run-lifecycle smoke), and an S3/LocalStack artifact test
 
 ---
 
@@ -105,7 +87,7 @@ The backend is fully instrumented and the frontend connects correctly — traini
 ## Acceptance Criteria
 - [ ] Criteria 1
 - [ ] Criteria 2
-- [ ] All existing tests pass (`pytest` / `vitest`) and `./check.sh` is green.
+- [ ] All existing tests pass (`pytest`) and `./check.sh` is green.
 - [ ] New tests added covering the new functionality.
 
 ## Out of Scope
@@ -155,7 +137,7 @@ Understand what the system does and how all its pieces connect before touching a
 |------|-----------------|
 | `docs/architecture.md` | Layer diagram, responsibility boundaries, how API / Worker / Trainer / DB relate to each other |
 | `docs/api-reference.md` | What endpoints exist, what they accept, what they return |
-| `docker-compose.yml` | What services run (PostgreSQL, Redis, API, Worker, Frontend) and how they're wired together |
+| `docker-compose.yml` | What services run (PostgreSQL, Redis, API, Worker, MCP server) and how they're wired together |
 | `check.sh` | What quality gates exist (lint, types, tests) — these define "done" |
 
 ---
@@ -220,22 +202,20 @@ Now that you understand how a training job is triggered, see how the actual mode
 | `backend/trainers/configs/` | How model hyperparameters are defined without hardcoding |
 | `backend/trainers/sklearn/trainer.py` | The reference implementation. Read this to understand the `train()` method contract |
 | `backend/trainers/xgboost/trainer.py` | Second trainer — same contract, adds a `learning_rate` hyperparameter |
-| `backend/api/routers/models.py` | `GET /trainers/` — lists registered trainers (name, label, config JSON schema) for the frontend model dropdown |
+| `backend/api/routers/models.py` | `GET /trainers/` — lists registered trainers (name, label, config JSON schema) for any client |
 
 **Key insight:** Adding a new model type means subclassing `BaseTrainer` and adding a self-registration line in the new trainer module — `register_all()` discovers it automatically. Nothing else changes.
 
 ---
 
-### Bonus — Frontend & Tests
+### Bonus — Tests
 
 Only read these after the backend flow is clear.
 
 | File | What to look for |
 |------|-----------------|
-| `frontend/src/api/` | `apiClient` fetch wrapper, `ApiError` class, endpoint constants — the frontend's contract with the backend |
-| `frontend/src/features/` | Feature-based modules (runs list, run detail) — where UI logic lives |
-| `frontend/src/pages/` | Page components that wire features into routes |
 | `tests/api/test_runs.py` | End-to-end API tests using `TestClient` — the best single-file summary of how the API behaves |
+| `tests/mcp/` | MCP server protocol and client contract tests |
 
 ---
 
