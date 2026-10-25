@@ -43,9 +43,9 @@ This roadmap transforms TrainGrid from an experiment tracker into a production-g
   - `POST /deployments/{id}/predict` & `POST /models/{name}/predict`: Real-time inference endpoint with payload schema validation.
   - Automatic input validation against the model's feature schema.
   - Compute and log inference latency metrics (p50, p95, p99) per request.
-- **1.3 Frontend Model Registry & Deployment View (`frontend/src/pages/ModelsPage.tsx`, `DeploymentsPage.tsx`)**
-  - Interactive Model Registry: view version history, promote/demote stages, and inspect artifact metadata.
-  - Live Inference Tester: UI sandbox to submit test JSON payloads and visualize predictions & latency in real time.
+- **1.3 Model Registry & Deployment API Access**
+  - Expose registry and serving endpoints through the OpenAPI schema and MCP tools so clients (CLI/SDK/notebooks) can register, promote, deploy, and test models.
+  - Document request/response examples for version history, stage transitions, and inference payloads.
 
 ---
 
@@ -59,8 +59,9 @@ This roadmap transforms TrainGrid from an experiment tracker into a production-g
   - Implement Grid Search and Random Search strategies.
   - Worker orchestration using Celery `chord` / `group` to dispatch $N$ parallel training runs across worker nodes.
   - Aggregator task that selects the Pareto-optimal run and tags the best performing model.
-- **2.3 Parallel Sweep UI & Visualization (`frontend/src/pages/RunComparisonPage.tsx`)**
-  - Hyperparameter scatter & parallel coordinates plot (e.g., learning rate vs. depth vs. validation accuracy).
+- **2.3 Sweep Result Analysis API**
+  - Expose child runs and the Pareto-optimal run through the sweep detail endpoint.
+  - Return hyperparameters and metrics side-by-side so any client can render comparisons.
 
 ---
 
@@ -70,7 +71,7 @@ This roadmap transforms TrainGrid from an experiment tracker into a production-g
 - **3.1 Live Training Stream over WebSockets/SSE (`backend/api/routers/streams.py`)**
   - Workers publish live epoch metrics and training stdout/stderr to Redis Pub/Sub channels.
   - FastAPI consumes Redis streams and broadcasts via WebSocket (`/ws/runs/{id}`) or Server-Sent Events (`/runs/{id}/events`).
-  - Live loss/accuracy curve plotting and terminal log viewer on the frontend run detail page.
+  - CLI/SDK/notebook clients consume the event stream to render live loss/accuracy curves and logs.
 - **3.2 Prometheus Telemetry & System Metrics (`backend/infrastructure/tracking/metrics_store.py`)**
   - Expose `/metrics` Prometheus endpoint.
   - Track Celery queue lag, active worker saturation, training execution durations, API request latency (p95/p99), and inference throughput (req/sec).
@@ -105,7 +106,7 @@ Here is how you can present this project on your resume for Big Tech application
 * **Distributed Task Orchestration & Tuning:**
   > "Engineered a distributed hyperparameter sweep engine utilizing **Celery chords & Redis pub/sub**, coordinating parallel model training across worker pools and reducing tuning turnaround time by **65%**."
 * **Real-Time Streaming & Telemetry:**
-  > "Built real-time metric and log streaming pipelines via **WebSockets and Redis Pub/Sub**, streaming live training curves and worker logs to a React dashboard with **sub-50ms latency**."
+  > "Built real-time metric and log streaming pipelines via **WebSockets and Redis Pub/Sub**, streaming live training curves and worker logs to clients with **sub-50ms latency**."
 * **Cloud-Native Storage & Model Serving:**
   > "Designed a pluggable cloud artifact store supporting **AWS S3 / MinIO** with presigned multi-part uploads, alongside an in-memory **model serving gateway delivering sub-15ms p95 inference latency**."
 * **Developer Tooling & Developer Experience:**
@@ -117,7 +118,7 @@ Here is how you can present this project on your resume for Big Tech application
 
 | Week | Focus Area | Key Deliverables |
 |:---|:---|:---|
-| **Week 1 (Sep 1–7)** | **Model Registry & Real-Time Serving** | Model versioning, stage promotion (`Staging`/`Production`), real-time inference endpoint (`POST /predict`), UI model registry & testing sandbox. |
-| **Week 2 (Sep 8–14)** | **Distributed Tuning & PyTorch Trainer** | PyTorch trainer with callbacks/checkpoints, Celery chord-based hyperparameter sweeps (Grid/Random), sweep comparison charts. |
+| **Week 1 (Sep 1–7)** | **Model Registry & Real-Time Serving** | Model versioning, stage promotion (`Staging`/`Production`), real-time inference endpoint (`POST /predict`), OpenAPI/MCP access for registry and inference. |
+| **Week 2 (Sep 8–14)** | **Distributed Tuning & PyTorch Trainer** | PyTorch trainer with callbacks/checkpoints, Celery chord-based hyperparameter sweeps (Grid/Random), sweep comparison API. |
 | **Week 3 (Sep 15–21)** | **Real-Time Streaming & Observability** | Redis Pub/Sub + WebSockets/SSE live training metrics & logs, Prometheus `/metrics` export, request correlation tracing. |
 | **Week 4 (Sep 22–30)** | **S3/MinIO Storage & Developer CLI** | S3/MinIO artifact store with presigned URLs, standalone `traingrid` Python CLI/SDK client for Jupyter/terminal workflows. |
