@@ -46,13 +46,3 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/traingrid-worker:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Build and push traingrid-frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          file: frontend/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/traingrid-frontend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max

@@ -42,8 +42,8 @@ Expanding TrainGrid from classical and deep learning models into **Generative AI
   - Automatically exports lightweight LoRA adapter checkpoints (`adapter_model.safetensors`, `adapter_config.json`) to S3/MinIO.
 - **1.2 Dataset Tokenization & Caching (`backend/trainers/llm/dataset.py`)**
   - Prompt template formatting (e.g. ChatML / Alpaca) and token length truncation with caching.
-- **1.3 UI Instruction Dataset Management (`frontend/src/features/datasets/`)**
-  - Upload, validate, and preview instruction-tuning JSONL prompt-response pairs directly in the dashboard.
+- **1.3 Instruction Dataset API**
+  - Upload, validate, and preview instruction-tuning JSONL prompt-response pairs through the datasets API.
 
 ---
 
@@ -53,9 +53,9 @@ Expanding TrainGrid from classical and deep learning models into **Generative AI
 - **2.1 Multi-Metric Evaluation Engine (`backend/workers/tasks/evaluation_tasks.py`)**
   - Compute automated NLP metrics: ROUGE-1/2/L, BLEU, Perplexity, and Exact Match on test prompt sets.
   - **LLM-as-a-Judge Evaluation:** Automated scoring rubric evaluating response coherence, hallucination rates, and task correctness against reference answers.
-- **2.2 Model Leaderboard & Prompt Playground (`frontend/src/pages/ModelsPage.tsx`)**
-  - Model Leaderboard: rank fine-tuned models side-by-side across evaluation benchmarks.
-  - Interactive Prompt Playground: side-by-side prompt generation testing with adjustable temperature, top_p, and max_tokens.
+- **2.2 Model Leaderboard & Evaluation API**
+  - Rank fine-tuned models side-by-side across evaluation benchmarks through a leaderboard endpoint.
+  - Expose prompt-testing parameters (temperature, top_p, max_tokens) through the inference API for any client.
 
 ---
 
@@ -102,6 +102,6 @@ Expanding TrainGrid from classical and deep learning models into **Generative AI
 | Week | Focus Area | Key Deliverables |
 |:---|:---|:---|
 | **Week 1 (Nov 1–7)** | **LoRA / PEFT LLM Fine-Tuning** | Hugging Face PEFT/LoRA trainer, 4-bit quantization, JSONL instruction dataset ingestion, S3 adapter storage. |
-| **Week 2 (Nov 8–14)** | **Automated LLM Evaluation** | Multi-metric evaluation engine (ROUGE/BLEU/Perplexity), LLM-as-a-judge rubric, UI Model Leaderboard. |
+| **Week 2 (Nov 8–14)** | **Automated LLM Evaluation** | Multi-metric evaluation engine (ROUGE/BLEU/Perplexity), LLM-as-a-judge rubric, model leaderboard API. |
 | **Week 3 (Nov 15–21)** | **OpenAI-Compatible Streaming Gateway** | `POST /v1/chat/completions`, real-time SSE token streaming, multi-tenant LoRA adapter hot-swapping. |
 | **Week 4 (Nov 22–30)** | **PyPI Release & Portfolio Polish** | `traingrid` pip package release, 1-click cloud deploy templates, interactive documentation & final portfolio presentation. |

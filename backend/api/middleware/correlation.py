@@ -2,8 +2,8 @@
 
 Reads X-Correlation-ID from the incoming request (or generates one when
 absent), stores it in the request-scoped ContextVar for the duration of
-the request, and echoes it back in the response header so callers —
-including the frontend — can reference it in error reports.
+the request, and echoes it back in the response header so callers
+can reference it in error reports.
 """
 
 import uuid

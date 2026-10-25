@@ -6,7 +6,7 @@ TrainGrid is an ML orchestration platform for training, tracking, and deploying 
 
 ## Project Status
 
-The first vertical slice (training a `RandomForestClassifier` on tabular CSV data) works **end-to-end**: create a run from the dashboard, the Celery worker trains the model, and the metrics plus trained artifact are persisted and viewable in the UI.
+The first vertical slice (training a `RandomForestClassifier` on tabular CSV data) works **end-to-end**: create a run through the HTTP API, the Celery worker trains the model, and the metrics plus trained artifact are persisted and returned by the API.
 
 ### Backend (Functional)
 
@@ -19,25 +19,18 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 - **Artifact storage** — `LocalArtifactStore` saves trained models under a configurable root; swappable for S3 later
 - **Database** — SQLAlchemy models for runs and experiments; a default experiment is seeded on startup
 - **Domain validation** — `POST /runs/` rejects unknown `trainer_name` (422) and unknown `experiment_id` (404) up front
-- **Tests** — 20 pytest tests across API, workers, trainers, and infrastructure
-
-### Frontend (Functional)
-
-- **Vite + React + TypeScript** app under `frontend/` with runs list/detail views
-- **Typed API client** — `apiClient` wrapper, `ApiError` class, endpoint constants
-- **108 unit tests** across 18 files + Playwright E2E tests (run in CI)
-- **Containerized** — multi-stage Dockerfile (node build → nginx serve) on port 3000
+- **Tests** — 217 pytest tests across API, workers, trainers, infrastructure, and MCP
+- **Machine-readable clients** — OpenAPI docs, the MCP server (`mcp-server/`), and a planned Python SDK/CLI
 
 ### Containerization
 
 - `backend/Dockerfile` — shared image for FastAPI and Celery worker
-- `frontend/Dockerfile` — multi-stage build (Node build → nginx) serving on port 3000
-- `docker-compose.yml` — services for PostgreSQL, Redis, API, Celery worker, and Frontend
+- `docker-compose.yml` — services for PostgreSQL, Redis, API, Celery worker, and MCP server
 - SQLite used for local development; PostgreSQL runs inside Docker
 
 ### CI/CD
 
-- `.github/workflows/ci.yml` — GitHub Actions: ruff (lint), mypy (types), pytest (backend tests), Vitest (frontend unit tests), and Playwright E2E tests (Docker Compose stack)
+- `.github/workflows/ci.yml` — GitHub Actions: ruff (lint), mypy (types), pytest (backend tests), an integration job (Docker Compose stack, MCP contract check, API run-lifecycle smoke), and an S3/LocalStack artifact test
 
 ---
 
@@ -47,7 +40,6 @@ The first vertical slice (training a `RandomForestClassifier` on tabular CSV dat
 
 - Python 3.10+
 - Docker and Docker Compose (for containerized setup)
-- Node.js (for frontend development)
 
 ### Backend (Local)
 
@@ -59,14 +51,6 @@ uvicorn backend.api.main:app --reload
 
 ```bash
 celery -A backend.workers.celery_app worker --loglevel=info
-```
-
-### Frontend (Local)
-
-```bash
-cd frontend
-npm install
-npm run dev
 ```
 
 ### Docker
@@ -90,7 +74,7 @@ creates the `traingrid-artifacts` bucket automatically on startup. Plain
 ### Tests
 
 ```bash
-./check.sh   # ruff format, ruff check, mypy, pytest, tsc, vitest, frontend build
+./check.sh   # ruff format, ruff check, mypy, pytest
 ```
 
 ---
@@ -133,7 +117,6 @@ backend/
   domain/            Entities and repository interfaces
   infrastructure/    Database, storage, queue, tracking
   shared/            Enums, errors, constants, types
-frontend/            React dashboard (runs list/detail views)
 tests/               Automated tests by layer
 docs/                Architecture documentation
 ```
