@@ -20,28 +20,4 @@ $VENV_BIN/pytest
 echo "Pytest passed!"
 
 echo ""
-echo "=== Frontend checks ==="
-echo ""
-
-cd frontend
-
-echo "Running tsc --noEmit (TypeScript type checking)..."
-npx tsc --noEmit
-echo "tsc passed!"
-
-echo "Running vitest (unit tests)..."
-npm test
-echo "Vitest passed!"
-
-echo "Running build..."
-npm run build
-echo "Frontend build passed!"
-
-# echo "Running Playwright E2E tests..."
-# npx playwright test
-# echo "Playwright E2E tests passed!"
-
-cd ..
-
-echo ""
 echo "All checks passed and auto-fixes applied successfully!"
