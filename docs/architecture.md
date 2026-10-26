@@ -16,7 +16,7 @@ backend/                  Python package for all backend code
   domain/           Core entities and repository interfaces
   infrastructure/   Database, storage, queue, and tracking integrations
   shared/           Common constants, enums, errors, and shared types
-frontend/           React dashboard UI (runs list/detail views)
+mcp-server/         MCP tool server that talks to the API over HTTP
 tests/              Automated tests organized by layer
 docs/               Project documentation and durable design context
 ```
@@ -26,7 +26,7 @@ docs/               Project documentation and durable design context
 Typical training flow:
 
 ```text
-frontend
+client (HTTP API / MCP server / OpenAPI)
   -> api router
   -> api service
   -> domain rule/entity
@@ -47,20 +47,25 @@ The `backend/api/` package contains the FastAPI application.
 ```text
 api/main.py              FastAPI app factory and router registration
 api/core/                config (pydantic-settings), logging, security, exceptions
-api/routers/             endpoint modules (health, runs, experiments, projects, models, deployments)
-api/schemas/             Pydantic request and response models (run schema is active; others are stubs)
-api/services/            application workflow orchestration (RunService is active; others are stubs)
-api/dependencies/        FastAPI dependency providers (stubs)
+api/routers/             endpoint modules (health, runs, experiments, projects, models, deployments, datasets, sweeps, streams, artifacts)
+api/schemas/             Pydantic request and response models
+api/services/            application workflow orchestration
+api/dependencies/        FastAPI dependency providers
 ```
 
-| Router | Endpoints | Status |
-|--------|-----------|--------|
-| `health.py` | `GET /health` | ✅ Returns `{"status": "ok"}` |
-| `runs.py` | `POST /runs/`, `GET /runs/`, `GET /runs/{run_id}` | ✅ Active — create, list, track training runs |
-| `experiments.py` | — | ⏳ Stub |
-| `projects.py` | — | ⏳ Stub |
-| `models.py` | — | ⏳ Stub |
-| `deployments.py` | — | ⏳ Stub |
+| Router | Endpoints |
+|--------|-----------|
+| `health.py` | `GET /health` |
+| `runs.py` | `POST /runs/`, `GET /runs/`, `GET /runs/{run_id}`, `GET /runs/compare`, `DELETE /runs/{run_id}` |
+| `experiments.py` | `POST /experiments/`, `GET /experiments/`, `GET/PATCH/DELETE /experiments/{id}` |
+| `projects.py` | `POST /projects/`, `GET /projects/`, `GET/PATCH/DELETE /projects/{id}` |
+| `models.py` | `GET /trainers/` — lists registered trainers and their config schemas |
+| `model_registry.py` | Model registration, version listing, stage promotion, prediction |
+| `deployments.py` | Deploy/undeploy registered models and run inference |
+| `datasets.py` | Upload and list datasets |
+| `sweeps.py` | Create, list, and inspect hyperparameter sweeps |
+| `streams.py` | `GET /runs/{run_id}/stream` — live training events over SSE |
+| `artifacts.py` | Presigned upload/download URLs for artifact storage |
 
 Endpoints should be async where possible. Routers should not contain training,
 database, or deployment implementation details.
@@ -164,27 +169,16 @@ shared/constants.py  APP_NAME = "TrainGrid"
 shared/types.py      Shared type aliases (stub)
 ```
 
-## Frontend
+## Clients
 
-The `frontend/` directory contains the React dashboard.
+TrainGrid is backend-first. Clients consume the platform through:
 
-```text
-frontend/src/app/        app-level routing, layout, providers
-frontend/src/pages/      full page views
-frontend/src/features/   feature-specific UI, hooks, types, API calls
-frontend/src/components/ reusable layout and UI components
-frontend/src/api/        shared API client (wired placeholder)
-frontend/src/lib/        formatting and utility helpers
-frontend/src/styles/     global styles
-```
+- **HTTP API** — documented by the FastAPI OpenAPI schema at `/docs` and `/openapi.json`
+- **MCP server** (`mcp-server/`) — exposes tools such as `create_run`, `get_run`, `list_runs`, and `compare_runs` over Streamable HTTP
+- **Python SDK/CLI** — planned client packaging (see the open SDK/CLI issues)
 
-**Status:** Functional — runs list/detail pages are wired to the backend through
-the typed API client (`apiClient`, `ApiError`, endpoint constants), with 108 unit
-tests across 18 files plus Playwright E2E tests. Containerized via a multi-stage
-Dockerfile (Node build → nginx) serving on port 3000.
-
-The UI should behave like an operations dashboard: tables, status badges,
-charts, logs, config panels, and direct workflow actions.
+There is no bundled web UI. Any future dashboard should live in its own
+repository and talk to the API over HTTP, with no coupling in this repo.
 
 ## Initial Vertical Slice
 
@@ -198,7 +192,7 @@ tabular CSV dataset
   -> sklearn RandomForestClassifier trainer
   -> local artifact storage (artifacts/ directory)
   -> persisted run metrics and status (SQLite/PostgreSQL)
-  -> frontend run detail view
+  -> API / OpenAPI / MCP clients
 ```
 
 The vertical slice is **functional end-to-end**:
@@ -209,13 +203,14 @@ The vertical slice is **functional end-to-end**:
 - local filesystem storage for artifacts (`LocalArtifactStore`)
 - persistence for run metadata, metrics, status transitions, and artifacts
 - experiment validation on run creation (unknown `experiment_id` → 404, unknown `trainer_name` → 422)
-- 20 pytest tests across API, workers, trainers, and infrastructure
+- 217 pytest tests across API, workers, trainers, infrastructure, and MCP
 
 ## Containerization
 
 ```text
 backend/Dockerfile       Shared image for FastAPI and Celery worker
-docker-compose.yml       PostgreSQL + Redis + API + Celery worker services
+mcp-server/Dockerfile    MCP tool server image
+docker-compose.yml       PostgreSQL + Redis + API + Celery worker + MCP server
 ```
 
 ## Tests

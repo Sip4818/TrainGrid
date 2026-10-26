@@ -53,8 +53,8 @@ Building on September's core MLOps foundation (Model Registry, Live Serving, Dis
 - **2.1 Statistical Data Drift Detection Engine (`backend/infrastructure/tracking/drift_detector.py`)**
   - Log incoming production inference feature payloads.
   - Implement statistical tests: **Kolmogorov-Smirnov (KS-test)** for continuous features and **Population Stability Index (PSI)** for categorical distributions comparing training baseline vs. live inference windows.
-- **2.2 Data Drift Dashboard & Visualizer (`frontend/src/features/deployments/components/DriftDashboard.tsx`)**
-  - Visual drift distribution overlays and feature importance drift alerts.
+- **2.2 Data Drift Reporting API**
+  - Expose per-feature drift scores and alerts through an API endpoint so CLI/SDK/dashboard clients can report on them.
 - **2.3 Automated Retraining Trigger (Closed-Loop Continuous Training)**
   - When drift exceeds a configurable threshold, automatically trigger a Celery workflow to ingest recent data, execute a training run, evaluate metrics against the champion model, and notify via webhook.
 
@@ -107,6 +107,6 @@ Building on September's core MLOps foundation (Model Registry, Live Serving, Dis
 | Week | Focus Area | Key Deliverables |
 |:---|:---|:---|
 | **Week 1 (Oct 1–7)** | **Advanced Model Serving & Traffic** | Weighted Canary traffic splitter (e.g. 90/10), shadow request mirroring, low-latency gRPC inference service. |
-| **Week 2 (Oct 8–14)** | **Drift Detection & Continuous Training** | KS-test / PSI drift engine, live drift visualization UI, automated retraining trigger workflows. |
+| **Week 2 (Oct 8–14)** | **Drift Detection & Continuous Training** | KS-test / PSI drift engine, drift reporting API, automated retraining trigger workflows. |
 | **Week 3 (Oct 15–21)** | **Multi-Tenancy, Priority Queues & RBAC** | Multi-queue Celery routing (`gpu`, `priority`, `batch`), RBAC & API Keys, Redis token-bucket rate limiter. |
 | **Week 4 (Oct 22–31)** | **Kubernetes KEDA & OpenTelemetry** | Production Helm chart with KEDA queue-based worker autoscaling, OTel/Jaeger distributed tracing, Locust load benchmarks. |

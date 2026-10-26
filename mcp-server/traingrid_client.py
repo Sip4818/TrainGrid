@@ -2,8 +2,8 @@
 
 The MCP service must talk to ``http://api:8000`` over HTTP only and never
 import SQLAlchemy models or API services directly. This keeps the layer
-boundary in ``docs/architecture.md`` intact (MCP is another client, like the
-frontend API client).
+boundary in ``docs/architecture.md`` intact (MCP is just another HTTP client
+of the API).
 """
 
 from __future__ import annotations

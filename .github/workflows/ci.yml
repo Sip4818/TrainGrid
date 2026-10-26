@@ -56,60 +56,14 @@ jobs:
             echo "No tests directory found; skipping pytest."
           fi
 
-  frontend-quality:
-    name: Frontend quality checks
+  integration-tests:
+    name: Integration tests
     runs-on: ubuntu-latest
+    needs: [python-quality]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Lint & type check
-        working-directory: frontend
-        run: npx tsc --noEmit
-
-      - name: Test
-        working-directory: frontend
-        run: npm test
-
-      - name: Build
-        working-directory: frontend
-        run: npm run build
-
-  e2e-tests:
-    name: End-to-end tests
-    runs-on: ubuntu-latest
-    needs: [python-quality, frontend-quality]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Install Playwright browsers
-        working-directory: frontend
-        run: npx playwright install --with-deps chromium
 
       - name: Start Docker Compose stack
         run: |
@@ -118,10 +72,7 @@ jobs:
             curl -sf http://localhost:8000/health > /dev/null && echo "API ready!" && break
             sleep 2
           done
-          echo "Waiting for frontend..."; for i in $(seq 1 30); do
-            curl -sf http://localhost:3000 > /dev/null && echo "Frontend ready!" && break
-            sleep 2
-          done
+          curl -sf http://localhost:8000/health > /dev/null || { echo "API never became ready"; exit 1; }
 
       - name: Verify MCP server startup and contract
         run: |
@@ -144,30 +95,17 @@ jobs:
           done
           echo "MCP startup and contract verified."
 
-      - name: Seed a training run so the runs table has data
+      - name: Verify run lifecycle through the API
         run: |
           response=$(curl -sf -X POST http://localhost:8000/runs/ \
             -H "Content-Type: application/json" \
             -d '{"experiment_id":1,"project_id":1,"trainer_name":"random_forest","config":{"dataset_path":"datasets/1/dataset.csv","target_column":"target","feature_columns":["feature1","feature2"],"n_estimators":50}}')
           echo "$response"
-          echo "$response" | grep -q '"id"' || { echo "Seed failed: no run was created"; exit 1; }
-          echo "Seed run created."
-
-      - name: Seed completed runs so the comparison flow has data
-        run: |
-          docker compose exec -T api python -m backend.scripts.seed_compare_runs
-          response=$(curl -sf "http://localhost:8000/runs/?project_id=1&experiment_id=1")
-          echo "$response"
-          completed=$(echo "$response" | grep -o '"completed"' | wc -l)
-          if [ "$completed" -lt 2 ]; then
-            echo "Seed failed: expected at least 2 completed runs, found $completed"
-            exit 1
-          fi
-          echo "Comparison runs seeded."
-
-      - name: Run Playwright E2E tests
-        working-directory: frontend
-        run: npx playwright test
+          run_id=$(echo "$response" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+          echo "run_id=$run_id"
+          run=$(curl -sf "http://localhost:8000/runs/$run_id")
+          echo "$run"
+          echo "$run" | python3 -c "import json,sys; data=json.load(sys.stdin); assert 'status' in data, 'missing status'; print('run status:', data['status'])"
 
       - name: Stop Docker Compose
         if: always()

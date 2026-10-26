@@ -41,8 +41,8 @@ The capstone roadmap for TrainGrid, expanding into **Autonomous AI Agents for ML
   - Ingests a raw dataset, analyzes distributions and missing values, generates optimal feature engineering recipes, dispatches hyperparameter sweeps, and registers the champion model.
 - **1.2 Automated Executive PDF/Markdown Report Generator**
   - Generates comprehensive training run summaries with loss graphs, confusion matrices, and feature importance bar charts.
-- **1.3 UI Agent Chat & Automation Console (`frontend/src/pages/AgentConsolePage.tsx`)**
-  - Natural language interface where users can type: *"Train an XGBoost model on `churn.csv`, optimize for recall, and deploy to staging."*
+- **1.3 Agent Automation API & MCP Tools**
+  - Expose the agent's planning and tool-calling actions through the API and MCP tools so clients can issue goals such as *"Train an XGBoost model on `churn.csv`, optimize for recall, and deploy to staging."*
 
 ---
 
@@ -54,8 +54,8 @@ The capstone roadmap for TrainGrid, expanding into **Autonomous AI Agents for ML
 - **2.2 Multi-Modal Embeddings Trainer (`backend/trainers/embeddings/`)**
   - Implement Sentence-Transformers and CLIP image/text embedding extractors.
   - Store dataset row embeddings for fast semantic filtering, anomaly detection, and duplicate removal.
-- **2.3 Semantic Dataset & Model Search UI (`frontend/src/features/datasets/`)**
-  - Natural language semantic search over uploaded datasets and registered model descriptions.
+- **2.3 Semantic Dataset & Model Search API**
+  - Natural language semantic search over uploaded datasets and registered model descriptions via an API endpoint.
 
 ---
 
@@ -100,7 +100,7 @@ The capstone roadmap for TrainGrid, expanding into **Autonomous AI Agents for ML
 
 | Week | Focus Area | Key Deliverables |
 |:---|:---|:---|
-| **Week 1 (Dec 1–7)** | **Autonomous AutoML Agent** | Tool-calling AutoML agent, automated executive PDF/MD report generator, natural language UI console. |
+| **Week 1 (Dec 1–7)** | **Autonomous AutoML Agent** | Tool-calling AutoML agent, automated executive PDF/MD report generator, agent automation API and MCP tools. |
 | **Week 2 (Dec 8–14)** | **Multi-Modal & Vector Search** | `pgvector` in PostgreSQL, Sentence-Transformers/CLIP embedding pipeline, semantic dataset search. |
 | **Week 3 (Dec 15–21)** | **Governance & Cryptographic Signing** | SHA-256 artifact cryptographic signing, automated Model Card generator, fairness audit metrics. |
 | **Week 4 (Dec 22–31)** | **FAANG System Design Suite** | Comprehensive Big Tech System Design interview guide, 3-minute video demo, final portfolio polish. |

@@ -38,8 +38,7 @@ def seed_defaults() -> None:
     """Create the default project and experiment so run creation works.
 
     Runs on API startup. Only inserts when the respective tables are empty,
-    keeping the current frontend flow (default experiment_id=1) working until
-    the frontend drill-down lands.
+    so clients can create runs against the default experiment (experiment_id=1).
     """
     db = SessionLocal()
     try:
