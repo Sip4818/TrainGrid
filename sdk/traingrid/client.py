@@ -17,6 +17,9 @@ class TrainGridClient:
         key = api_key or os.getenv("TrainGrid_API_KEY")
         headers["Authorization"] = f"Bearer {key}"
 
+        if base_url is None:
+            raise ValueError("Base url is required")
+
         self.http_ = httpx.Client(base_url=base_url, headers=headers, timeout=time_out)
 
     def request(self, method: str, path: str):
@@ -26,4 +29,4 @@ class TrainGridClient:
             return respone
         except Exception:
             # TODO : give proper http exception
-            raise httpx._exceptions.HTTPError
+            raise Exception
