@@ -6,7 +6,7 @@ class TrainGridError(Exception):
 
 
 class TrainGridApiError(TrainGridError):
-    def __init__(self, code: int, message: str, status_code: int) -> None:
+    def __init__(self, code: int | str, message: str, status_code: int) -> None:
         super().__init__(f"{code} (HTTP {status_code}): {message}")
         self.code = code
         self.message = message
@@ -16,15 +16,16 @@ class TrainGridApiError(TrainGridError):
     def from_response(cls, response: httpx.Response) -> "TrainGridApiError":
 
         try:
-            detail = response.json().get("details", {})
-        except ValueError:
-            details = {}
+            detail = response.json().get("detail", {})
+        except Exception:
+            detail = {}
 
         if isinstance(detail, dict):
             code = detail.get("code", "API_ERROR")
             message = detail.get("message", response.text)
         else:
-            raise AttributeError()
+            code = "API_ERROR"
+            message = response.text
 
         return cls(code, message, response.status_code)
 

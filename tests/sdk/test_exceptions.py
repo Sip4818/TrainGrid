@@ -1,9 +1,10 @@
+import httpx
+
 from sdk.traingrid.exceptions import (
     TrainGridApiError,
     TrainGridError,
     TrainGridTimeoutError,
 )
-import httpx
 
 
 def test_hierarchy():
@@ -11,7 +12,7 @@ def test_hierarchy():
     assert issubclass(TrainGridTimeoutError, TrainGridError)
 
 
-def test_from_response_parses_details():
+def test_from_response_parses_detail():
     response = httpx.Response(
         status_code=422,
         json={"detail": {"code": "Trainer_NOT_FOUND", "message": "Nope"}},
