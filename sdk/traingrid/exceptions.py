@@ -6,7 +6,7 @@ class TrainGridError(Exception):
 
 
 class TrainGridApiError(TrainGridError):
-    def __init__(self, code: int | str, message: str, status_code: int) -> None:
+    def __init__(self, code: str, message: str, status_code: int) -> None:
         super().__init__(f"{code} (HTTP {status_code}): {message}")
         self.code = code
         self.message = message
