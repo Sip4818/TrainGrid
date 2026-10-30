@@ -1,5 +1,7 @@
 from unittest.mock import Mock
 
+import httpx
+
 from sdk.traingrid.client import TrainGridClient
 
 
@@ -29,7 +31,7 @@ def test_time_out():
 def test_request():
     client = create_client()
     client.http_.request = Mock(
-        return_value=Mock(status_code=200, json=Mock(return_value={"id": 1}))
+        return_value=httpx.Response(status_code=200, json={"id": 1})
     )
     response = client.request(method="GET", path="/runs/1")
 
