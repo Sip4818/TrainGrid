@@ -16,9 +16,11 @@ class TrainGridApiError(TrainGridError):
     def from_response(cls, response: httpx.Response) -> "TrainGridApiError":
 
         try:
-            detail = response.json().get("detail", {})
-        except Exception:
-            detail = {}
+            data = response.json()
+        except ValueError:
+            data = {}
+
+        detail = data.get("detail", {}) if isinstance(data, dict) else {}
 
         if isinstance(detail, dict):
             code = detail.get("code", "API_ERROR")
