@@ -51,3 +51,10 @@ def test_from_response_detail_is_list():
     assert err.code == "API_ERROR"
     assert err.message == response.text
     assert err.status_code == 422
+
+
+def test_timeout():
+    err = TrainGridTimeoutError(run_id=1, timeout=30.0)
+
+    assert err.run_id == 1
+    assert err.timeout == 30.0

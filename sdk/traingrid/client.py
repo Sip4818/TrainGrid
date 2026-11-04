@@ -2,7 +2,10 @@ import os
 
 import httpx
 
-from sdk.traingrid.exceptions import TrainGridApiError, TrainGridError
+from sdk.traingrid.exceptions import (
+    TrainGridApiError,
+    TrainGridError,
+)
 
 
 class TrainGridClient:
@@ -30,6 +33,7 @@ class TrainGridClient:
             response = self.http_.request(method=method, url=path)
         except httpx.HTTPError as exc:
             raise TrainGridError(f"Request failed: {exc}") from exc
+
         if response.is_error:
             raise TrainGridApiError.from_response(response) from None
         return response
